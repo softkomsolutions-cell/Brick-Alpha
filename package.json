@@ -10,6 +10,10 @@
     "partner:staging": "npm --prefix frontend run build && npm --prefix server start",
     "partner:share": "node scripts/partner-share.mjs",
     "render:smoke": "node scripts/render-smoke-test.mjs",
+    "test:backend": "npm --prefix server run test",
+    "lint:frontend": "npm --prefix frontend run lint",
+    "check:backend": "npm --prefix server run check",
+    "check:full": "npm run test:backend && npm run lint:frontend && npm run check:backend && npm run build",
     "partner:compose": "docker compose up --build -d",
     "partner:compose:down": "docker compose down",
     "partner:compose:logs": "docker compose logs -f collecttrade"

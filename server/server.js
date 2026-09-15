@@ -19,12 +19,15 @@ const ENGINE_TICK_MS = 5000;
 const MARKET_REFRESH_MS = 60 * 1000;
 const NEWS_REFRESH_MS = 10 * 60 * 1000;
 const HISTORY_LIMIT = 240;
-const DATA_DIR = path.join(__dirname, "data");
-const STORE_FILE = path.join(DATA_DIR, "app-store.json");
+const DATA_DIR = process.env.COLLECTTRADE_DATA_DIR || path.join(__dirname, "data");
+const STORE_FILE =
+  process.env.COLLECTTRADE_STORE_FILE || path.join(DATA_DIR, "app-store.json");
 const PRODUCT_CATALOG_FILE = path.join(DATA_DIR, "product-catalog.json");
-const SHARE_STATUS_FILE = path.join(DATA_DIR, "share-status.json");
+const SHARE_STATUS_FILE =
+  process.env.COLLECTTRADE_SHARE_STATUS_FILE || path.join(DATA_DIR, "share-status.json");
 const FRONTEND_DIST_DIR = path.join(__dirname, "..", "frontend", "dist");
 const FRONTEND_INDEX_FILE = path.join(FRONTEND_DIST_DIR, "index.html");
+const DISABLE_RUNTIME = process.env.COLLECTTRADE_DISABLE_RUNTIME === "1";
 const TWELVE_DATA_API_KEY = process.env.TWELVE_DATA_API_KEY || "";
 const TWELVE_DATA_BASE_URL = "https://api.twelvedata.com";
 const TWELVE_DATA_INTERVAL = process.env.TWELVE_DATA_INTERVAL || "1h";
@@ -1599,6 +1602,40 @@ function persistStore() {
       null,
       2,
     ),
+  );
+}
+
+function resetStoreForTests() {
+  store = {
+    users: [],
+    userStates: {},
+    settings: sanitizeSettings(DEFAULT_SETTINGS),
+    trades: [],
+    newsTargets: [...DEFAULT_TARGETS],
+    feedbackItems: [],
+  };
+  users = store.users;
+  userStates = store.userStates;
+  guestTrades = store.trades;
+  guestTargets = store.newsTargets;
+  appSettings = store.settings;
+  feedbackItems = store.feedbackItems;
+  tradeId = 1;
+  requestId = 1;
+  persistStore();
+  return store;
+}
+
+function getStoreSnapshotForTests() {
+  return JSON.parse(
+    JSON.stringify({
+      users,
+      userStates,
+      settings: appSettings,
+      trades: guestTrades,
+      newsTargets: guestTargets,
+      feedbackItems,
+    }),
   );
 }
 
@@ -5356,26 +5393,45 @@ if (fs.existsSync(FRONTEND_INDEX_FILE)) {
   });
 }
 
-engineTick();
-refreshMarketDataOnce().catch((error) => {
-  marketDataMeta.lastError = error.message;
-});
-refreshNewsOnce().catch((error) => {
-  newsMeta.lastError = error.message;
-});
-
-setInterval(engineTick, ENGINE_TICK_MS);
-setInterval(() => {
+if (DISABLE_RUNTIME) {
+  engineTick();
+} else {
+  engineTick();
   refreshMarketDataOnce().catch((error) => {
     marketDataMeta.lastError = error.message;
   });
-}, MARKET_REFRESH_MS);
-setInterval(() => {
   refreshNewsOnce().catch((error) => {
     newsMeta.lastError = error.message;
   });
-}, NEWS_REFRESH_MS);
 
-app.listen(PORT, () => {
-  console.log(`Brick Alpha API listening on ${PORT}`);
-});
+  setInterval(engineTick, ENGINE_TICK_MS);
+  setInterval(() => {
+    refreshMarketDataOnce().catch((error) => {
+      marketDataMeta.lastError = error.message;
+    });
+  }, MARKET_REFRESH_MS);
+  setInterval(() => {
+    refreshNewsOnce().catch((error) => {
+      newsMeta.lastError = error.message;
+    });
+  }, NEWS_REFRESH_MS);
+
+  app.listen(PORT, () => {
+    console.log(`Brick Alpha API listening on ${PORT}`);
+  });
+}
+
+module.exports = app;
+module.exports.app = app;
+
+if (process.env.COLLECTTRADE_TEST === "1") {
+  module.exports.__testSupport = {
+    getStoreSnapshot: getStoreSnapshotForTests,
+    getUsers: () => users,
+    getUserState,
+    loadStore,
+    persistStore,
+    resetStore: resetStoreForTests,
+    runEngineTick: engineTick,
+  };
+}
