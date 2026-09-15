@@ -48,6 +48,26 @@ Phase 0 adds:
 
 Phase 0 does not add a database or change business behavior.
 
+## Phase 1 Status
+
+Phase 1 foundation work is limited to:
+
+- Prisma 7.10 package installation.
+- PostgreSQL schema foundation.
+- Optional `DATABASE_URL` configuration.
+- Lazy Prisma client support.
+- Non-blocking database health capability.
+- Legacy JSON repository abstraction.
+- Read-only legacy store inspection.
+
+The current application source of truth remains JSON.
+No route reads from PostgreSQL.
+No route writes to PostgreSQL.
+No Railway database has been touched.
+No initial migration has been generated because a local PostgreSQL connection was unavailable.
+
+Detailed foundation documentation is in `docs/backend/postgresql-foundation.md`.
+
 ## Phase 1 - PostgreSQL and Prisma Foundation
 
 - Add Prisma and Railway PostgreSQL configuration.
