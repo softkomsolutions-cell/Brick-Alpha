@@ -1,0 +1,776 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  OWNER
+  PARTNER
+  ADMIN
+}
+
+enum AssetType {
+  COLLECTIBLE
+  MARKET_INSTRUMENT
+}
+
+enum HoldingStatus {
+  OPEN
+  CLOSED
+  ARCHIVED
+}
+
+enum TransactionType {
+  BUY
+  SELL
+  ADJUSTMENT
+  TRANSFER_IN
+  TRANSFER_OUT
+}
+
+enum TransactionSide {
+  BUY
+  SELL
+}
+
+enum ExecutionMode {
+  PAPER
+  LIVE
+  SIMULATED
+}
+
+enum ExecutionStatus {
+  PENDING
+  ACCEPTED
+  PARTIALLY_FILLED
+  FILLED
+  CANCELLED
+  FAILED
+  UNKNOWN
+}
+
+enum FeeType {
+  BROKER
+  MARKETPLACE
+  SHIPPING
+  STORAGE
+  TAX
+  OTHER
+}
+
+enum ValuationStatus {
+  FRESH
+  STALE
+  UNAVAILABLE
+  REVIEW_REQUIRED
+}
+
+enum ConnectorStatus {
+  NOT_CONFIGURED
+  CONFIGURED
+  ONLINE
+  ERROR
+  MANUAL_SETUP
+  UNSUPPORTED
+}
+
+enum AlertKind {
+  PRICE_ABOVE
+  PRICE_BELOW
+  RSI_ABOVE
+  RSI_BELOW
+}
+
+enum NotificationStatus {
+  UNREAD
+  READ
+}
+
+enum FeedbackType {
+  BUG
+  UX
+  IMPROVEMENT
+  CONTENT
+}
+
+enum FeedbackSeverity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum FeedbackStatus {
+  NEW
+  REVIEWING
+  PLANNED
+  RESOLVED
+}
+
+enum IntakeStatus {
+  NEW
+  QUOTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ImportReviewStatus {
+  RECEIVED
+  REVIEWING
+  APPROVED
+  REJECTED
+  RECONCILED
+}
+
+enum ReconciliationStatus {
+  PENDING
+  MATCHED
+  CREATED
+  CONFLICT
+  REJECTED
+}
+
+model User {
+  id                       String    @id @default(uuid()) @db.Uuid
+  legacyId                 String?   @unique
+  name                     String
+  email                    String    @unique
+  passwordHash             String?
+  passwordSalt             String?
+  passwordResetRequestedAt DateTime? @db.Timestamptz(6)
+  role                     UserRole  @default(PARTNER)
+  createdAt                DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt                DateTime  @updatedAt @db.Timestamptz(6)
+  lastLoginAt              DateTime? @db.Timestamptz(6)
+
+  settings            UserSettings?
+  sessions            Session[]
+  passwordResetTokens PasswordResetToken[]
+  portfolios          Portfolio[]
+  connectorAccounts   ConnectorAccount[]
+  watchlistItems      WatchlistItem[]
+  alertRules          AlertRule[]
+  notifications       Notification[]
+  feedbackAuthored    Feedback[]           @relation("FeedbackAuthor")
+  feedbackResolved    Feedback[]           @relation("FeedbackResolver")
+  intakeRequests      IntakeRequest[]
+  importBatches       ImportBatch[]
+  importReviews       ImportReview[]
+  auditEvents         AuditEvent[]
+
+  @@index([role])
+}
+
+model UserSettings {
+  id                 String   @id @default(uuid()) @db.Uuid
+  userId             String   @unique @db.Uuid
+  preferredRegion    String   @default("south-africa")
+  timezone           String   @default("Africa/Johannesburg")
+  riskMode           String   @default("balanced")
+  subscriptionTier   String   @default("starter")
+  alertPreferences   Json?
+  routinePreferences Json?
+  executionProfiles  Json?
+  createdAt          DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime @updatedAt @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  tokenHash  String    @unique
+  expiresAt  DateTime  @db.Timestamptz(6)
+  revokedAt  DateTime? @db.Timestamptz(6)
+  lastSeenAt DateTime? @db.Timestamptz(6)
+  userAgent  String?
+  ipAddress  String?
+  createdAt  DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime  @updatedAt @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([revokedAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime  @db.Timestamptz(6)
+  usedAt    DateTime? @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model Portfolio {
+  id           String   @id @default(uuid()) @db.Uuid
+  legacyId     String?  @unique
+  userId       String   @db.Uuid
+  name         String
+  baseCurrency String   @default("ZAR")
+  createdAt    DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(6)
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  holdings     Holding[]
+  transactions Transaction[]
+
+  @@index([userId])
+}
+
+model Asset {
+  id        String    @id @default(uuid()) @db.Uuid
+  legacyId  String?   @unique
+  assetType AssetType
+  symbol    String?
+  name      String
+  currency  String?
+  metadata  Json?
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @db.Timestamptz(6)
+
+  collectible           Collectible?
+  marketInstrument      MarketInstrument?
+  holdings              Holding[]
+  transactions          Transaction[]
+  valuations            Valuation[]
+  watchlistItems        WatchlistItem[]
+  alertRules            AlertRule[]
+  brickAlphaAssessments BrickAlphaAssessment[]
+  importPositions       ImportPosition[]
+
+  @@unique([assetType, symbol])
+  @@index([name])
+}
+
+model Collectible {
+  assetId                String    @id @db.Uuid
+  brand                  String?
+  category               String?
+  sku                    String?
+  description            String?
+  theme                  String?
+  condition              String?
+  rarity                 String?
+  expectedRetirementDate DateTime? @db.Timestamptz(6)
+  actualRetirementDate   DateTime? @db.Timestamptz(6)
+  createdAt              DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt              DateTime  @updatedAt @db.Timestamptz(6)
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([sku])
+  @@index([brand, category])
+}
+
+model MarketInstrument {
+  assetId        String   @id @db.Uuid
+  ticker         String
+  desk           String?
+  providerSymbol String?
+  exchange       String?
+  quoteCurrency  String?
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(6)
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([ticker, exchange])
+  @@index([desk])
+}
+
+model Holding {
+  id           String        @id @default(uuid()) @db.Uuid
+  legacyId     String?       @unique
+  portfolioId  String        @db.Uuid
+  assetId      String        @db.Uuid
+  status       HoldingStatus @default(OPEN)
+  quantity     Decimal       @db.Decimal(20, 8)
+  averageCost  Decimal       @db.Decimal(20, 8)
+  costBasis    Decimal       @db.Decimal(20, 8)
+  currentPrice Decimal?      @db.Decimal(20, 8)
+  currentValue Decimal?      @db.Decimal(20, 8)
+  currency     String
+  acquiredAt   DateTime?     @db.Timestamptz(6)
+  closedAt     DateTime?     @db.Timestamptz(6)
+  metadata     Json?
+  createdAt    DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime      @updatedAt @db.Timestamptz(6)
+
+  portfolio    Portfolio     @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  asset        Asset         @relation(fields: [assetId], references: [id])
+  lots         HoldingLot[]
+  transactions Transaction[]
+
+  @@unique([portfolioId, assetId, status])
+  @@index([portfolioId, status])
+  @@index([assetId])
+}
+
+model HoldingLot {
+  id                  String   @id @default(uuid()) @db.Uuid
+  legacyId            String?  @unique
+  holdingId           String   @db.Uuid
+  sourceTransactionId String?  @db.Uuid
+  quantity            Decimal  @db.Decimal(20, 8)
+  remainingQuantity   Decimal  @db.Decimal(20, 8)
+  unitCost            Decimal  @db.Decimal(20, 8)
+  costBasis           Decimal  @db.Decimal(20, 8)
+  currency            String
+  acquiredAt          DateTime @db.Timestamptz(6)
+  metadata            Json?
+  createdAt           DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime @updatedAt @db.Timestamptz(6)
+
+  holding           Holding          @relation(fields: [holdingId], references: [id], onDelete: Cascade)
+  sourceTransaction Transaction?     @relation("LotSourceTransaction", fields: [sourceTransactionId], references: [id])
+  saleAllocations   SaleAllocation[]
+
+  @@index([holdingId, remainingQuantity])
+  @@index([sourceTransactionId])
+}
+
+model Transaction {
+  id               String           @id @default(uuid()) @db.Uuid
+  legacyId         String?          @unique
+  portfolioId      String           @db.Uuid
+  holdingId        String?          @db.Uuid
+  assetId          String           @db.Uuid
+  type             TransactionType
+  side             TransactionSide?
+  quantity         Decimal          @db.Decimal(20, 8)
+  unitPrice        Decimal?         @db.Decimal(20, 8)
+  grossAmount      Decimal?         @db.Decimal(20, 8)
+  netAmount        Decimal?         @db.Decimal(20, 8)
+  currency         String
+  externalProvider String?
+  externalId       String?
+  idempotencyKey   String?          @unique
+  notes            String?
+  metadata         Json?
+  occurredAt       DateTime         @default(now()) @db.Timestamptz(6)
+  createdAt        DateTime         @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime         @updatedAt @db.Timestamptz(6)
+
+  portfolio       Portfolio        @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  holding         Holding?         @relation(fields: [holdingId], references: [id])
+  asset           Asset            @relation(fields: [assetId], references: [id])
+  lotsCreated     HoldingLot[]     @relation("LotSourceTransaction")
+  saleAllocations SaleAllocation[] @relation("SaleTransaction")
+  execution       Execution?
+  fees            Fee[]
+
+  @@unique([externalProvider, externalId])
+  @@index([portfolioId, occurredAt])
+  @@index([assetId, occurredAt])
+  @@index([holdingId])
+}
+
+model SaleAllocation {
+  id            String   @id @default(uuid()) @db.Uuid
+  transactionId String   @db.Uuid
+  holdingLotId  String   @db.Uuid
+  quantity      Decimal  @db.Decimal(20, 8)
+  costBasis     Decimal  @db.Decimal(20, 8)
+  proceeds      Decimal  @db.Decimal(20, 8)
+  realizedPnl   Decimal  @db.Decimal(20, 8)
+  currency      String
+  createdAt     DateTime @default(now()) @db.Timestamptz(6)
+
+  transaction Transaction @relation("SaleTransaction", fields: [transactionId], references: [id], onDelete: Cascade)
+  holdingLot  HoldingLot  @relation(fields: [holdingLotId], references: [id])
+
+  @@index([transactionId])
+  @@index([holdingLotId])
+}
+
+model Execution {
+  id                    String          @id @default(uuid()) @db.Uuid
+  transactionId         String          @unique @db.Uuid
+  mode                  ExecutionMode
+  providerId            String?
+  status                ExecutionStatus @default(PENDING)
+  externalOrderId       String?
+  externalClientOrderId String?
+  requestedQuantity     Decimal?        @db.Decimal(20, 8)
+  filledQuantity        Decimal?        @db.Decimal(20, 8)
+  requestedPrice        Decimal?        @db.Decimal(20, 8)
+  filledPrice           Decimal?        @db.Decimal(20, 8)
+  currency              String?
+  failureReason         String?
+  rawPayload            Json?
+  submittedAt           DateTime?       @db.Timestamptz(6)
+  completedAt           DateTime?       @db.Timestamptz(6)
+  createdAt             DateTime        @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime        @updatedAt @db.Timestamptz(6)
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, externalOrderId])
+  @@index([status, createdAt])
+}
+
+model Fee {
+  id            String   @id @default(uuid()) @db.Uuid
+  transactionId String   @db.Uuid
+  type          FeeType
+  amount        Decimal  @db.Decimal(20, 8)
+  currency      String
+  notes         String?
+  metadata      Json?
+  createdAt     DateTime @default(now()) @db.Timestamptz(6)
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([transactionId])
+}
+
+model Valuation {
+  id               String          @id @default(uuid()) @db.Uuid
+  legacyId         String?         @unique
+  assetId          String          @db.Uuid
+  source           String
+  providerRecordId String?
+  status           ValuationStatus @default(FRESH)
+  value            Decimal         @db.Decimal(20, 8)
+  currency         String
+  confidence       Decimal?        @db.Decimal(5, 2)
+  asOf             DateTime        @db.Timestamptz(6)
+  rawPayload       Json?
+  metadata         Json?
+  createdAt        DateTime        @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime        @updatedAt @db.Timestamptz(6)
+
+  asset                Asset                 @relation(fields: [assetId], references: [id])
+  evidence             ValuationEvidence[]
+  brickAlphaAssessment BrickAlphaAssessment?
+
+  @@index([assetId, asOf])
+  @@index([source, providerRecordId])
+}
+
+model ValuationEvidence {
+  id          String    @id @default(uuid()) @db.Uuid
+  valuationId String    @db.Uuid
+  kind        String
+  sourceUrl   String?
+  sourceLabel String?
+  observedAt  DateTime? @db.Timestamptz(6)
+  salePrice   Decimal?  @db.Decimal(20, 8)
+  currency    String?
+  condition   String?
+  notes       String?
+  rawPayload  Json?
+  createdAt   DateTime  @default(now()) @db.Timestamptz(6)
+
+  valuation Valuation @relation(fields: [valuationId], references: [id], onDelete: Cascade)
+
+  @@index([valuationId])
+}
+
+model BrickAlphaAssessment {
+  id                    String   @id @default(uuid()) @db.Uuid
+  valuationId           String?  @unique @db.Uuid
+  assetId               String   @db.Uuid
+  modelVersion          String
+  score                 Decimal  @db.Decimal(8, 4)
+  grade                 String?
+  recommendation        String
+  confidence            Decimal? @db.Decimal(5, 2)
+  estimatedRoi          Decimal? @db.Decimal(12, 4)
+  projectedRoi          Decimal? @db.Decimal(12, 4)
+  retirementStatus      String?
+  retirementProbability Decimal? @db.Decimal(5, 2)
+  factorScores          Json
+  breakdown             Json?
+  createdAt             DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime @updatedAt @db.Timestamptz(6)
+
+  valuation Valuation? @relation(fields: [valuationId], references: [id])
+  asset     Asset      @relation(fields: [assetId], references: [id])
+
+  @@index([assetId, createdAt])
+  @@index([recommendation])
+}
+
+model ConnectorAccount {
+  id                   String          @id @default(uuid()) @db.Uuid
+  userId               String          @db.Uuid
+  provider             String
+  providerAccountId    String?
+  status               ConnectorStatus @default(NOT_CONFIGURED)
+  encryptedCredentials String?
+  config               Json?
+  lastTestAt           DateTime?       @db.Timestamptz(6)
+  lastSyncAt           DateTime?       @db.Timestamptz(6)
+  lastError            String?
+  createdAt            DateTime        @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime        @updatedAt @db.Timestamptz(6)
+
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  snapshots ConnectorSnapshot[]
+
+  @@unique([userId, provider])
+  @@index([provider, status])
+}
+
+model ConnectorSnapshot {
+  id                 String   @id @default(uuid()) @db.Uuid
+  connectorAccountId String   @db.Uuid
+  fetchedAt          DateTime @default(now()) @db.Timestamptz(6)
+  totalAssets        Int?
+  fundedAssets       Int?
+  rawPayload         Json?
+
+  connectorAccount ConnectorAccount   @relation(fields: [connectorAccountId], references: [id], onDelete: Cascade)
+  balances         ConnectorBalance[]
+
+  @@index([connectorAccountId, fetchedAt])
+}
+
+model ConnectorBalance {
+  id         String  @id @default(uuid()) @db.Uuid
+  snapshotId String  @db.Uuid
+  currency   String
+  available  Decimal @db.Decimal(20, 8)
+  reserved   Decimal @db.Decimal(20, 8)
+  total      Decimal @db.Decimal(20, 8)
+
+  snapshot ConnectorSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  @@unique([snapshotId, currency])
+}
+
+model WatchlistItem {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  assetId   String?  @db.Uuid
+  ticker    String
+  label     String
+  desk      String?
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  asset Asset? @relation(fields: [assetId], references: [id])
+
+  @@unique([userId, ticker])
+  @@index([userId, updatedAt])
+}
+
+model AlertRule {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @db.Uuid
+  assetId          String?   @db.Uuid
+  ticker           String
+  label            String
+  desk             String?
+  kind             AlertKind
+  threshold        Decimal   @db.Decimal(20, 8)
+  enabled          Boolean   @default(true)
+  lastTriggeredAt  DateTime? @db.Timestamptz(6)
+  lastTriggerState Boolean   @default(false)
+  createdAt        DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @db.Timestamptz(6)
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  asset         Asset?         @relation(fields: [assetId], references: [id])
+  notifications Notification[]
+
+  @@unique([userId, ticker, kind, threshold])
+  @@index([userId, enabled])
+}
+
+model Notification {
+  id          String             @id @default(uuid()) @db.Uuid
+  userId      String             @db.Uuid
+  alertRuleId String?            @db.Uuid
+  ticker      String?
+  label       String?
+  desk        String?
+  title       String
+  message     String
+  type        String             @default("alert")
+  status      NotificationStatus @default(UNREAD)
+  createdAt   DateTime           @default(now()) @db.Timestamptz(6)
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  alertRule AlertRule? @relation(fields: [alertRuleId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status, createdAt])
+}
+
+model Feedback {
+  id             String           @id @default(uuid()) @db.Uuid
+  legacyId       String?          @unique
+  authorUserId   String?
+  resolverUserId String?
+  title          String
+  type           FeedbackType
+  severity       FeedbackSeverity
+  area           String
+  notes          String
+  status         FeedbackStatus   @default(NEW)
+  resolutionNote String?
+  createdAt      DateTime         @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime         @updatedAt @db.Timestamptz(6)
+
+  author   User? @relation("FeedbackAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
+  resolver User? @relation("FeedbackResolver", fields: [resolverUserId], references: [id], onDelete: SetNull)
+
+  @@index([status, updatedAt])
+  @@index([authorUserId])
+}
+
+model IntakeRequest {
+  id               String       @id @default(uuid()) @db.Uuid
+  legacyId         String?      @unique
+  userId           String       @db.Uuid
+  reference        String?
+  channel          String
+  requestType      String
+  status           IntakeStatus @default(NEW)
+  priority         String       @default("normal")
+  customerName     String
+  company          String?
+  contactEmail     String?
+  contactPhone     String?
+  subject          String?
+  quantity         Int          @default(1)
+  notes            String?
+  quotedAmount     Decimal?     @db.Decimal(20, 2)
+  followUpAt       DateTime?    @db.Timestamptz(6)
+  catalogSelection Json?
+  printDetails     Json?
+  createdAt        DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime     @updatedAt @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+}
+
+model ImportBatch {
+  id           String             @id @default(uuid()) @db.Uuid
+  legacyId     String?            @unique
+  ownerUserId  String?
+  sourceType   String
+  sourceName   String?
+  sourcePath   String?
+  checksum     String?
+  reviewStatus ImportReviewStatus @default(RECEIVED)
+  metadata     Json?
+  createdAt    DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime           @updatedAt @db.Timestamptz(6)
+
+  owner     User?            @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
+  positions ImportPosition[]
+  evidence  ImportEvidence[]
+  reviews   ImportReview[]
+
+  @@index([ownerUserId, reviewStatus])
+  @@index([checksum])
+}
+
+model ImportPosition {
+  id                   String               @id @default(uuid()) @db.Uuid
+  legacyId             String?              @unique
+  batchId              String               @db.Uuid
+  assetId              String?              @db.Uuid
+  identifier           String
+  name                 String?
+  quantity             Decimal              @db.Decimal(20, 8)
+  purchasePrice        Decimal?             @db.Decimal(20, 8)
+  currentValue         Decimal?             @db.Decimal(20, 8)
+  currency             String?
+  sourceRef            String?
+  reconciliationStatus ReconciliationStatus @default(PENDING)
+  rawData              Json?
+  createdAt            DateTime             @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime             @updatedAt @db.Timestamptz(6)
+
+  batch    ImportBatch      @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  asset    Asset?           @relation(fields: [assetId], references: [id])
+  evidence ImportEvidence[]
+  reviews  ImportReview[]
+
+  @@index([batchId, reconciliationStatus])
+  @@index([identifier])
+}
+
+model ImportEvidence {
+  id           String   @id @default(uuid()) @db.Uuid
+  batchId      String   @db.Uuid
+  positionId   String?  @db.Uuid
+  evidenceType String
+  sourceUrl    String?
+  sourcePath   String?
+  checksum     String?
+  metadata     Json?
+  createdAt    DateTime @default(now()) @db.Timestamptz(6)
+
+  batch    ImportBatch     @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  position ImportPosition? @relation(fields: [positionId], references: [id], onDelete: SetNull)
+
+  @@index([batchId])
+  @@index([positionId])
+}
+
+model ImportReview {
+  id             String   @id @default(uuid()) @db.Uuid
+  batchId        String   @db.Uuid
+  positionId     String?  @db.Uuid
+  reviewerUserId String?
+  decision       String
+  notes          String?
+  reviewedAt     DateTime @default(now()) @db.Timestamptz(6)
+
+  batch    ImportBatch     @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  position ImportPosition? @relation(fields: [positionId], references: [id], onDelete: SetNull)
+  reviewer User?           @relation(fields: [reviewerUserId], references: [id], onDelete: SetNull)
+
+  @@index([batchId, reviewedAt])
+  @@index([positionId])
+}
+
+model AuditEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String?  @db.Uuid
+  action     String
+  entityType String
+  entityId   String?
+  requestId  String?
+  metadata   Json?
+  occurredAt DateTime @default(now()) @db.Timestamptz(6)
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, occurredAt])
+  @@index([entityType, entityId])
+  @@index([action, occurredAt])
+}
+
+model LegacySnapshot {
+  id              String   @id @default(uuid()) @db.Uuid
+  sourcePath      String
+  checksum        String   @unique
+  formatVersion   String?
+  userCount       Int      @default(0)
+  userStateCount  Int      @default(0)
+  tradeCount      Int      @default(0)
+  feedbackCount   Int      @default(0)
+  migrationStatus String   @default("INSPECTED")
+  metadata        Json?
+  capturedAt      DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([sourcePath, capturedAt])
+}
