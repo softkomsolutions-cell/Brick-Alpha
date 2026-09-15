@@ -4,6 +4,8 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const Parser = require("rss-parser");
+const { getDatabaseHealth } = require("./config/database");
+const { createLegacyStoreRepository } = require("./repositories/legacyStoreRepository");
 
 const app = express();
 const parser = new Parser();
@@ -1626,7 +1628,7 @@ function resetStoreForTests() {
   return store;
 }
 
-function getStoreSnapshotForTests() {
+function getStoreSnapshot() {
   return JSON.parse(
     JSON.stringify({
       users,
@@ -1673,6 +1675,14 @@ function getUserState(userId) {
 
   return userStates[userId];
 }
+
+const legacyStoreRepository = createLegacyStoreRepository({
+  getFeedback: () => feedbackItems,
+  getStoreSnapshot,
+  getUserState,
+  getUsers: () => users,
+  persist: persistStore,
+});
 
 function publicUser(user) {
   return {
@@ -3999,7 +4009,8 @@ function closeTrade(trade, exitReason, signal) {
   return true;
 }
 
-function buildHealth() {
+async function buildHealth() {
+  const databaseHealth = await getDatabaseHealth();
   const openTrades = Object.values(userStates)
     .flatMap((state) => state.trades)
     .filter((trade) => trade.status === "open").length;
@@ -4032,6 +4043,7 @@ function buildHealth() {
       news: newsMeta.lastError ? "degraded" : "online",
       connectors: connectorServiceStatus,
       persistence: "online",
+      database: databaseHealth.status,
     },
     metrics: {
       userCount: users.length,
@@ -4050,6 +4062,8 @@ function buildHealth() {
       marketDataProvider: marketDataMeta.provider,
       marketDataMode: marketDataMeta.mode,
       marketDataInterval: marketDataMeta.interval,
+      databaseConfigured: databaseHealth.configured,
+      databaseEnvironment: databaseHealth.environment,
       lastEngineTickAt,
       lastMarketRefreshAt: marketDataMeta.lastSuccessAt || marketDataMeta.lastAttemptAt,
       lastNewsAttemptAt: newsMeta.lastAttemptAt,
@@ -4171,8 +4185,8 @@ app.get("/", (_req, res) => {
 </html>`);
 });
 
-app.get("/api/health", (_req, res) => {
-  res.json(buildHealth());
+app.get("/api/health", async (_req, res) => {
+  res.json(await buildHealth());
 });
 
 app.post("/api/auth/register", (req, res) => {
@@ -5426,9 +5440,10 @@ module.exports.app = app;
 
 if (process.env.COLLECTTRADE_TEST === "1") {
   module.exports.__testSupport = {
-    getStoreSnapshot: getStoreSnapshotForTests,
+    getStoreSnapshot,
     getUsers: () => users,
     getUserState,
+    legacyStoreRepository,
     loadStore,
     persistStore,
     resetStore: resetStoreForTests,
