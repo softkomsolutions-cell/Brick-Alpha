@@ -14,6 +14,7 @@ process.env.COLLECTTRADE_SHARE_STATUS_FILE = path.join(dataDir, "share-status.js
 process.env.AUTH_SECRET = "phase0-test-auth-secret";
 process.env.CONNECTOR_SECRET = "phase0-test-connector-secret";
 process.env.TWELVE_DATA_API_KEY = "";
+delete process.env.DATABASE_URL;
 
 const app = require("../server");
 const support = app.__testSupport;
