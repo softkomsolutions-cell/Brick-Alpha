@@ -78,7 +78,36 @@ Detailed foundation documentation is in `docs/backend/postgresql-foundation.md`.
 - Add legacy JSON import tooling.
 - Keep all existing routes on legacy persistence initially.
 
+## Phase 1.5 - Staging Foundation Finalization
+
+Completed on 2026-09-16 from the existing Phase 1 repository state:
+
+- Retained the committed UUID user foreign-key corrections and
+  `20260916080000_init_backend_foundation` migration.
+- Reviewed migration SQL: additive only, Decimal financial columns, matching
+  foreign-key types, expected indexes and uniqueness, no production references.
+- Passed Prisma format, validate, and generate without changing the schema.
+- Passed all 32 backend tests, including Phase 0 regressions, backend syntax,
+  frontend build, and frontend lint (four existing warnings, zero errors).
+- Passed local smoke checks for `/`, `/api/health`, `/api/signals`, and `/api/news`
+  using isolated temporary JSON data with provider refresh disabled.
+- Confirmed health reports `not_configured` without `DATABASE_URL`.
+- Reviewed tracked files for credentials and scratch artifacts; only synthetic
+  test credentials were found. Reviewed both migration documents for Markdown
+  corruption and duplicate sections.
+
+Staging is online and the migration is applied with its checksum reconciled to
+the committed file, as confirmed by the OpenCode handover. Finalization did not
+repeat Railway setup, credential rotation, or migration application, and did not
+deploy the application or touch production. Live staging state was not queried
+again. JSON remains the source of truth; application data reads and writes remain
+on JSON. The optional PostgreSQL health probe performs only `SELECT 1`.
+
+Validation scope and evidence are recorded in `docs/backend/postgresql-foundation.md`.
+
 ## Phase 2 - Users and Authentication
+
+Phase 2 is not started and requires a separate instruction to proceed.
 
 - Import users while preserving current password compatibility.
 - Add database-backed sessions and reset tokens.

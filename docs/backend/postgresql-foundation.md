@@ -25,7 +25,7 @@ Render, Vercel, and Netlify are not migration targets. Existing configuration ma
 - `@prisma/client`: `7.10.0` runtime dependency.
 - Schema: `server/prisma/schema.prisma`.
 - Prisma configuration: `server/prisma.config.ts`.
-- Migration directory: `server/prisma/migrations/` when the first migration is generated.
+- Migration directory: `server/prisma/migrations/`.
 
 ## DATABASE_URL
 
@@ -137,6 +137,50 @@ Application status:
 - The migration ran in a transaction that rolls back fully on failure (verified during development).
 - Staging portal credentials were rotated (`ALTER USER`) and the service variables were updated without a restart.
 - Production (`patient-perfection` production env) has no services and was not touched.
+
+## Phase 1.5 Final Validation (2026-09-16)
+
+The OpenCode handover confirms that staging is online, the migration is applied,
+and its database checksum was reconciled to the canonical committed migration file.
+Credentials were already rotated, `DATABASE_URL` is configured in Railway, and
+temporary Railway services and sensitive local files were removed. These staging
+facts are carried forward from the verified handover; this finalization did not
+connect to the database, rotate credentials, apply migrations, or deploy services.
+
+The existing schema fix and migration were already committed and were retained.
+Local validation completed on `feature/backend-production-upgrade`:
+
+| Check | Result |
+|---|---|
+| Prisma format, validate, generate | PASS (Prisma 7.10.0); no schema content change |
+| Backend tests, including Phase 0 regressions | PASS: 32 tests, no failures or skips |
+| Frontend lint | PASS: zero errors, four existing React hook warnings |
+| Backend syntax | PASS |
+| Frontend build | PASS |
+| Local smoke: `/`, `/api/health`, `/api/signals`, `/api/news` | PASS: HTTP 200 and expected content |
+| Database health without configuration | PASS: `services.database = not_configured` |
+| Tracked-file credential and scratch-artifact review | PASS: only synthetic test credentials found |
+
+Smoke checks used the built frontend and an isolated temporary JSON store with
+provider refresh disabled. They validate local application responses, not live
+provider feeds or deployed staging API connectivity. The initial sandbox attempts
+were blocked by filesystem permissions; the successful checks ran outside that
+sandbox. No application or frontend source changes were needed.
+
+The committed migration contains 31 domain tables, 42 foreign keys, 73 indexes
+(including unique indexes), and 38 Decimal columns. All foreign-key column types
+match their referenced columns, including UUID references to `User.id`. Review
+found no `DROP`, `DELETE`, or `TRUNCATE` statements, destructive `ALTER` statements,
+floating-point financial columns, credentials, or production references. The
+`ALTER TABLE` statements only add foreign-key constraints. Financial amounts are
+relational Decimal fields; JSON remains limited to metadata, provider payloads,
+assessment details, and compatibility data.
+
+JSON remains the application source of truth. Business routes do not read or
+write PostgreSQL; the optional health probe is limited to `SELECT 1`. No users,
+trades, or portfolios were migrated. API contracts, financial behavior, valuation
+logic, Brick Alpha scoring, and frontend behavior remain unchanged. Phase 2 has
+not started, and production was not touched.
 
 ## Legacy Store Inspection
 
