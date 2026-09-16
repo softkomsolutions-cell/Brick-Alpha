@@ -6,16 +6,25 @@ const crypto = require("crypto");
 const Parser = require("rss-parser");
 const { getDatabaseHealth } = require("./config/database");
 const { createLegacyStoreRepository } = require("./repositories/legacyStoreRepository");
+const { readAuthConfig, corsOptions } = require('./config/auth');
+const { createLegacyAuthRepository } = require('./repositories/legacyAuthRepository');
+const { createPostgresAuthRepository } = require('./repositories/postgresAuthRepository');
+const { createDualAuthRepository } = require('./repositories/dualAuthRepository');
+const { createAuthService, AuthError } = require('./services/auth-service');
+const { createAuthRateLimiter } = require('./services/auth-rate-limit');
+const authConfig = readAuthConfig();
+const authRateLimiter = createAuthRateLimiter();
 
 const app = express();
 const parser = new Parser();
 
-app.use(cors());
+app.use(cors(corsOptions(authConfig)));
+// Default: do not trust forwarding headers. Configure exact proxy CIDRs when deploying.
+if (process.env.TRUSTED_PROXY_CIDRS) app.set('trust proxy', process.env.TRUSTED_PROXY_CIDRS.split(',').map(value => value.trim()));
 app.use(express.json());
 
 const PORT = Number(process.env.PORT || 5000);
-const AUTH_SECRET =
-  process.env.AUTH_SECRET || "collecttrade-local-development-secret";
+const AUTH_SECRET = authConfig.secret;
 const CONNECTOR_SECRET = process.env.CONNECTOR_SECRET || AUTH_SECRET;
 const ENGINE_TICK_MS = 5000;
 const MARKET_REFRESH_MS = 60 * 1000;
@@ -1540,6 +1549,7 @@ function loadStore() {
 
     return {
       users: rawUsers.map((user, index) => sanitizeUserRecord(user, index, preferredOwnerId)),
+      auth: parsed.auth,
       userStates,
       settings: sanitizeSettings(parsed.settings),
       trades: Array.isArray(parsed.trades) ? parsed.trades : [],
@@ -1565,6 +1575,7 @@ function loadStore() {
 
 let store = loadStore();
 let users = store.users;
+let authState = store.auth || { sessions: [], events: [], legacyTokenCutoffs: {} };
 let userStates = store.userStates;
 let guestTrades = store.trades;
 let guestTargets = store.newsTargets;
@@ -1595,6 +1606,7 @@ function persistStore() {
     JSON.stringify(
       {
         users,
+        auth: authState,
         userStates,
         settings: appSettings,
         trades: guestTrades,
@@ -1608,6 +1620,8 @@ function persistStore() {
 }
 
 function resetStoreForTests() {
+  authState = { sessions: [], events: [], legacyTokenCutoffs: {} };
+  authRateLimiter.clear();
   store = {
     users: [],
     userStates: {},
@@ -1683,6 +1697,13 @@ const legacyStoreRepository = createLegacyStoreRepository({
   getUsers: () => users,
   persist: persistStore,
 });
+
+const legacyAuthRepository = createLegacyAuthRepository({ getUsers: () => users, getUserState, getAuthState: () => authState, persist: persistStore, removeUserState: id => { delete userStates[id]; } });
+const postgresAuthRepository = createPostgresAuthRepository(() => require('./db/prisma-client').getPrismaClient());
+const authRepository = authConfig.mode === 'legacy' ? legacyAuthRepository
+  : authConfig.mode === 'postgres' ? postgresAuthRepository
+    : createDualAuthRepository(legacyAuthRepository, postgresAuthRepository);
+const authService = createAuthService({ repository: authRepository, config: authConfig, defaultSettings: sanitizeSettings(DEFAULT_SETTINGS) });
 
 function publicUser(user) {
   return {
@@ -1813,81 +1834,6 @@ function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase();
 }
 
-function hashPassword(password, salt) {
-  return crypto.pbkdf2Sync(password, salt, 120000, 64, "sha512").toString("hex");
-}
-
-function verifyPassword(password, user) {
-  return hashPassword(password, user.passwordSalt) === user.passwordHash;
-}
-
-function verifySecret(value, salt, hash) {
-  if (!value || !salt || !hash) {
-    return false;
-  }
-
-  return hashPassword(value, salt) === hash;
-}
-
-function clearPasswordReset(user) {
-  user.passwordResetSalt = "";
-  user.passwordResetHash = "";
-  user.passwordResetRequestedAt = null;
-  user.passwordResetExpiresAt = null;
-}
-
-function issuePasswordResetCode(user) {
-  const resetCode = String(Math.floor(100000 + Math.random() * 900000));
-  const resetSalt = crypto.randomBytes(16).toString("hex");
-  user.passwordResetSalt = resetSalt;
-  user.passwordResetHash = hashPassword(resetCode, resetSalt);
-  user.passwordResetRequestedAt = nowIso();
-  user.passwordResetExpiresAt = new Date(Date.now() + 1000 * 60 * 15).toISOString();
-  return resetCode;
-}
-
-function encodeToken(payload) {
-  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
-  const signature = crypto
-    .createHmac("sha256", AUTH_SECRET)
-    .update(body)
-    .digest("base64url");
-
-  return `${body}.${signature}`;
-}
-
-function decodeToken(token) {
-  if (!token || !token.includes(".")) {
-    return null;
-  }
-
-  const [body, signature] = token.split(".");
-  const expected = crypto.createHmac("sha256", AUTH_SECRET).update(body).digest("base64url");
-
-  if (signature !== expected) {
-    return null;
-  }
-
-  try {
-    const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8"));
-    if (payload.exp && Date.now() > payload.exp) {
-      return null;
-    }
-
-    return payload;
-  } catch (error) {
-    return null;
-  }
-}
-
-function issueToken(user) {
-  return encodeToken({
-    sub: user.id,
-    email: user.email,
-    exp: Date.now() + 1000 * 60 * 60 * 24 * 7,
-  });
-}
-
 function readBearerToken(req) {
   const authHeader = req.headers.authorization || "";
   if (!authHeader.startsWith("Bearer ")) {
@@ -1897,42 +1843,21 @@ function readBearerToken(req) {
   return authHeader.slice(7).trim();
 }
 
-function optionalAuth(req, _res, next) {
-  const token = readBearerToken(req);
-
-  if (!token) {
-    req.user = null;
-    req.userState = null;
+async function optionalAuth(req, res, next) {
+  try {
+    req.user = await authService.authenticate(readBearerToken(req));
+    req.userState = req.user ? getUserState(req.user.id) : null;
+    if (req.user) req.userState.settings = await authService.getSettings(req.user.id);
     next();
-    return;
-  }
-
-  const payload = decodeToken(token);
-  const user = users.find((candidate) => candidate.id === payload?.sub);
-
-  if (!user) {
-    req.user = null;
-    req.userState = null;
-    next();
-    return;
-  }
-
-  req.user = user;
-  req.userState = getUserState(user.id);
-  next();
+  } catch { res.status(503).json({ ok: false, error: 'auth_unavailable' }); }
 }
 
 function requireAuth(req, res, next) {
-  optionalAuth(req, res, () => {
-    if (!req.user) {
-      res.status(401).json({ ok: false, error: "unauthorized" });
-      return;
-    }
-
+  return optionalAuth(req, res, () => {
+    if (!req.user) return res.status(401).json({ ok: false, error: 'unauthorized' });
     next();
   });
 }
-
 function ema(values, period) {
   if (!values.length) {
     return [];
@@ -4189,188 +4114,24 @@ app.get("/api/health", async (_req, res) => {
   res.json(await buildHealth());
 });
 
-app.post("/api/auth/register", (req, res) => {
-  const name = String(req.body?.name || "").trim();
-  const email = normalizeEmail(req.body?.email);
-  const password = String(req.body?.password || "");
-
-  if (name.length < 2) {
-    res.status(400).json({ ok: false, error: "name_too_short" });
-    return;
-  }
-
-  if (!email.includes("@")) {
-    res.status(400).json({ ok: false, error: "invalid_email" });
-    return;
-  }
-
-  if (password.length < 8) {
-    res.status(400).json({ ok: false, error: "password_too_short" });
-    return;
-  }
-
-  if (users.some((user) => user.email === email)) {
-    res.status(409).json({ ok: false, error: "email_in_use" });
-    return;
-  }
-
-  const passwordSalt = crypto.randomBytes(16).toString("hex");
-  const user = {
-    id: crypto.randomUUID(),
-    name,
-    email,
-    passwordSalt,
-    passwordHash: hashPassword(password, passwordSalt),
-    role: users.length === 0 || users.every((candidate) => isSystemAccountEmail(candidate.email))
-      ? "owner"
-      : "partner",
-    createdAt: nowIso(),
-    lastLoginAt: nowIso(),
+function authHandler(work, status = 200) {
+  return async (req, res) => {
+    try { res.status(status).json(await work(req)); }
+    catch (error) {
+      if (error instanceof AuthError) return res.status(error.status).json({ ok: false, error: error.message });
+      res.status(503).json({ ok: false, error: 'auth_unavailable' });
+    }
   };
-
-  users.push(user);
-  getUserState(user.id);
-  persistStore();
-
-  res.status(201).json({
-    ok: true,
-    token: issueToken(user),
-    user: publicUser(user),
-    settings: getUserState(user.id).settings,
-  });
+}
+app.post('/api/auth/register', authRateLimiter.middleware('register'), authHandler(req => authService.register(req.body), 201));
+app.post('/api/auth/login', authRateLimiter.middleware('login'), authHandler(req => authService.login(req.body)));
+app.post('/api/auth/forgot-password/request', authRateLimiter.middleware('forgot-password/request'), authHandler(req => authService.requestReset(req.body)));
+app.post('/api/auth/forgot-password/confirm', authRateLimiter.middleware('forgot-password/confirm'), authHandler(req => authService.confirmReset(req.body)));
+app.post('/api/auth/demo', authRateLimiter.middleware('demo'), authHandler(req => authService.register(req.body, true), 201));
+app.post('/api/auth/logout', requireAuth, authHandler(req => authService.revoke(readBearerToken(req))));
+app.get('/api/auth/me', requireAuth, (req, res) => {
+  res.json({ ok: true, user: publicUser(req.user), settings: req.userState.settings });
 });
-
-app.post("/api/auth/login", (req, res) => {
-  const email = normalizeEmail(req.body?.email);
-  const password = String(req.body?.password || "");
-  const user = users.find((candidate) => candidate.email === email);
-
-  if (!user || !verifyPassword(password, user)) {
-    res.status(401).json({ ok: false, error: "invalid_credentials" });
-    return;
-  }
-
-  user.lastLoginAt = nowIso();
-  persistStore();
-
-  res.json({
-    ok: true,
-    token: issueToken(user),
-    user: publicUser(user),
-    settings: getUserState(user.id).settings,
-  });
-});
-
-app.post("/api/auth/forgot-password/request", (req, res) => {
-  const email = normalizeEmail(req.body?.email);
-
-  if (!email.includes("@")) {
-    res.status(400).json({ ok: false, error: "invalid_email" });
-    return;
-  }
-
-  const user = users.find((candidate) => candidate.email === email);
-  let demoCode = null;
-  let expiresAt = null;
-
-  if (user && user.passwordHash) {
-    demoCode = issuePasswordResetCode(user);
-    expiresAt = user.passwordResetExpiresAt;
-    persistStore();
-  }
-
-  res.json({
-    ok: true,
-    message: "If that account exists, a reset code has been prepared for this build.",
-    demoCode,
-    expiresAt,
-  });
-});
-
-app.post("/api/auth/forgot-password/confirm", (req, res) => {
-  const email = normalizeEmail(req.body?.email);
-  const resetCode = String(req.body?.code || "").trim();
-  const password = String(req.body?.password || "");
-  const user = users.find((candidate) => candidate.email === email);
-
-  if (!email.includes("@")) {
-    res.status(400).json({ ok: false, error: "invalid_email" });
-    return;
-  }
-
-  if (!resetCode) {
-    res.status(400).json({ ok: false, error: "reset_code_required" });
-    return;
-  }
-
-  if (password.length < 8) {
-    res.status(400).json({ ok: false, error: "password_too_short" });
-    return;
-  }
-
-  if (!user || !user.passwordResetHash || !user.passwordResetSalt) {
-    res.status(400).json({ ok: false, error: "invalid_reset_code" });
-    return;
-  }
-
-  const expiresAt = Date.parse(user.passwordResetExpiresAt || "");
-  if (!expiresAt || Date.now() > expiresAt) {
-    clearPasswordReset(user);
-    persistStore();
-    res.status(400).json({ ok: false, error: "reset_code_expired" });
-    return;
-  }
-
-  if (!verifySecret(resetCode, user.passwordResetSalt, user.passwordResetHash)) {
-    res.status(400).json({ ok: false, error: "invalid_reset_code" });
-    return;
-  }
-
-  const passwordSalt = crypto.randomBytes(16).toString("hex");
-  user.passwordSalt = passwordSalt;
-  user.passwordHash = hashPassword(password, passwordSalt);
-  clearPasswordReset(user);
-  persistStore();
-
-  res.json({
-    ok: true,
-    message: "Password updated. Sign in with your new password.",
-  });
-});
-
-app.post("/api/auth/demo", (req, res) => {
-  const demoName = sanitizeOptionalText(req.body?.name, 120) || "Partner Demo";
-  const demoUser = {
-    id: crypto.randomUUID(),
-    name: demoName,
-    email: `demo-${Date.now()}-${Math.floor(Math.random() * 100000)}@collecttrade.local`,
-    passwordSalt: "",
-    passwordHash: "",
-    role: "partner",
-    createdAt: nowIso(),
-    lastLoginAt: nowIso(),
-  };
-
-  users.push(demoUser);
-  getUserState(demoUser.id);
-  persistStore();
-
-  res.status(201).json({
-    ok: true,
-    token: issueToken(demoUser),
-    user: publicUser(demoUser),
-    settings: getUserState(demoUser.id).settings,
-  });
-});
-
-app.get("/api/auth/me", requireAuth, (req, res) => {
-  res.json({
-    ok: true,
-    user: publicUser(req.user),
-    settings: req.userState.settings,
-  });
-});
-
 app.get("/api/signals", (_req, res) => {
   res.json({
     generatedAt: lastEngineTickAt,
@@ -5176,18 +4937,18 @@ app.get("/api/settings", requireAuth, (req, res) => {
   });
 });
 
-app.put("/api/settings", requireAuth, (req, res) => {
-  req.userState.settings = sanitizeSettings({
+app.put("/api/settings", requireAuth, authHandler(async req => {
+  const settings = sanitizeSettings({
     ...req.userState.settings,
     ...req.body,
   });
-  persistStore();
-
-  res.json({
+  await authService.setSettings(req.user.id, settings);
+  req.userState.settings = settings;
+  return {
     ok: true,
     settings: req.userState.settings,
-  });
-});
+  };
+}));
 
 app.get("/api/connectors", requireAuth, (req, res) => {
   res.json({
@@ -5444,6 +5205,8 @@ if (process.env.COLLECTTRADE_TEST === "1") {
     getUsers: () => users,
     getUserState,
     legacyStoreRepository,
+    authService,
+    authRepository,
     loadStore,
     persistStore,
     resetStore: resetStoreForTests,

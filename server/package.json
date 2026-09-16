@@ -15,6 +15,8 @@
     "db:migrate:dev": "prisma migrate dev --name init_backend_foundation",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:legacy:inspect": "node scripts/inspect-legacy-store.js",
+    "db:auth:migrate": "node scripts/migrate-auth-users.js",
+    "db:auth:validate-staging": "node scripts/validate-staging-auth.js",
     "catalog:import": "python import_catalog.py"
   },
   "keywords": [],
@@ -22,10 +24,12 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
     "cors": "^2.8.5",
     "express": "^5.2.1",
     "pdfkit": "^0.18.0",
+    "pg": "^8.23.0",
     "rss-parser": "^3.13.0"
   },
   "devDependencies": {

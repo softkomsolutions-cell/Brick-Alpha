@@ -81,7 +81,7 @@ async function getDatabaseHealth(environment = process.env) {
       status: "error",
       configured: true,
       environment: config.environment,
-      detail: String(error?.message || "database_check_failed").slice(0, 180),
+      detail: "database_check_failed",
     };
   }
 }

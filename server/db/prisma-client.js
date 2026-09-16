@@ -7,9 +7,9 @@ function getPrismaClient(environment = process.env) {
 
   const { PrismaClient } = require("@prisma/client");
   const { requireDatabaseUrl } = require("../config/database");
-  requireDatabaseUrl(environment);
-
-  prismaClient = new PrismaClient();
+  const { PrismaPg } = require('@prisma/adapter-pg');
+  const adapter = new PrismaPg({ connectionString: requireDatabaseUrl(environment), connectionTimeoutMillis: 5000, max: 5 });
+  prismaClient = new PrismaClient({ adapter });
   return prismaClient;
 }
 
