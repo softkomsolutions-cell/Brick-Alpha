@@ -63,8 +63,9 @@ Phase 1 foundation work is limited to:
 The current application source of truth remains JSON.
 No route reads from PostgreSQL.
 No route writes to PostgreSQL.
-No Railway database has been touched.
-No initial migration has been generated because a local PostgreSQL connection was unavailable.
+The staging Railway PostgreSQL database has received the credential rotation and the additive schema foundation only.
+No initial-migration state remains outstanding: `20260916080000_init_backend_foundation` was generated and applied to staging.
+Production has no Railway services and was not touched.
 
 Detailed foundation documentation is in `docs/backend/postgresql-foundation.md`.
 

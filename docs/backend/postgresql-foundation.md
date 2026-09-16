@@ -122,14 +122,21 @@ It must only be run intentionally against a selected Railway database.
 ## Migration Status
 
 The schema was formatted, validated, and the client was generated locally.
-No initial migration was created because no local PostgreSQL instance or `DATABASE_URL` was available.
-No Railway database was contacted.
-
-The first migration must be generated later in a controlled environment and named:
+The initial additive migration was generated and applied to the staging Railway PostgreSQL service:
 
 ```text
-init_backend_foundation
+prisma/migrations/20260916080000_init_backend_foundation/
 ```
+
+Application status:
+
+- Migration name: `20260916080000_init_backend_foundation`.
+- Applied only to the staging environment (`patient-perfection` project, staging env, service `Postgres`).
+- Applied over the project private network from a temporary Railway Function; no tunnel was used.
+- Verified via `MIGRATION_OK tables=32` (31 domain tables plus `_prisma_migrations`) with checksum recorded.
+- The migration ran in a transaction that rolls back fully on failure (verified during development).
+- Staging portal credentials were rotated (`ALTER USER`) and the service variables were updated without a restart.
+- Production (`patient-perfection` production env) has no services and was not touched.
 
 ## Legacy Store Inspection
 
