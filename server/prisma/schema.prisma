@@ -612,8 +612,8 @@ model Notification {
 model Feedback {
   id             String           @id @default(uuid()) @db.Uuid
   legacyId       String?          @unique
-  authorUserId   String?
-  resolverUserId String?
+  authorUserId   String?          @db.Uuid
+  resolverUserId String?          @db.Uuid
   title          String
   type           FeedbackType
   severity       FeedbackSeverity
@@ -662,7 +662,7 @@ model IntakeRequest {
 model ImportBatch {
   id           String             @id @default(uuid()) @db.Uuid
   legacyId     String?            @unique
-  ownerUserId  String?
+  ownerUserId  String?            @db.Uuid
   sourceType   String
   sourceName   String?
   sourcePath   String?
@@ -729,7 +729,7 @@ model ImportReview {
   id             String   @id @default(uuid()) @db.Uuid
   batchId        String   @db.Uuid
   positionId     String?  @db.Uuid
-  reviewerUserId String?
+  reviewerUserId String?  @db.Uuid
   decision       String
   notes          String?
   reviewedAt     DateTime @default(now()) @db.Timestamptz(6)
