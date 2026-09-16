@@ -107,7 +107,9 @@ Validation scope and evidence are recorded in `docs/backend/postgresql-foundatio
 
 ## Phase 2 - Users and Authentication
 
-Phase 2 is not started and requires a separate instruction to proceed.
+Phase 2 implementation and synthetic staging validation are complete. Deployment
+and actual user import remain separate, explicitly controlled rollout actions.
+Default auth persistence remains `legacy`; business/financial persistence remains JSON.
 
 - Import users while preserving current password compatibility.
 - Add database-backed sessions and reset tokens.
@@ -115,7 +117,22 @@ Phase 2 is not started and requires a separate instruction to proceed.
 - Preserve current auth response objects.
 - Switch reads and writes behind a feature flag.
 
+Implemented `legacy`, strict comparison/mirroring `dual`, and `postgres` auth
+repositories behind a service boundary. Password hashing remains compatible;
+hashed durable sessions, revocation, secure single-use resets, auth audits,
+environment-aware reset disclosure, rate limits, and configured CORS are covered
+by tests. The explicit-source user/settings import supports dry-run, checksum
+confirmation, conflict detection, transactions, and idempotency.
+
+Real PostgreSQL auth checks passed on the existing staging service inside a
+transaction that was deliberately rolled back. No actual user data was imported,
+no new Prisma migration was needed, no application was deployed, and production
+was not touched. The initial migration is unchanged. See
+`docs/backend/auth-migration.md` for contracts, validation, rollback, and rollout gates.
+
 ## Phase 3 - Portfolio, Holdings, Transactions, and Sales
+
+Not started. Requires a separate instruction; Phase 2 does not migrate financial data.
 
 - Import current trades.
 - Introduce holdings and acquisition lots.

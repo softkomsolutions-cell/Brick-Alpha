@@ -182,6 +182,26 @@ trades, or portfolios were migrated. API contracts, financial behavior, valuatio
 logic, Brick Alpha scoring, and frontend behavior remain unchanged. Phase 2 has
 not started, and production was not touched.
 
+## Phase 2 Auth Extension (2026-09-16)
+
+Auth/users now have explicit `legacy` (default), `dual`, and `postgres` repository
+implementations behind an auth service. Prisma uses `@prisma/adapter-pg` for real
+PostgreSQL connections. Existing models cover users, settings, sessions, reset
+tokens, and audit events; no schema changes or new migration were required.
+`20260916080000_init_backend_foundation` remains unchanged.
+
+Synthetic integration checks passed on the existing Railway staging `Postgres`
+service, including migration checksum verification. The validation transaction
+was rolled back and no synthetic users remained. A temporary TCP proxy and
+authenticated public CA certificate enabled verified TLS access and were removed
+afterward. No credentials were rotated or printed and no application was deployed.
+
+PostgreSQL auth reads/writes are available only in the explicitly selected database
+auth modes. Runtime configuration was not switched; the default remains JSON.
+Financial/business PostgreSQL reads and writes remain disabled in every mode.
+No actual user or financial data was migrated and production was not touched.
+See `docs/backend/auth-migration.md` for the migration, security, and rollback policy.
+
 ## Legacy Store Inspection
 
 The dry-run inspector is:
