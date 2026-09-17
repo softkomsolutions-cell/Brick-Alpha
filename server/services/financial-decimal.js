@@ -1,4 +1,5 @@
-const { Decimal } = require('@prisma/client/runtime/client');
+const { Prisma } = require('@prisma/client');
+const Decimal = Prisma.Decimal;
 
 function decimal(value = 0) {
   if (value instanceof Decimal) return value;
