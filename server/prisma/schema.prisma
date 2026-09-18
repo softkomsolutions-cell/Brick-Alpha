@@ -464,6 +464,7 @@ model ValuationEvidence {
   kind        String
   sourceUrl   String?
   sourceLabel String?
+  provider    String?
   observedAt  DateTime? @db.Timestamptz(6)
   salePrice   Decimal?  @db.Decimal(20, 8)
   currency    String?

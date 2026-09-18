@@ -226,6 +226,41 @@ all 72 backend tests passed, frontend lint passed (zero errors, four existing
 warnings), backend syntax passed, and the production frontend build passed.
 See `docs/backend/financial-domain.md`.
 
+## Phase 4 Valuation Extension (2026-09-18)
+
+The valuation domain now has explicit `legacy` (default), `dual`, and `postgres`
+repository implementations behind a valuation service boundary. One additive
+migration extends the foundation:
+
+```text
+prisma/migrations/20260918000000_phase4_valuation_domain/
+```
+
+The migration performs a single additive statement: `ALTER TABLE
+"ValuationEvidence" ADD COLUMN "provider" TEXT;`. It was applied to the staging
+Railway PostgreSQL service:
+
+- Applied over a temporary SSH tunnel with `prisma migrate deploy`
+  (`MIGRATE_DEPLOY_EXIT=0`).
+- Verified immediately afterward: the `provider` column exists on
+  `ValuationEvidence` via `information_schema.columns`.
+- Local Prisma format, validate, and generate all pass; the foundation migration
+  is unchanged.
+
+Synthetic valuation validation passed on the existing Railway staging `Postgres`
+service inside the same tunnel using only the deterministic in-process mock
+provider (`ok`, `stale`, and `fail` modes): fresh recalculation persisted a
+`brick-alpha-v1` assessment with provider-attributed evidence, a second
+recalculate appended history without altering the first row, aged evidence mapped
+to `REVIEW_REQUIRED`, an unavailable provider yielded `UNAVAILABLE` with nothing
+persisted, and every synthetic asset/valuation/assessment row was deleted and
+verified gone (`STAGING_VALIDATION_EXIT=0`). No real provider call was made and no
+real valuation data was migrated.
+
+Default valuation persistence remains `legacy`; no business route was switched,
+the frontend was not changed, and production was not touched. See
+`docs/backend/valuation-domain.md`.
+
 ## Legacy Store Inspection
 
 The dry-run inspector is:
