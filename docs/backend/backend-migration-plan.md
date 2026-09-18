@@ -166,11 +166,56 @@ needed; `20260916080000_init_backend_foundation` is unchanged. See
 
 ## Phase 4 - Valuation and Brick Alpha
 
-- Select the canonical scoring model.
-- Add versioned valuations and evidence.
-- Persist Brick Alpha assessments.
-- Preserve current frontend fields and labels.
-- Prove parity against `brick-alpha-baseline.json` before backend activation.
+Phase 4 implementation and synthetic staging validation are complete. Default
+valuation persistence remains `legacy`; no valuation data has been migrated, the
+frontend is unchanged, and production was not touched. Rollout of real reads and
+writes to PostgreSQL remains a separate, explicitly controlled decision.
+
+Decisions locked in Phase 4:
+
+- The canonical scoring model is the frontend `frontend/src/brickAlphaModel.js`,
+  versioned `brick-alpha-v1`. It was ported byte-for-byte to
+  `server/services/brick-alpha-model.js` and proven by deep-equality parity tests
+  against the fixture baseline and scenario inputs. Dormant backend valuation
+  services are not activated.
+- Valuations and evidence are append-only. A recalculate never overwrites a prior
+  row; repeated recalculations extend history and preserve the earlier rows
+  bit-for-bit.
+- Valuation records carry no user context and are asset-scoped reference data
+  returned to any authenticated user; user isolation concerns do not apply to
+  valuation rows.
+- Provider runs are normalized into provider-attributed evidence (`provider`
+  column added on `ValuationEvidence`). The provider never owns a score: the
+  versioned Brick Alpha model owns the assessment.
+- No value is ever fabricated. A conversion with no configured rate holds the raw
+  source amount with status `REVIEW_REQUIRED` and notice
+  `currency_conversion_unavailable_<display>`; an unavailable provider yields
+  `UNAVAILABLE` and nothing is persisted.
+- Stale evidence maps to `STALE`/`REVIEW_REQUIRED` by age; confidence is preserved
+  from the model, and evidence signal/bounded confidence are recorded additively
+  in the assessment `breakdown` JSON.
+
+Implemented behind the `legacy`, `dual`, and `postgres` valuation persistence
+modes:
+
+- `GET /api/assets/:assetId/valuation`, `GET /api/assets/:assetId/valuations`,
+  `GET /api/assets/:assetId/brick-alpha`, `GET /api/assets/:assetId/brick-alpha/history`,
+  and `POST /api/assets/:assetId/valuation/recalculate` (thin, authenticated;
+  404 `valuation_not_found`/`brick_alpha_assessment_not_found`, 409
+  `valuation_unavailable` when there is no usable evidence).
+- A deterministic in-process mock provider (with `ok`, `stale`, and `fail` modes)
+  plus Bricklink/Brickeconomy adapters behind a provider registry that degrades to
+  mock; provider runs are bounded by timeout and retry budget.
+- `server/repositories/postgresValuationRepository.js` with transactional,
+  serializable persistence of valuations, evidence, and assessments.
+
+Validation completed 2026-09-18 against the existing Railway staging `Postgres`
+service over a temporary SSH tunnel: the additive migration
+`20260918000000_phase4_valuation_domain` was applied, every validator checkpoint
+passed (`STAGING_VALIDATION_EXIT=0`), synthetic data was removed and verified
+gone. Only the deterministic mock provider was exercised; no real provider call
+was made and no real valuation data was migrated. Detailed contracts and policy
+are in `docs/backend/valuation-domain.md`.
 
 ## Phase 5 - Connectors and Background Jobs
 
@@ -213,7 +258,6 @@ The following remain open because the existing code does not establish a reliabl
 - Cost-basis method.
 - Fees, shipping, commission, tax, and storage treatment.
 - Holding consolidation rules.
-- Canonical frontend versus dormant backend Brick Alpha model.
 - Whether VALR live trading remains in final Brick Alpha scope.
 - Billing and subscription scope.
 - Exact Cloudflare frontend product and deployment configuration.
