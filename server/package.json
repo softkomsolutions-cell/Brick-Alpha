@@ -16,6 +16,7 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:legacy:inspect": "node scripts/inspect-legacy-store.js",
     "db:financial:inspect": "node scripts/inspect-financial-store.js",
+    "db:financial:validate-staging": "node scripts/validate-staging-financial.js",
     "db:auth:migrate": "node scripts/migrate-auth-users.js",
     "db:auth:validate-staging": "node scripts/validate-staging-auth.js",
     "catalog:import": "python import_catalog.py"

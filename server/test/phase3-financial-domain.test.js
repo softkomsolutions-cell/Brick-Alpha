@@ -130,3 +130,65 @@ test('market instruments support fractional quantities and idempotency', async (
   assert.equal([...repository.__state.transactions.values()].length, 1);
   assert.equal(decimal(holding(repository).quantity).toFixed(8), '0.12345678');
 });
+
+test('re-purchasing after complete disposal reopens a holding with a fresh acquisition batch', async () => {
+  const { repository, service } = setup();
+  await service.createCollectibleTrade('user-a', lego(), { side: 'BUY', quantity: 1, acquisitionPrice: '1000', currentPrice: '1500', currency: 'ZAR' });
+  await service.createCollectibleTrade('user-a', lego(), { side: 'SELL', quantity: 1, salePrice: '1500', currency: 'ZAR' });
+  assert.ok(holding(repository).closedAt, 'complete disposal should close the holding');
+  const firstState = await service.getPortfolioState('user-a');
+  assert.equal(firstState.summary.costBasis, 0);
+
+  await service.createCollectibleTrade('user-a', lego(), { side: 'BUY', quantity: 1, acquisitionPrice: '1250', currentPrice: '1250', currency: 'ZAR' });
+  const reopened = holding(repository);
+  assert.equal(decimal(reopened.quantity).toString(), '1');
+  assert.equal(decimal(reopened.costBasis).toString(), '1250');
+  assert.equal(reopened.closedAt, null);
+  const repurchased = await service.getPortfolioState('user-a');
+  assert.equal(repurchased.summary.costBasis, 1250);
+  assert.equal(repurchased.summary.currentValue, 1250);
+  assert.equal(repurchased.summary.realizedPnl, 500);
+});
+
+test('BUY requires an explicit acquisition price and SELL requires an explicit sale price', async () => {
+  const { repository, service } = setup();
+  await assert.rejects(() => service.createCollectibleTrade('user-a', lego(), { side: 'BUY', quantity: 1, currency: 'ZAR' }), /acquisition_price_required/);
+  await service.createCollectibleTrade('user-a', lego(), { side: 'BUY', quantity: 1, acquisitionPrice: '1000', currency: 'ZAR' });
+  await assert.rejects(() => service.createCollectibleTrade('user-a', lego(), { side: 'SELL', quantity: 1, currency: 'ZAR' }), /sale_price_required/);
+  await assert.rejects(() => service.createCollectibleTrade('user-a', lego(), { side: 'BUY', quantity: 1, acquisitionPrice: '0', currency: 'ZAR' }), /acquisition_price_required/);
+  await assert.rejects(() => service.createCollectibleTrade('user-a', lego(), { side: 'BUY', quantity: 1, acquisitionPrice: '-1', currency: 'ZAR' }), /acquisition_price_required/);
+  assert.equal(repository.__state.transactions.size, 1);
+});
+
+test('realized and unrealized P/L never double-count the same sale proceeds', async () => {
+  const { repository, service } = setup();
+  await service.createCollectibleTrade('user-a', lego(), { side: 'BUY', quantity: 2, acquisitionPrice: '1000', currentPrice: '1500', currency: 'ZAR' });
+  await service.createCollectibleTrade('user-a', lego(), { side: 'SELL', quantity: 1, salePrice: '1500', currentPrice: '1500', currency: 'ZAR' });
+  const state = await service.getPortfolioState('user-a');
+  assert.equal(state.summary.costBasis, 1000);
+  assert.equal(state.summary.currentValue, 1500);
+  assert.equal(state.summary.unrealizedPnl, 500);
+  assert.equal(state.summary.realizedPnl, 500);
+  assert.deepEqual(lots(repository).map(lot => decimal(lot.remainingQuantity).toString()), ['1']);
+});
+
+test('every trade persists an execution record and idempotent replays do not duplicate it', async () => {
+  const { repository, service } = setup();
+  const input = { side: 'BUY', quantity: 2, acquisitionPrice: '1000', currency: 'ZAR', occurredAt: '2026-01-01T00:00:00.000Z', idempotencyKey: 'exec-buy-1' };
+  const created = await service.createCollectibleTrade('user-a', lego(), input);
+  const replay = await service.createCollectibleTrade('user-a', lego(), input);
+  assert.equal(created.id, replay.id);
+  assert.equal([...repository.__state.transactions.values()].length, 1);
+  assert.equal(repository.__state.executions.size, 1);
+  const execution = [...repository.__state.executions.values()][0];
+  assert.equal(execution.transactionId, created.id);
+  assert.equal(execution.mode, 'PAPER');
+  assert.equal(execution.status, 'FILLED');
+  assert.equal(decimal(execution.requestedQuantity).toString(), '2');
+  assert.equal(decimal(execution.filledQuantity).toString(), '2');
+  assert.equal(decimal(execution.requestedPrice).toString(), '1000');
+  assert.equal(decimal(execution.filledPrice).toString(), '1000');
+  assert.equal(execution.submittedAt, '2026-01-01T00:00:00.000Z');
+  assert.equal(execution.completedAt, '2026-01-01T00:00:00.000Z');
+  assert.equal(created.execution.transactionId, execution.transactionId);
+});

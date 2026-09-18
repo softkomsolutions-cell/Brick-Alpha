@@ -5,6 +5,7 @@ const path = require("path");
 const crypto = require("crypto");
 const Parser = require("rss-parser");
 const { getDatabaseHealth } = require("./config/database");
+const { readFinancialConfig } = require("./config/financial");
 const { createLegacyStoreRepository } = require("./repositories/legacyStoreRepository");
 const { readAuthConfig, corsOptions } = require('./config/auth');
 const { createLegacyAuthRepository } = require('./repositories/legacyAuthRepository');
@@ -12,8 +13,12 @@ const { createPostgresAuthRepository } = require('./repositories/postgresAuthRep
 const { createDualAuthRepository } = require('./repositories/dualAuthRepository');
 const { createAuthService, AuthError } = require('./services/auth-service');
 const { createAuthRateLimiter } = require('./services/auth-rate-limit');
+const { createPostgresFinancialRepository } = require('./repositories/postgresFinancialRepository');
+const { createFinancialService, tradeViewFromTransaction } = require('./services/financial-service');
+const { getPrismaClient } = require('./db/prisma-client');
 const authConfig = readAuthConfig();
 const authRateLimiter = createAuthRateLimiter();
+const financialConfig = readFinancialConfig();
 
 const app = express();
 const parser = new Parser();
@@ -1704,6 +1709,34 @@ const authRepository = authConfig.mode === 'legacy' ? legacyAuthRepository
   : authConfig.mode === 'postgres' ? postgresAuthRepository
     : createDualAuthRepository(legacyAuthRepository, postgresAuthRepository);
 const authService = createAuthService({ repository: authRepository, config: authConfig, defaultSettings: sanitizeSettings(DEFAULT_SETTINGS) });
+
+let postgresFinancialService = null;
+
+function getPostgresFinancialService() {
+  if (!postgresFinancialService) {
+    postgresFinancialService = createFinancialService({
+      repository: createPostgresFinancialRepository(() => getPrismaClient()),
+      defaultCurrency: financialConfig.defaultCurrency,
+    });
+  }
+  return postgresFinancialService;
+}
+
+function isFinancialPostgresMode() {
+  return financialConfig.mode === "postgres";
+}
+
+function isFinancialDualMode() {
+  return financialConfig.mode === "dual";
+}
+
+function financialErrorStatus(error) {
+  const code = error?.code || "";
+  const message = String(error?.message || "");
+  if (code === "unknown_trade") return 404;
+  if (message.includes("financial_user_not_found")) return 404;
+  return 400;
+}
 
 function publicUser(user) {
   return {
@@ -4658,7 +4691,15 @@ app.patch("/api/intake/:requestId", requireAuth, (req, res) => {
   });
 });
 
-app.get("/api/portfolio", requireAuth, (req, res) => {
+app.get("/api/portfolio", requireAuth, async (req, res) => {
+  if (isFinancialPostgresMode()) {
+    try {
+      res.json(await getPostgresFinancialService().getPortfolioView(req.user.id));
+    } catch (error) {
+      res.status(financialErrorStatus(error)).json({ ok: false, error: error.code || error.message || "portfolio_failed" });
+    }
+    return;
+  }
   res.json(req.userState.trades);
 });
 
@@ -4693,6 +4734,43 @@ app.post("/api/trades", requireAuth, async (req, res) => {
 
   if (!quantity) {
     res.status(400).json({ ok: false, error: "invalid_quantity" });
+    return;
+  }
+
+  if (isFinancialPostgresMode()) {
+    try {
+      const result = await getPostgresFinancialService().createMarketTrade(req.user.id, signal, {
+        side,
+        quantity,
+        acquisitionPrice: req.body?.acquisitionPrice,
+        salePrice: req.body?.salePrice ?? req.body?.unitPrice ?? req.body?.price,
+        unitPrice: req.body?.unitPrice,
+        price: req.body?.price,
+        currentPrice: req.body?.currentPrice,
+        currency: req.body?.currency,
+        fees: req.body?.fees,
+        feeAmount: req.body?.feeAmount,
+        feeType: req.body?.feeType,
+        orderNote,
+        idempotencyKey: req.body?.idempotencyKey || null,
+        executionMode: executionProfile.mode || "paper",
+        executionProvider: executionProfile.providerId || null,
+      });
+
+      res.status(201).json({
+        ok: true,
+        trade: tradeViewFromTransaction(result.trade),
+        portfolio: await getPostgresFinancialService().getPortfolioView(req.user.id),
+        execution: {
+          mode: result.trade?.execution?.mode ? String(result.trade.execution.mode).toLowerCase() : executionProfile.mode || "paper",
+          providerId: result.trade?.execution?.providerId || null,
+          pair: result.trade?.asset?.marketInstrument?.ticker || signal.ticker || null,
+          remoteStatus: result.trade?.execution?.status ? String(result.trade.execution.status).toLowerCase() : null,
+        },
+      });
+    } catch (error) {
+      res.status(financialErrorStatus(error)).json({ ok: false, error: error.code || error.message || "trade_execution_failed" });
+    }
     return;
   }
 
@@ -4755,6 +4833,25 @@ app.post("/api/trades", requireAuth, async (req, res) => {
     }
 
     req.userState.trades.unshift(trade);
+
+    if (isFinancialDualMode()) {
+      await getPostgresFinancialService().createMarketTrade(req.user.id, signal, {
+        side,
+        quantity,
+        acquisitionPrice: trade.entryPrice,
+        salePrice: trade.entryPrice,
+        currentPrice: trade.currentPrice,
+        currency: req.body?.currency,
+        fees: req.body?.fees,
+        feeAmount: req.body?.feeAmount,
+        feeType: req.body?.feeType,
+        orderNote,
+        idempotencyKey: `legacy-trade:${trade.id}`,
+        executionMode: trade.executionMode || "paper",
+        executionProvider: trade.executionProvider || null,
+      });
+    }
+
     persistStore();
 
     res.status(201).json({
@@ -4784,7 +4881,7 @@ app.post("/api/trades", requireAuth, async (req, res) => {
   }
 });
 
-app.post("/api/collectibles/trades", requireAuth, (req, res) => {
+app.post("/api/collectibles/trades", requireAuth, async (req, res) => {
   const collectibleId = String(req.body?.collectibleId || "").trim();
   const side = String(req.body?.side || "").toUpperCase();
   const orderNote = sanitizeOrderNote(req.body?.orderNote);
@@ -4813,6 +4910,43 @@ app.post("/api/collectibles/trades", requireAuth, (req, res) => {
     return;
   }
 
+  if (isFinancialPostgresMode()) {
+    try {
+      const result = await getPostgresFinancialService().createCollectibleTrade(req.user.id, item, {
+        side,
+        quantity,
+        acquisitionPrice: req.body?.acquisitionPrice,
+        salePrice: req.body?.salePrice ?? req.body?.unitPrice,
+        unitPrice: req.body?.unitPrice,
+        price: req.body?.price,
+        currentPrice: req.body?.currentPrice,
+        currency: req.body?.currency,
+        fees: req.body?.fees,
+        feeAmount: req.body?.feeAmount,
+        feeType: req.body?.feeType,
+        orderNote,
+        idempotencyKey: req.body?.idempotencyKey || null,
+        executionMode: "paper",
+        executionProvider: "collecttrade",
+      });
+
+      res.status(201).json({
+        ok: true,
+        trade: tradeViewFromTransaction(result.trade),
+        portfolio: await getPostgresFinancialService().getPortfolioView(req.user.id),
+        execution: {
+          mode: result.trade?.execution?.mode ? String(result.trade.execution.mode).toLowerCase() : "paper",
+          providerId: result.trade?.execution?.providerId || "collecttrade",
+          pair: null,
+          remoteStatus: result.trade?.execution?.status ? String(result.trade.execution.status).toLowerCase() : null,
+        },
+      });
+    } catch (error) {
+      res.status(financialErrorStatus(error)).json({ ok: false, error: error.code || error.message || "trade_execution_failed" });
+    }
+    return;
+  }
+
   const trade = createCollectibleTrade(item, side, req.user.id, {
     quantity,
     orderNote,
@@ -4823,6 +4957,29 @@ app.post("/api/collectibles/trades", requireAuth, (req, res) => {
     executionProvider: "collecttrade",
     executionLabel: "Brick Alpha Paper",
   });
+
+  if (isFinancialDualMode()) {
+    try {
+      await getPostgresFinancialService().createCollectibleTrade(req.user.id, item, {
+        side,
+        quantity,
+        acquisitionPrice: side === "BUY" ? req.body?.acquisitionPrice : undefined,
+        salePrice: side === "SELL" ? req.body?.salePrice ?? req.body?.unitPrice ?? trade.entryPrice : undefined,
+        currentPrice: trade.currentPrice,
+        currency: req.body?.currency,
+        fees: req.body?.fees,
+        feeAmount: req.body?.feeAmount,
+        feeType: req.body?.feeType,
+        orderNote,
+        idempotencyKey: `legacy-trade:${trade.id}`,
+        executionMode: "paper",
+        executionProvider: "collecttrade",
+      });
+    } catch (error) {
+      res.status(financialErrorStatus(error)).json({ ok: false, error: error.code || error.message || "trade_execution_failed" });
+      return;
+    }
+  }
 
   req.userState.trades.unshift(trade);
   persistStore();
@@ -4841,8 +4998,40 @@ app.post("/api/collectibles/trades", requireAuth, (req, res) => {
 });
 
 app.post("/api/trades/:tradeId/close", requireAuth, async (req, res) => {
-  const trade = findTradeById(req.userState.trades, req.params.tradeId);
   const orderNote = sanitizeOrderNote(req.body?.orderNote);
+
+  if (isFinancialPostgresMode()) {
+    try {
+      const result = await getPostgresFinancialService().closeTransaction(req.user.id, req.params.tradeId, {
+        quantity: req.body?.quantity,
+        salePrice: req.body?.salePrice,
+        unitPrice: req.body?.unitPrice,
+        currentPrice: req.body?.currentPrice,
+        fees: req.body?.fees,
+        feeAmount: req.body?.feeAmount,
+        feeType: req.body?.feeType,
+        orderNote,
+        idempotencyKey: req.body?.idempotencyKey || null,
+      });
+
+      res.json({
+        ok: true,
+        trade: tradeViewFromTransaction(result.trade),
+        portfolio: await getPostgresFinancialService().getPortfolioView(req.user.id),
+        execution: {
+          mode: result.trade?.execution?.mode ? String(result.trade.execution.mode).toLowerCase() : "paper",
+          providerId: result.trade?.execution?.providerId || null,
+          pair: result.trade?.asset?.marketInstrument?.ticker || null,
+          remoteStatus: result.trade?.execution?.status ? String(result.trade.execution.status).toLowerCase() : null,
+        },
+      });
+    } catch (error) {
+      res.status(financialErrorStatus(error)).json({ ok: false, error: error.code || error.message || "trade_close_failed" });
+    }
+    return;
+  }
+
+  const trade = findTradeById(req.userState.trades, req.params.tradeId);
 
   if (!trade) {
     res.status(404).json({ ok: false, error: "unknown_trade" });
@@ -4902,6 +5091,43 @@ app.post("/api/trades/:tradeId/close", requireAuth, async (req, res) => {
     }
 
     persistStore();
+
+    if (isFinancialDualMode()) {
+      if (trade.assetClass === "collectible") {
+        const item = findTradeableCollectibleById(trade.collectibleId);
+        if (!item) {
+          res.status(400).json({ ok: false, error: "unknown_collectible" });
+          return;
+        }
+        await getPostgresFinancialService().createCollectibleTrade(req.user.id, item, {
+          side: "SELL",
+          quantity: trade.quantity,
+          salePrice: trade.exitPrice || trade.currentPrice || trade.entryPrice,
+          currentPrice: trade.exitPrice || trade.currentPrice || trade.entryPrice,
+          orderNote,
+          idempotencyKey: `legacy-close:${trade.id}`,
+          executionMode: trade.closeExecutionMode || trade.executionMode || "paper",
+          executionProvider: trade.closeExecutionProvider || trade.executionProvider || "collecttrade",
+        });
+      } else {
+        const closeSignal = signal || {
+          ticker: trade.marketTicker,
+          label: trade.ticker,
+          price: trade.exitPrice || trade.currentPrice || trade.entryPrice,
+          desk: "market",
+        };
+        await getPostgresFinancialService().createMarketTrade(req.user.id, closeSignal, {
+          side: trade.side === "BUY" ? "SELL" : "BUY",
+          quantity: trade.quantity,
+          salePrice: trade.exitPrice || trade.currentPrice || trade.entryPrice,
+          currentPrice: trade.exitPrice || trade.currentPrice || trade.entryPrice,
+          orderNote,
+          idempotencyKey: `legacy-close:${trade.id}`,
+          executionMode: trade.closeExecutionMode || trade.executionMode || "paper",
+          executionProvider: trade.closeExecutionProvider || trade.executionProvider || null,
+        });
+      }
+    }
 
     res.json({
       ok: true,
@@ -5207,6 +5433,8 @@ if (process.env.COLLECTTRADE_TEST === "1") {
     legacyStoreRepository,
     authService,
     authRepository,
+    financialConfig,
+    getPostgresFinancialService,
     loadStore,
     persistStore,
     resetStore: resetStoreForTests,

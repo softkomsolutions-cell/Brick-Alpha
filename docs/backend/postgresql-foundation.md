@@ -202,6 +202,30 @@ Financial/business PostgreSQL reads and writes remain disabled in every mode.
 No actual user or financial data was migrated and production was not touched.
 See `docs/backend/auth-migration.md` for the migration, security, and rollback policy.
 
+## Phase 3 Financial Extension (2026-09-18)
+
+The financial domain now has explicit `legacy` (default), `dual`, and `postgres`
+repository implementations behind a financial service boundary. The additive
+foundation schema already covers portfolios, assets, holdings, lots, transactions,
+sale allocations, executions, and fees; no schema change or new migration was
+required. `20260916080000_init_backend_foundation` remains unchanged.
+
+Synthetic accounting validation passed on the existing Railway staging `Postgres`
+service inside a temporary SSH tunnel: all named checkpoints passed,
+`VALIDATOR-EXIT=0`, and every synthetic user and asset was deleted afterward
+(`PASS synthetic staging financial data removed`). The advisory lock runs as
+`SELECT pg_advisory_xact_lock(hashtextextended(portfolio:asset key, 0::bigint))`
+via `$executeRaw`; financial mutations use serializable transactions and retry
+SQLSTATE `40001` serialization conflicts. Concurrent sales allowed exactly one
+winner with final inventory zero and never negative.
+
+Default financial persistence remains `legacy`; no business route was switched and
+no financial data was migrated. Production was not touched. Local verification on
+`feature/backend-production-upgrade`: Prisma format/validate/generate passed,
+all 72 backend tests passed, frontend lint passed (zero errors, four existing
+warnings), backend syntax passed, and the production frontend build passed.
+See `docs/backend/financial-domain.md`.
+
 ## Legacy Store Inspection
 
 The dry-run inspector is:

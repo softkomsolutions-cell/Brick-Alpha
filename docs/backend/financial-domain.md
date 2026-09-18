@@ -30,7 +30,9 @@ A completely disposed holding therefore contributes zero quantity, zero remainin
 
 ## Concurrency and inventory safety
 
-The PostgreSQL repository uses a serializable database transaction for each financial mutation. It takes a transaction-scoped PostgreSQL advisory lock keyed by portfolio and asset and locks open holding-lot rows with `FOR UPDATE` before allocation. Inventory is checked after those locks are held. This prevents two concurrent sales from independently consuming the same units.
+The PostgreSQL repository uses a serializable database transaction for each financial mutation. It takes a transaction-scoped PostgreSQL advisory lock keyed by portfolio and asset (a deterministic `hashtextextended(portfolio:asset)` key executed with `$executeRaw`) and locks open holding-lot rows with `SELECT ... FOR UPDATE` before allocation. Inventory is checked after those locks are held. This prevents two concurrent sales from independently consuming the same units.
+
+When PostgreSQL detects a serialization anomaly (SQLSTATE `40001`) between concurrent financial writes, the repository retries the transaction on a fresh snapshot, so the losing sale re-reads current inventory and rejects cleanly rather than surfacing a database-level error. The winning sale commits once and its side effects are never replayed.
 
 Idempotency keys are persisted on transactions and checked inside the transaction boundary. PostgreSQL also enforces uniqueness for the key.
 
@@ -45,6 +47,18 @@ Phase 3 does not switch the existing HTTP handlers to PostgreSQL by default. Exi
 `npm --prefix server run db:financial:inspect -- --source=/absolute/path/to/app-store.json` performs a read-only inspection. The caller must explicitly name the source snapshot. The report includes SHA-256, user/trade/open/closed/duplicate/invalid/ambiguous counts, currencies, quantities, explicit cost basis and legacy realized P/L.
 
 The inspector never infers acquisition cost from catalog/current/estimated prices and never invents lot history. Records without sufficient acquisition evidence are marked for manual review. Phase 3 performs no real financial migration.
+
+## Phase 3 validation (2026-09-18)
+
+The PostgreSQL financial domain was validated end-to-end against the reviewed Railway staging database over a temporary SSH tunnel. The validator (`server/scripts/validate-staging-financial.js`) runs only against the staging environment and service, rewrites `DATABASE_URL` to the tunnel, and names every checkpoint so a failure reports the exact step.
+
+Checkpoint sequence: `user-create`, `raw-sanity`, `advisory-lock-isolation`, `first-purchase`, `second-purchase`, `fifo-sale`, `oversell`, `complete-disposal`, `buy-after-disposal`, `multiple-assets`, `multiple-users`, `fractional-market`, `idempotency`, `concurrent-sale`, `validate-complete`, then deterministic synthetic cleanup. A `--sanity-only` mode exercises just `raw-sanity` and `advisory-lock-isolation`.
+
+Result: all checkpoints passed, `VALIDATOR-EXIT=0`, and cleanup removed every synthetic user and asset (`PASS synthetic staging financial data removed`). The concurrent-sale checkpoint produced exactly one successful sale and exactly one rejected sale (PostgreSQL `40001` serialization enforcement, then clean re-read of zero inventory), with final quantity zero and inventory never negative.
+
+Root-cause fix: the advisory lock had initially failed under Prisma with P2010 because `SELECT pg_advisory_xact_lock(...)` returns a `void` result column that `$queryRaw` cannot deserialize. The lock now executes in `$executeRaw` (which sends the query without deserializing columns), keeping the same transaction-scoped lock and deterministic key.
+
+Local regression on `feature/backend-production-upgrade` after the fixes: Prisma format/validate/generate passed, `node --test` passed all 72 tests, frontend lint passed with zero errors (four pre-existing warnings), backend syntax passed, and the production frontend build passed.
 
 ## Phase 3 release gates
 

@@ -6,10 +6,14 @@ function readFinancialConfig(environment = process.env) {
   if ((mode === 'dual' || mode === 'postgres') && !String(environment.DATABASE_URL || '').trim()) {
     throw new Error('database_financial_requires_DATABASE_URL');
   }
+  const lotAllocation = String(environment.FINANCIAL_LOT_ALLOCATION || 'FIFO').trim().toUpperCase();
+  if (lotAllocation !== 'FIFO') {
+    throw new Error('unsupported_financial_lot_allocation');
+  }
   return {
     mode,
     defaultCurrency: String(environment.FINANCIAL_DEFAULT_CURRENCY || 'ZAR').trim().toUpperCase(),
-    lotAllocation: String(environment.FINANCIAL_LOT_ALLOCATION || 'FIFO').trim().toUpperCase(),
+    lotAllocation,
   };
 }
 

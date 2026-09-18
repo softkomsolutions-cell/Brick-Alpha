@@ -23,6 +23,11 @@ function createMemoryFinancialRepository() {
   function holdingFor(portfolioId, assetId) {
     return [...state.holdings.values()].find(item => item.portfolioId === portfolioId && item.assetId === assetId && item.status === 'OPEN');
   }
+  function withRelations(transaction) {
+    const saleAllocations = [...state.saleAllocations.values()].filter(item => item.transactionId === transaction.id);
+    const execution = [...state.executions.values()].find(item => item.transactionId === transaction.id) || null;
+    return { ...transaction, asset: state.assets.get(transaction.assetId) || null, saleAllocations, execution };
+  }
 
   const repo = {
     __state: state,
@@ -63,7 +68,12 @@ function createMemoryFinancialRepository() {
       return holding;
     },
     async findTransactionByIdempotencyKey(key) {
-      return [...state.transactions.values()].find(item => item.idempotencyKey === key) || null;
+      const row = [...state.transactions.values()].find(item => item.idempotencyKey === key) || null;
+      return row ? withRelations(row) : null;
+    },
+    async getTransactionById(id) {
+      const row = state.transactions.get(id) || null;
+      return row ? withRelations(row) : null;
     },
     async createTransaction(input) {
       const row = { id: randomUUID(), ...input };
@@ -73,6 +83,11 @@ function createMemoryFinancialRepository() {
     async createFee(input) {
       const row = { id: randomUUID(), ...input };
       state.fees.set(row.id, row);
+      return row;
+    },
+    async createExecution(input) {
+      const row = { id: randomUUID(), ...input };
+      state.executions.set(row.id, row);
       return row;
     },
     async createLot(input) {
@@ -116,6 +131,13 @@ function createMemoryFinancialRepository() {
       const transactionIds = [...state.transactions.values()].filter(item => portfolioIds.includes(item.portfolioId)).map(item => item.id);
       const saleAllocations = [...state.saleAllocations.values()].filter(item => transactionIds.includes(item.transactionId));
       return { holdings, saleAllocations };
+    },
+    async listPortfolioTransactions(userId) {
+      const portfolioIds = [...state.portfolios.values()].filter(item => item.userId === userId).map(item => item.id);
+      return [...state.transactions.values()]
+        .filter(item => portfolioIds.includes(item.portfolioId))
+        .sort((left, right) => String(right.occurredAt).localeCompare(String(left.occurredAt)))
+        .map(withRelations);
     },
   };
   return repo;

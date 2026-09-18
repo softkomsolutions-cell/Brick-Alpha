@@ -132,14 +132,37 @@ was not touched. The initial migration is unchanged. See
 
 ## Phase 3 - Portfolio, Holdings, Transactions, and Sales
 
-Not started. Requires a separate instruction; Phase 2 does not migrate financial data.
+Phase 3 implementation and synthetic staging validation are complete. Default
+financial persistence remains `legacy`; no financial data has been migrated, the
+frontend is unchanged, and production was not touched. Rollout of real reads and
+writes to PostgreSQL remains a separate, explicitly controlled decision.
 
-- Import current trades.
-- Introduce holdings and acquisition lots.
-- Define cost-basis policy before cutover.
-- Add partial-sale allocation.
-- Add idempotent transaction handling.
-- Preserve existing trade routes through response mappers.
+Implemented behind the `legacy`, `dual`, and `postgres` financial persistence
+modes:
+
+- Import current trades and introduce holdings and acquisition lots.
+- Define the cost-basis policy before any cutover: deterministic FIFO across
+  acquisition lots, with explicit acquisition unit cost never substituted by
+  catalog, current, or estimated value.
+- Add partial-sale allocation, aggregated cost basis, realized and unrealized P/L,
+  and exclusion of disposed inventory from NAV/cost/unrealized P/L.
+- Add idempotent transaction handling and executions separate from accounting.
+- Preserve existing trade routes through response mappers; API contracts are frozen.
+- Add a financial inspector that is explicit-source, dry-run, and refuses to invent
+  legacy acquisition history.
+
+Concurrency is enforced with a serializable transaction, a transaction-scoped
+PostgreSQL advisory lock (`$executeRaw` over a deterministic `hashtextextended`
+key), and `FOR UPDATE` row locks on open lots, with retries on SQLSTATE `40001`
+so the losing concurrent sale rejects cleanly. See
+`docs/backend/financial-domain.md`.
+
+Validation completed 2026-09-18 against the existing Railway staging `Postgres`
+service over a temporary SSH tunnel: all validator checkpoints passed,
+`VALIDATOR-EXIT=0`, synthetic data was removed, and the full local regression
+passed (72 backend tests, Prisma checks, frontend lint/build). No new migration was
+needed; `20260916080000_init_backend_foundation` is unchanged. See
+`docs/backend/financial-domain.md` for contracts, validation, and policies.
 
 ## Phase 4 - Valuation and Brick Alpha
 
