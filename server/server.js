@@ -15,10 +15,16 @@ const { createAuthService, AuthError } = require('./services/auth-service');
 const { createAuthRateLimiter } = require('./services/auth-rate-limit');
 const { createPostgresFinancialRepository } = require('./repositories/postgresFinancialRepository');
 const { createFinancialService, tradeViewFromTransaction } = require('./services/financial-service');
+const { readValuationConfig } = require('./config/valuation');
+const { createPostgresValuationRepository } = require('./repositories/postgresValuationRepository');
+const { createValuationService } = require('./services/valuation-service');
+const { createMemoryValuationRepository } = require('./test-support/valuation-memory');
+const { createProviderRegistry } = require('./services/valuation/providers');
 const { getPrismaClient } = require('./db/prisma-client');
 const authConfig = readAuthConfig();
 const authRateLimiter = createAuthRateLimiter();
 const financialConfig = readFinancialConfig();
+const valuationConfig = readValuationConfig();
 
 const app = express();
 const parser = new Parser();
@@ -1644,6 +1650,7 @@ function resetStoreForTests() {
   tradeId = 1;
   requestId = 1;
   persistStore();
+  if (legacyValuationRepository) legacyValuationRepository.reset();
   return store;
 }
 
@@ -1728,6 +1735,40 @@ function isFinancialPostgresMode() {
 
 function isFinancialDualMode() {
   return financialConfig.mode === "dual";
+}
+
+let valuationProviderRegistry = null;
+let legacyValuationService = null;
+let legacyValuationRepository = null;
+let postgresValuationService = null;
+
+function getValuationProviderRegistry() {
+  if (!valuationProviderRegistry) valuationProviderRegistry = createProviderRegistry({ config: valuationConfig });
+  return valuationProviderRegistry;
+}
+function getLegacyValuationService() {
+  if (!legacyValuationService) {
+    legacyValuationRepository = createMemoryValuationRepository();
+    legacyValuationService = createValuationService({
+      repository: legacyValuationRepository,
+      config: valuationConfig,
+      providers: getValuationProviderRegistry(),
+    });
+  }
+  return legacyValuationService;
+}
+function getPostgresValuationService() {
+  if (!postgresValuationService) {
+    postgresValuationService = createValuationService({
+      repository: createPostgresValuationRepository(() => getPrismaClient()),
+      config: valuationConfig,
+      providers: getValuationProviderRegistry(),
+    });
+  }
+  return postgresValuationService;
+}
+function getValuationService() {
+  return valuationConfig.mode === "postgres" ? getPostgresValuationService() : getLegacyValuationService();
 }
 
 function financialErrorStatus(error) {
@@ -5156,6 +5197,74 @@ app.post("/api/trades/:tradeId/close", requireAuth, async (req, res) => {
   }
 });
 
+app.get("/api/assets/:assetId/valuation", requireAuth, async (req, res) => {
+  try {
+    const valuation = await getValuationService().getValuation(req.params.assetId);
+    if (!valuation) {
+      res.status(404).json({ ok: false, error: "valuation_not_found" });
+      return;
+    }
+    res.json({ ok: true, valuation });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.code || error.message || "valuation_read_failed" });
+  }
+});
+
+app.get("/api/assets/:assetId/valuations", requireAuth, async (req, res) => {
+  try {
+    const valuations = await getValuationService().getValuationHistory(req.params.assetId);
+    res.json({ ok: true, valuations });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.code || error.message || "valuation_history_failed" });
+  }
+});
+
+app.get("/api/assets/:assetId/brick-alpha", requireAuth, async (req, res) => {
+  try {
+    const assessment = await getValuationService().getAssessment(req.params.assetId);
+    if (!assessment) {
+      res.status(404).json({ ok: false, error: "brick_alpha_assessment_not_found" });
+      return;
+    }
+    res.json({ ok: true, assessment });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.code || error.message || "brick_alpha_read_failed" });
+  }
+});
+
+app.get("/api/assets/:assetId/brick-alpha/history", requireAuth, async (req, res) => {
+  try {
+    const assessments = await getValuationService().getAssessmentHistory(req.params.assetId);
+    res.json({ ok: true, assessments });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.code || error.message || "brick_alpha_history_failed" });
+  }
+});
+
+app.post("/api/assets/:assetId/valuation/recalculate", requireAuth, async (req, res) => {
+  const assetId = String(req.params.assetId || "").trim();
+  if (!assetId || assetId.length > 128) {
+    res.status(400).json({ ok: false, error: "invalid_asset_id" });
+    return;
+  }
+  try {
+    const outcome = await getValuationService().recalculate({
+      assetId,
+      asset: (req.body && typeof req.body === "object" && req.body.asset) || {},
+      observedAt: req.body?.observedAt || null,
+      asOf: req.body?.asOf || null,
+      evidenceInputs: Array.isArray(req.body?.evidence) ? req.body.evidence : null,
+    });
+    if (!outcome.created) {
+      res.status(409).json({ ok: false, error: "valuation_unavailable", modelVersion: outcome.modelVersion, providers: outcome.providers, reason: outcome.reason });
+      return;
+    }
+    res.status(201).json({ ok: true, status: outcome.status, modelVersion: outcome.modelVersion, providers: outcome.providers, valuation: outcome.valuation, assessment: outcome.assessment });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.code || error.message || "valuation_recalculate_failed" });
+  }
+});
+
 app.get("/api/settings", requireAuth, (req, res) => {
   res.json({
     ok: true,
@@ -5435,6 +5544,11 @@ if (process.env.COLLECTTRADE_TEST === "1") {
     authRepository,
     financialConfig,
     getPostgresFinancialService,
+    valuationConfig,
+    getValuationService,
+    getLegacyValuationService,
+    getPostgresValuationService,
+    getValuationProviderRegistry,
     loadStore,
     persistStore,
     resetStore: resetStoreForTests,
