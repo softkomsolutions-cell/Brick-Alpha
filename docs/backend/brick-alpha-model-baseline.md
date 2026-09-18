@@ -4,15 +4,39 @@ Phase 0 freezes the active frontend model before any backend valuation migration
 
 ## Current Canonical Runtime
 
-The active Brick Alpha collectible model is:
+The canonical Brick Alpha collectible model is:
 
 ```text
 frontend/src/brickAlphaModel.js
 ```
 
-The backend valuation services under `server/services/` are dormant and are not activated by this baseline.
+## Canonical Decision (Phase 4, 2026-09-18)
 
-The frontend receives basic collectible and trade data, then derives scores and recommendations locally.
+The canonical model is the active frontend model above. It is versioned as
+`brick-alpha-v1` and ported byte-for-byte to the backend:
+
+```text
+server/services/brick-alpha-model.js
+```
+
+The backend port exports the full frontend surface plus
+`BRICK_ALPHA_MODEL_VERSION = 'brick-alpha-v1'`. The dormant backend valuation
+services under `server/services/` remain dormant and are never activated by this
+decision. The frontend model is never "improved" during migration; improvements
+require a new model version.
+
+Parity is proven, not assumed, by deep-equality tests:
+
+```text
+server/test/phase4-valuation-parity.test.js
+```
+
+The parity suite runs every fixture case from `brick-alpha-baseline.json` and a
+set of scenario inputs (retired, high-discount, low-discount, high-scarcity,
+low-liquidity) through both the frontend module and the backend port and requires
+the full scoring object to be identical, including score, grade, recommendation,
+confidence, ROI forecasts, retirement intelligence, alpha signal badges,
+display-group contributions, and factor-level contributions.
 
 ## Baseline Date
 
@@ -66,16 +90,22 @@ The fixture also records:
 - Forecasts are calculated in the browser.
 - Retirement intelligence is calculated in the browser.
 - Scan processing is simulated and uses local demo data.
-- No valuation snapshot is persisted.
-- No model version is stored with a result.
+- No valuation snapshot is persisted by the frontend.
 
-## OPEN DECISIONS
+Phase 4 adds the backend valuation domain that persists versioned snapshots via
+`POST /api/assets/:assetId/valuation/recalculate`. The persisted assessment stores
+`modelVersion = brick-alpha-v1` with every persisted result, so a model upgrade
+becomes a versioned, auditable change. The model's 0-100 score scale and
+recommendation labels are retained exactly; the backend port does not reinterpret
+them.
 
-- Canonical model: active frontend model or dormant backend model.
-- Score scale: current 0-100 frontend scale versus dormant 0-100 and 0-10 recommendation scale.
-- Canonical recommendation labels.
-- Evidence requirements for confidence.
-- Whether score changes should be historical and immutable.
-- Whether backend responses should include all current derived frontend fields.
+## RESOLVED DECISIONS (Phase 4)
 
-No model was moved or changed in Phase 0.
+| Decision | Resolution |
+|---|---|
+| Canonical model | Active frontend model, ported and versioned `brick-alpha-v1`. |
+| Score scale | Current 0-100 frontend scale preserved; dormant backend scales unused. |
+| Recommendation labels | Current frontend labels preserved. |
+| Confidence | Model `confidenceFor` preserved; evidence signal and bounded confidence are recorded additively in assessment `breakdown` JSON and never change the persisted confidence. |
+| Historical immutability | Valuations and assessments are append-only; recalculate never overwrites an earlier row. |
+| Backend response fields | All current derived frontend fields are returned through the legacy response mapper plus versioned assessment payloads. |
