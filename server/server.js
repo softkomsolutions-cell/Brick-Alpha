@@ -21,6 +21,12 @@ const { createValuationService } = require('./services/valuation-service');
 const { createMemoryValuationRepository } = require('./test-support/valuation-memory');
 const { createProviderRegistry } = require('./services/valuation/providers');
 const { getPrismaClient } = require('./db/prisma-client');
+const { readConnectorConfig } = require('./config/connector');
+const { createConnectorService } = require('./services/connector-service');
+const { createPostgresConnectorRepository } = require('./repositories/postgresConnectorRepository');
+const { createConnectorProviderRegistry } = require('./services/connectors/providers');
+const { connectorFreshness } = require('./services/connectors/freshness');
+const { createJobRunner } = require('./services/job-runner');
 const authConfig = readAuthConfig();
 const authRateLimiter = createAuthRateLimiter();
 const financialConfig = readFinancialConfig();
@@ -1771,6 +1777,76 @@ function getValuationService() {
   return valuationConfig.mode === "postgres" ? getPostgresValuationService() : getLegacyValuationService();
 }
 
+let connectorConfigInstance = null;
+let connectorServiceInstance = null;
+let connectorJobRunnerInstance = null;
+let connectorProviderRegistryInstance = null;
+
+function getConnectorConfig() {
+  if (!connectorConfigInstance) connectorConfigInstance = readConnectorConfig(process.env);
+  return connectorConfigInstance;
+}
+
+function getConnectorProviderRegistry() {
+  if (!connectorProviderRegistryInstance) {
+    connectorProviderRegistryInstance = createConnectorProviderRegistry({ config: getConnectorConfig() });
+  }
+  return connectorProviderRegistryInstance;
+}
+
+function getConnectorService() {
+  const config = getConnectorConfig();
+  if (config.mode === "legacy") return null;
+  if (!connectorServiceInstance) {
+    connectorServiceInstance = createConnectorService({
+      repository: createPostgresConnectorRepository(() => getPrismaClient()),
+      providers: getConnectorProviderRegistry(),
+      config,
+      valuation: getValuationService(),
+    });
+  }
+  return connectorServiceInstance;
+}
+
+function getConnectorJobRunner() {
+  const config = getConnectorConfig();
+  if (config.mode === "legacy") return null;
+  if (!connectorJobRunnerInstance) {
+    connectorJobRunnerInstance = createJobRunner({
+      repository: createPostgresConnectorRepository(() => getPrismaClient()),
+      config,
+      handlers: {},
+    });
+  }
+  return connectorJobRunnerInstance;
+}
+
+function legacyConnectorHealthView() {
+  return connectorFleetSummary().providers.map((stat) => ({
+    ...stat,
+    availability: CONNECTOR_PROVIDER_MAP[stat.id]?.availability || "manual_setup",
+    supportsOrders: false,
+    health:
+      stat.online > 0
+        ? "healthy"
+        : stat.errors > 0
+          ? "degraded"
+          : stat.configured > 0
+            ? "unknown"
+            : "not_configured",
+  }));
+}
+
+function connectorFreshnessForRecord(record) {
+  return connectorFreshness({
+    observedAt: record.lastSyncAt,
+    now: Date.now(),
+    refreshAfterMs: getConnectorConfig().refreshAfterMs,
+    reviewMs: getConnectorConfig().reviewMs,
+    sourceAvailable: true,
+  });
+}
+
 function financialErrorStatus(error) {
   const code = error?.code || "";
   const message = String(error?.message || "");
@@ -1790,57 +1866,18 @@ function publicUser(user) {
   };
 }
 
-const CONNECTOR_CIPHER_KEY = crypto.createHash("sha256").update(CONNECTOR_SECRET).digest();
+const connectorCipher = require('./services/connectors/cipher');
 
 function encryptConnectorPayload(payload) {
-  const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv("aes-256-gcm", CONNECTOR_CIPHER_KEY, iv);
-  const encrypted = Buffer.concat([
-    cipher.update(JSON.stringify(payload), "utf8"),
-    cipher.final(),
-  ]);
-  const tag = cipher.getAuthTag();
-  return `${iv.toString("base64url")}.${tag.toString("base64url")}.${encrypted.toString("base64url")}`;
+  return connectorCipher.encryptConnectorPayload(payload, CONNECTOR_SECRET);
 }
 
 function decryptConnectorPayload(blob) {
-  if (!blob || typeof blob !== "string") {
-    return null;
-  }
-
-  const [ivRaw, tagRaw, dataRaw] = blob.split(".");
-  if (!ivRaw || !tagRaw || !dataRaw) {
-    return null;
-  }
-
-  try {
-    const decipher = crypto.createDecipheriv(
-      "aes-256-gcm",
-      CONNECTOR_CIPHER_KEY,
-      Buffer.from(ivRaw, "base64url"),
-    );
-    decipher.setAuthTag(Buffer.from(tagRaw, "base64url"));
-    const decrypted = Buffer.concat([
-      decipher.update(Buffer.from(dataRaw, "base64url")),
-      decipher.final(),
-    ]);
-    return JSON.parse(decrypted.toString("utf8"));
-  } catch {
-    return null;
-  }
+  return connectorCipher.decryptConnectorPayload(blob, CONNECTOR_SECRET);
 }
 
 function maskValue(value, head = 6, tail = 4) {
-  const stringValue = String(value || "").trim();
-  if (!stringValue) {
-    return "";
-  }
-
-  if (stringValue.length <= head + tail) {
-    return `${stringValue.slice(0, Math.max(2, head - 2))}...`;
-  }
-
-  return `${stringValue.slice(0, head)}...${stringValue.slice(-tail)}`;
+  return connectorCipher.maskValue(value, head, tail);
 }
 
 function connectorCredentials(record) {
@@ -5472,6 +5509,163 @@ app.delete("/api/connectors/:providerId", requireAuth, (req, res) => {
   });
 });
 
+app.get("/api/connectors/:providerId/status", requireAuth, async (req, res) => {
+  const providerId = String(req.params.providerId || "").trim().toLowerCase();
+  const provider = CONNECTOR_PROVIDER_MAP[providerId];
+  if (!provider) {
+    res.status(404).json({ ok: false, error: "unknown_connector" });
+    return;
+  }
+
+  const connector = connectorStateForUser(req.userState, providerId);
+  const service = getConnectorService();
+
+  try {
+    if (service) {
+      const status = await service.status({
+        userId: req.userState.id,
+        providerId,
+        now: Date.now(),
+      });
+      res.json({ ok: true, status });
+      return;
+    }
+
+    res.json({
+      ok: true,
+      status: {
+        provider: providerId,
+        name: provider.name,
+        desk: provider.desk,
+        availability: provider.availability,
+        supportsOrders: false,
+        configured: Boolean(connector.authBlob),
+        status: connector.status,
+        healthState:
+          connector.status === "online" ? "HEALTHY" : connector.lastError ? "DEGRADED" : "UNKNOWN",
+        freshness: connectorFreshnessForRecord(connector),
+        lastSyncAt: connector.lastSyncAt,
+        lastHealthCheckAt: null,
+        unavailableUntil: null,
+        lastError: connector.lastError,
+        snapshotCount: connector.accountSnapshot ? 1 : 0,
+        latestSnapshot: connector.accountSnapshot,
+      },
+    });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error?.message || "connector_status_failed" });
+  }
+});
+
+app.post("/api/connectors/:providerId/refresh", requireAuth, async (req, res) => {
+  const providerId = String(req.params.providerId || "").trim().toLowerCase();
+  const provider = CONNECTOR_PROVIDER_MAP[providerId];
+  if (!provider) {
+    res.status(404).json({ ok: false, error: "unknown_connector" });
+    return;
+  }
+  if (providerId !== "valr") {
+    res.status(400).json({ ok: false, error: "sync_not_supported" });
+    return;
+  }
+
+  const connector = connectorStateForUser(req.userState, providerId);
+  if (!Boolean(connector.authBlob)) {
+    res.status(400).json({ ok: false, error: "connector_not_configured" });
+    return;
+  }
+
+  const service = getConnectorService();
+  const jobRunner = getConnectorJobRunner();
+  const config = getConnectorConfig();
+
+  if (service && jobRunner && config.jobsEnabled) {
+    const idempotencyKey =
+      String(req.body?.idempotencyKey || "").trim() || crypto.randomUUID();
+    const job = await jobRunner.enqueue({
+      type: "connector_refresh",
+      provider: providerId,
+      idempotencyKey,
+      correlationId: req.userState.id,
+      payload: { userId: req.userState.id, providerId },
+    });
+    res.status(202).json({
+      ok: true,
+      queued: true,
+      duplicate: Boolean(job.duplicate),
+      job: {
+        id: job.id,
+        type: job.type,
+        status: job.status,
+        idempotencyKey: job.idempotencyKey,
+        runAt: job.runAt,
+      },
+      provider: buildConnectorView(providerId, connector),
+    });
+    return;
+  }
+
+  try {
+    if (service) {
+      const credentials = connectorCredentials(connector);
+      const result = await service.refreshSnapshot({
+        userId: req.userState.id,
+        providerId,
+        credentials,
+        record: connector,
+        force: Boolean(req.body?.force),
+      });
+      res.json({
+        ok: true,
+        status: result.skipped === "fresh" ? "fresh" : "refreshed",
+        freshness: result.freshness,
+        provider: buildConnectorView(providerId, connector),
+      });
+      return;
+    }
+
+    const result = await syncConnectorAccount(providerId, connector);
+    connector.status = result.status;
+    connector.lastTestAt = nowIso();
+    connector.lastSyncAt = nowIso();
+    connector.lastError = null;
+    connector.accountSnapshot = sanitizeAccountSnapshot(result.snapshot);
+    persistStore();
+
+    res.json({
+      ok: true,
+      status: "refreshed",
+      freshness: connectorFreshnessForRecord(connector),
+      provider: buildConnectorView(providerId, connector),
+    });
+  } catch (error) {
+    connector.status = connector.configured ? "error" : connectorBaselineStatus(providerId);
+    connector.lastSyncAt = nowIso();
+    connector.lastError = error.message;
+    persistStore();
+
+    res.status(400).json({
+      ok: false,
+      error: error.message || "connector_refresh_failed",
+      provider: buildConnectorView(providerId, connector),
+    });
+  }
+});
+
+app.get("/api/health/providers", requireAuth, async (req, res) => {
+  const service = getConnectorService();
+  try {
+    if (service) {
+      const providers = await service.fleetHealth({ now: Date.now() });
+      res.json({ ok: true, providers });
+      return;
+    }
+    res.json({ ok: true, providers: legacyConnectorHealthView() });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error?.message || "provider_health_failed" });
+  }
+});
+
 app.get("/api/news/targets", requireAuth, (req, res) => {
   res.json({
     ok: true,
@@ -5549,6 +5743,9 @@ if (process.env.COLLECTTRADE_TEST === "1") {
     getLegacyValuationService,
     getPostgresValuationService,
     getValuationProviderRegistry,
+    connectorConfig: getConnectorConfig,
+    getConnectorService,
+    getConnectorJobRunner,
     loadStore,
     persistStore,
     resetStore: resetStoreForTests,

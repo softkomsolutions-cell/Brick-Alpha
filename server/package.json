@@ -19,6 +19,8 @@
     "db:financial:validate-staging": "node scripts/validate-staging-financial.js",
     "db:auth:migrate": "node scripts/migrate-auth-users.js",
     "db:auth:validate-staging": "node scripts/validate-staging-auth.js",
+    "db:connector:validate-staging": "node scripts/validate-staging-connectors-jobs.js",
+    "worker": "node worker.js",
     "catalog:import": "python import_catalog.py"
   },
   "keywords": [],
