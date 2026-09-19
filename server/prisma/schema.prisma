@@ -77,6 +77,30 @@ enum ConnectorStatus {
   UNSUPPORTED
 }
 
+enum ConnectorHealthState {
+  UNKNOWN
+  HEALTHY
+  DEGRADED
+  UNAVAILABLE
+  RATE_LIMITED
+  AUTH_FAILED
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum JobType {
+  CONNECTOR_HEALTH
+  CONNECTOR_REFRESH
+  VALUATION_REFRESH
+  MARKET_REFRESH
+}
+
 enum AlertKind {
   PRICE_ABOVE
   PRICE_BELOW
@@ -504,18 +528,21 @@ model BrickAlphaAssessment {
 }
 
 model ConnectorAccount {
-  id                   String          @id @default(uuid()) @db.Uuid
-  userId               String          @db.Uuid
+  id                   String               @id @default(uuid()) @db.Uuid
+  userId               String               @db.Uuid
   provider             String
   providerAccountId    String?
-  status               ConnectorStatus @default(NOT_CONFIGURED)
+  status               ConnectorStatus      @default(NOT_CONFIGURED)
+  healthState          ConnectorHealthState @default(UNKNOWN)
+  unavailableUntil     DateTime?            @db.Timestamptz(6)
+  lastHealthCheckAt    DateTime?            @db.Timestamptz(6)
   encryptedCredentials String?
   config               Json?
-  lastTestAt           DateTime?       @db.Timestamptz(6)
-  lastSyncAt           DateTime?       @db.Timestamptz(6)
+  lastTestAt           DateTime?            @db.Timestamptz(6)
+  lastSyncAt           DateTime?            @db.Timestamptz(6)
   lastError            String?
-  createdAt            DateTime        @default(now()) @db.Timestamptz(6)
-  updatedAt            DateTime        @updatedAt @db.Timestamptz(6)
+  createdAt            DateTime             @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime             @updatedAt @db.Timestamptz(6)
 
   user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   snapshots ConnectorSnapshot[]
@@ -549,6 +576,32 @@ model ConnectorBalance {
   snapshot ConnectorSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
 
   @@unique([snapshotId, currency])
+}
+
+model Job {
+  id             String    @id @default(uuid()) @db.Uuid
+  type           JobType
+  provider       String?
+  status         JobStatus @default(QUEUED)
+  idempotencyKey String    @unique
+  runId          String?   @unique @db.Uuid
+  correlationId  String?
+  attempts       Int       @default(0)
+  maxAttempts    Int       @default(3)
+  runAt          DateTime  @default(now()) @db.Timestamptz(6)
+  startedAt      DateTime? @db.Timestamptz(6)
+  completedAt    DateTime? @db.Timestamptz(6)
+  timeoutMs      Int       @default(45000)
+  retryPolicy    Json?
+  errorCode      String?
+  errorSummary   String?
+  payload        Json?
+  result         Json?
+  createdAt      DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @db.Timestamptz(6)
+
+  @@index([status, runAt])
+  @@index([type, status])
 }
 
 model WatchlistItem {
