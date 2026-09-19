@@ -219,10 +219,42 @@ are in `docs/backend/valuation-domain.md`.
 
 ## Phase 5 - Connectors and Background Jobs
 
-- Persist market candles, news, provider refresh state, connector snapshots, and executions.
-- Move timers into Railway worker/background processes where appropriate.
-- Add timeouts, retries, backoff, idempotency, and reconciliation.
-- Keep live execution disabled until explicitly approved.
+Phase 5 implementation is complete and locally regressed. Default connector
+persistence remains `legacy`; the staging validation script is ready but has
+not yet been run against staging (a separate, explicitly controlled rollout
+action). No connector data has been migrated, the frontend is unchanged, live
+execution remains disabled, and production was not touched.
+
+Implemented behind the `legacy`, `dual`, and `postgres` connector persistence
+modes plus a standalone job worker:
+
+- A provider-agnostic connector layer: provider registry (VALR read-only sync;
+  IBKR, Saxo, EasyEquities classified as manual/unsupported), circuit-breaker
+  health states and `unavailableUntil` stand-down, timeouts, failure
+  classification, retry budgets, and bounded exponential backoff explained in
+  `docs/backend/connectors-and-jobs.md`.
+- Additive migration `20260918000001_phase5_connector_jobs`:
+  `ConnectorHealthState` enum `healthState`/`unavailableUntil`/`lastHealthCheckAt`
+  columns on `ConnectorAccount`, `Job` table with `JobStatus`/`JobType` enums and
+  a unique `idempotencyKey`, plus `ConnectorSnapshot`/`ConnectorBalance`.
+- Postgres-backed connector account, snapshot, and job persistence with
+  `FOR UPDATE SKIP LOCKED` job claiming and a unique idempotency index; a worker
+  (`node worker.js`) that runs `connector_refresh`, `connector_health`,
+  `market_refresh`, and `valuation_refresh` jobs, decrypting credentials with the
+  shared AES-GCM cipher and never logging secrets.
+- New additive API routes (legacy behavior preserved when connector persistence
+  is `legacy`): `GET /api/connectors/:providerId/status` (configured, health,
+  freshness, lastSync, snapshot count/latest), `POST
+  /api/connectors/:providerId/refresh` (enqueues a job, or syncs when jobs are
+  unavailable), and `GET /api/health/providers` (fleet health). All existing
+  connector routes and response contracts are unchanged.
+
+The full matrix test suite (`server/test/phase5-*`) passes locally alongside the
+existing backend tests. The synthetic, mock-provider staging validation script
+`server/scripts/validate-staging-connectors-jobs.js`
+(`npm run db:connector:validate-staging`) mirrors the valuation validator and is
+ready to run from the existing Railway staging `Postgres` service. See
+`docs/backend/connectors-and-jobs.md`.
 
 ## Phase 6 - Imports, Feedback, Audit, and Admin
 

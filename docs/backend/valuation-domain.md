@@ -98,6 +98,25 @@ carry no user-identifying fields.
 The existing `/api/assets/:assetId/brick-alpha` legacy response envelope is
 preserved through the response mapper.
 
+## Connector evidence bridge (Phase 5)
+
+The connector service can feed persisted balance snapshots into the valuation
+pipeline as deterministic evidence through
+`connectorService.evaluateValuationEvidence({ userId, providerId, assetId, asset, asOf })`:
+
+- Funded snapshot balances (absolute `total` greater than zero, capped at 25) are
+  normalized into `CURRENT_PRICE` evidence entries attributed to
+  `connector:<providerId>` with `observedAt` = snapshot `fetchedAt`.
+- With no snapshot or no funded balances the call returns `UNAVAILABLE`
+  (`no_connector_snapshot` / `no_funded_balances`) and persists nothing.
+- Otherwise the evidence is handed to the standard recalculate pipeline, so the
+  same append-only, versioned `brick-alpha-v1` semantics and `UNAVAILABLE` guards
+  apply; the connector never owns a score.
+
+This bridge is covered by `server/test/phase5-connector-domain.test.js` and is
+exercised only behind connector persistence modes that have snapshots; legacy
+mode returns `no_connector_snapshot`. No route is switched to it by this phase.
+
 ## Providers
 
 `server/services/valuation/providers/index.js` provides a registry that degrades

@@ -261,6 +261,42 @@ Default valuation persistence remains `legacy`; no business route was switched,
 the frontend was not changed, and production was not touched. See
 `docs/backend/valuation-domain.md`.
 
+## Phase 5 Connector and Job Extension (2026-09-19)
+
+The connector domain now has explicit `legacy` (default), `dual`, and `postgres`
+repository implementations behind a connector service boundary, plus a standalone
+background job worker. One additive migration extends the foundation:
+
+```text
+prisma/migrations/20260918000001_phase5_connector_jobs/
+```
+
+The migration is additive only (no DROP, no TRUNCATE, no destructive ALTER, no
+backfill) and adds:
+
+- `ConnectorHealthState` enum and `healthState` (default `UNKNOWN`),
+  `unavailableUntil`, and `lastHealthCheckAt` columns on `ConnectorAccount`.
+- `JobStatus` and `JobType` enums and the `Job` table with a unique
+  `idempotencyKey` index and a unique `runId` index, plus supporting
+  `status`/`runAt` and `type`/`status` indexes.
+- `ConnectorSnapshot` and `ConnectorBalance` tables for persisted balance
+  snapshots (snaphots reference the account with cascade deletes; balances are
+  unique per snapshot and currency).
+
+The previous three migrations (foundation, phase4) are unchanged and the local
+Prisma format, validate, and generate checks all pass. Job claiming uses `FOR
+UPDATE` `SKIP LOCKED`, so concurrent workers never double-process a job; job
+production defaults to `QUEUED` and requires `CONNECTOR_JOBS_ENABLED` when
+connector persistence is `postgres`.
+
+The synthetic staging validator `server/scripts/validate-staging-connectors-jobs.js`
+(`npm run db:connector:validate-staging`) is ready but has not yet been run
+against staging; that run remains a separate rollout action. See
+`docs/backend/connectors-and-jobs.md`.
+
+Default connector persistence remains `legacy`; no business route was switched,
+the frontend was not changed, and production was not touched.
+
 ## Legacy Store Inspection
 
 The dry-run inspector is:
