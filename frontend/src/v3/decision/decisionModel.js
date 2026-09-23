@@ -8,6 +8,7 @@ import {
   riskLabel,
 } from "../../scanEvaluationData";
 import { formatCollectiblePrice } from "../../appUtils";
+import { canonicalMarketValue, recordedGrowth } from "../valuation/valuationAuthority";
 
 const CHANNELS = [
   { id: "private", label: "Private sale", feeRate: 0.05 },
@@ -31,7 +32,7 @@ function setNumberOf(evaluation) {
 export function mapVerdictVocabulary(evaluation) {
   const recommendation = String(evaluation?.recommendation || "");
   const score = numberOrZero(evaluation?.brickAlphaScore);
-  const current = numberOrZero(evaluation?.currentMarketValue || evaluation?.price);
+  const current = canonicalMarketValue(evaluation).value ?? 0;
   const retail = numberOrZero(evaluation?.retailPrice);
   const discount = numberOrZero(evaluation?.discountPercentage);
   const ceiling = retail > 0 ? retail : current;
@@ -176,7 +177,9 @@ export function buildDecisionSnapshot({
   const frozen = JSON.parse(JSON.stringify(evaluation || {}));
   const retirement = buildRetirementSnapshot(frozen);
   const verdict = mapVerdictVocabulary(frozen);
-  const currentValue = numberOrZero(frozen.currentMarketValue || frozen.price);
+  const valuation = canonicalMarketValue(frozen);
+  const growth = recordedGrowth(frozen);
+  const currentValue = valuation.value ?? 0;
   const confidence = confidenceFor(frozen);
   const breakdown = buildBrickAlphaScoreBreakdown(frozen);
   const marketPricing = buildMarketPricing(frozen, profile);
@@ -191,6 +194,10 @@ export function buildDecisionSnapshot({
     theme: frozen.legoTheme || profile?.theme || "",
     collectibleId: frozen.id,
     currentValue,
+    valuationSource: valuation.source,
+    valuationAuthoritative: valuation.authoritative,
+    annualGrowth: growth.annualPercent,
+    growth90Day: growth.ninetyDayPercent,
     retailPrice: numberOrZero(frozen.retailPrice),
     score: Math.round(numberOrZero(frozen.brickAlphaScore)),
     grade: letterGradeFor(frozen.brickAlphaScore),

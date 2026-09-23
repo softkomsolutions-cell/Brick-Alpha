@@ -335,6 +335,9 @@ export function summarizeOpenCollection(trades = []) {
   const averageScore = openTrades.length
     ? openTrades.reduce((sum, trade) => sum + numberOrZero(trade.brickAlphaScore), 0) / openTrades.length
     : 0;
+  const averageRisk = openTrades.length
+    ? openTrades.reduce((sum, trade) => sum + numberOrZero(trade.riskScore), 0) / openTrades.length
+    : 0;
   const categoryCount = new Set(openTrades.map((trade) => trade.category).filter(Boolean)).size;
   const diversificationScore = Math.min(100, Math.max(0, categoryCount * 22 + openTrades.length * 4));
 
@@ -347,6 +350,7 @@ export function summarizeOpenCollection(trades = []) {
     openPositions: openTrades.reduce((sum, trade) => sum + quantityOf(trade), 0),
     averageBrickAlphaScore: averageScore,
     collectionGrade: investmentGradeFor(averageScore),
+    riskLevel: averageRisk <= 40 ? "Low" : averageRisk <= 62 ? "Balanced" : "High",
     diversificationScore,
     themeAllocation: themeAllocationFor(openTrades),
   };

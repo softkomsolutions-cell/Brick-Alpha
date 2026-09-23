@@ -47,7 +47,11 @@ export function VerdictScreen({ navigateToPage, onWatch, onAddToCollection }) {
           <div className="v3VerdictScore">
             <ScoreRing score={snapshot.score} label="Brick Alpha Score" size="large" />
           </div>
-          <div className="v3Metric"><span>Current value</span><strong>{formatCollectiblePrice(snapshot.currentValue)}</strong></div>
+          <div className="v3Metric">
+            <span>Current value</span>
+            <strong>{formatCollectiblePrice(snapshot.currentValue)}</strong>
+            <small>{snapshot.valuationSource || "BrickEconomy"}</small>
+          </div>
           <div className="v3Metric"><span>Confidence</span><strong>{snapshot.confidence}%</strong></div>
           <div className="v3Metric"><span>ROI</span><strong>+{snapshot.roi}%</strong></div>
           <div className="v3Metric"><span>Risk</span><strong>{snapshot.risk}</strong></div>
