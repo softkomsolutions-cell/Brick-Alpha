@@ -2,6 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react
 import "./App.css";
 import "./saasTheme.css";
 import "./specV3.css";
+import "./v3/v3Layout.css";
 import {
   API_BASE_URL,
   APP_NAME,
@@ -57,6 +58,11 @@ import {
   enrichBrickAlphaTrade,
   summarizeBrickAlphaPortfolio,
 } from "./brickAlphaModel";
+import { V3BottomNav } from "./v3/V3BottomNav";
+import { V3Sidebar } from "./v3/V3Sidebar";
+import { V3OnboardingFlow } from "./v3/onboarding/V3OnboardingFlow";
+import { isV3OnboardingComplete } from "./v3/onboarding/onboardingStorage";
+import { isV3LegoJourneyPage } from "./v3/v3Nav";
 
 function lazyNamedExport(factory, exportName) {
   return lazy(() =>
@@ -105,6 +111,16 @@ const OrderTicketModal = lazyNamedExport(
 const CloseTradeModal = lazyNamedExport(
   () => import("./components/workspaceCards"),
   "CloseTradeModal",
+);
+const ExitsScreen = lazy(() => import("./v3/screens/ExitsScreen").then((m) => ({ default: m.ExitsScreen })));
+const VerdictScreen = lazy(() =>
+  import("./v3/screens/VerdictScreen").then((m) => ({ default: m.VerdictScreen })),
+);
+const SetAnalysisScreen = lazy(() =>
+  import("./v3/screens/SetAnalysisScreen").then((m) => ({ default: m.SetAnalysisScreen })),
+);
+const LogPurchaseScreen = lazy(() =>
+  import("./v3/screens/LogPurchaseScreen").then((m) => ({ default: m.LogPurchaseScreen })),
 );
 
 const EMPTY_SIGNALS_RESPONSE = {
@@ -855,7 +871,8 @@ export default function App() {
   const [resetForm, setResetForm] = useState(INITIAL_RESET_FORM);
   const [resetStatus, setResetStatus] = useState("");
   const [resetHintCode, setResetHintCode] = useState("");
-  const [splashVisible, setSplashVisible] = useState(true);
+  const [splashVisible, setSplashVisible] = useState(false);
+  const [v3OnboardingVisible, setV3OnboardingVisible] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [notificationCenterVisible, setNotificationCenterVisible] = useState(false);
   const [searchVisible, setSearchVisible] = useState(false);
@@ -1277,6 +1294,8 @@ export default function App() {
       .then((data) => {
         setCurrentUser(data.user);
         setAppSettings(normalizeAppSettings(data.settings));
+        setSplashVisible(false);
+        setV3OnboardingVisible(!isV3OnboardingComplete());
       })
       .catch(() => {
         clearSession();
@@ -1551,7 +1570,8 @@ export default function App() {
       setAuthMode("login");
       setAuthView("auth");
       setAuthStage("auth");
-      setSplashVisible(true);
+      setSplashVisible(false);
+      setV3OnboardingVisible(!isV3OnboardingComplete());
       setNavigationStack([]);
       const launch = launchSelection || preAuthLaunch;
       const nextPage = "home";
@@ -1761,6 +1781,19 @@ export default function App() {
     [jumpToPageSection, rememberLaunch],
   );
 
+  const completeV3Onboarding = useCallback(() => {
+    setV3OnboardingVisible(false);
+    applyWorkspaceRoute("home", activeDesk, {
+      pushHistory: false,
+      sectionId: "home-dashboard",
+      persistLaunch: true,
+    });
+  }, [activeDesk, applyWorkspaceRoute]);
+
+  const handleNavigateHome = useCallback(() => {
+    navigateToPage("home", false, activeDesk);
+  }, [activeDesk, navigateToPage]);
+
   const handleDeskRoute = useCallback(
     (targetPage, desk) => {
       navigateToPage(targetPage, false, desk);
@@ -1805,7 +1838,7 @@ export default function App() {
   const handleMenuSplash = useCallback(() => {
     setMenuVisible(false);
     setNotificationCenterVisible(false);
-    setSplashVisible(true);
+    setV3OnboardingVisible(true);
   }, []);
 
   const handleMenuLogout = useCallback(() => {
@@ -1983,7 +2016,7 @@ export default function App() {
     (trade) => {
       if (trade.assetClass === "collectible") {
         setSelectedCollectibleId(trade.collectibleId || trade.id);
-        jumpToPageSection("collectibles", "collectibles-grid");
+        jumpToPageSection("research", "collectibles-grid");
         return;
       }
 
@@ -2282,7 +2315,7 @@ export default function App() {
         );
         if (collectible) {
           handleCollectibleSelect(collectible);
-          jumpToPageSection("collectibles", "investment-analysis");
+          jumpToPageSection("research", "investment-analysis");
           return;
         }
       }
@@ -2707,7 +2740,9 @@ export default function App() {
     label: workspaceLabel(page, activeDesk),
     hint: SCREEN_PREVIEWS[page] || "Current workspace",
   };
-  const canGoBack = navigationStack.length > 0 || page !== "home";
+  const canGoBack =
+    navigationStack.length > 0 ||
+    !["home", "research", "scan", "collection", "exits"].includes(page);
   const notificationSummary = notificationsResponse.summary || EMPTY_NOTIFICATIONS_RESPONSE.summary;
   const notificationUnreadCount = notificationSummary.unread || 0;
   const alertSummary = alertsResponse.summary || EMPTY_ALERTS_RESPONSE.summary;
@@ -2745,7 +2780,7 @@ export default function App() {
       detail: brickAlphaSummary.costBasis
         ? `${((brickAlphaSummary.unrealizedGain / brickAlphaSummary.costBasis) * 100).toFixed(1)}% vs cost`
         : "Awaiting cost basis",
-      action: () => jumpToPageSection("portfolio", "portfolio-dashboard"),
+      action: () => jumpToPageSection("collection", "portfolio-dashboard"),
     },
     {
       id: "score",
@@ -2761,7 +2796,7 @@ export default function App() {
       label: "Collection Grade",
       value: brickAlphaSummary.collectionGrade || "--",
       detail: "Investment quality tier",
-      action: () => jumpToPageSection("portfolio", "portfolio-dashboard"),
+      action: () => jumpToPageSection("collection", "portfolio-dashboard"),
     },
     {
       id: "diversification",
@@ -2770,7 +2805,7 @@ export default function App() {
         ? `${Math.round(brickAlphaSummary.diversificationScore)}/100`
         : "--",
       detail: "Theme and category spread",
-      action: () => jumpToPageSection("portfolio", "portfolio-dashboard"),
+      action: () => jumpToPageSection("collection", "portfolio-dashboard"),
     },
   ];
   const globalSearchIndex = useMemo(
@@ -2846,12 +2881,10 @@ export default function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [closeGlobalSearch, currentUser, openGlobalSearch, searchVisible, splashVisible]);
 
-  const primaryNavItems = NAV_ITEMS.filter((item) =>
-    ["home", "scan-evaluate", "collectibles", "portfolio", "news", "signals"].includes(item.id),
-  );
   const utilityNavItems = NAV_ITEMS.filter((item) =>
     ["subscriptions", "tools", "reports", "connections", "settings"].includes(item.id),
   );
+  const legoJourneyActive = isV3LegoJourneyPage(page);
   const defaultTradingDesk = ["forex", "etfs", "jse"].includes(activeDesk) ? activeDesk : "forex";
   const menuPrimaryItems = [
     {
@@ -2876,18 +2909,18 @@ export default function App() {
       action: () => handleMenuNavigate("signals", "crypto"),
     },
     {
-      id: "menu-collectibles",
-      glyph: "CL",
-      label: "LEGO Investments",
-      detail: "collectibles",
-      action: () => handleMenuNavigate("collectibles", activeDesk),
+      id: "menu-research",
+      glyph: "RS",
+      label: "Research",
+      detail: "Browse and analyze sets",
+      action: () => handleMenuNavigate("research", activeDesk),
     },
     {
-      id: "menu-portfolio",
-      glyph: "PF",
-      label: "Portfolio",
-      detail: "Open positions and history",
-      action: () => handleMenuNavigate("portfolio", activeDesk),
+      id: "menu-collection",
+      glyph: "CL",
+      label: "Collection",
+      detail: "Holdings and performance",
+      action: () => handleMenuNavigate("collection", activeDesk),
     },
   ];
   const menuDeskItems = MARKET_DESKS.map((desk) => ({
@@ -3081,7 +3114,7 @@ export default function App() {
         />
       ) : null}
 
-      {page === "collectibles" ? (
+      {page === "research" ? (
         <CollectiblesScreen
           activeCollectible={activeCollectible}
           activePageSections={activePageSections}
@@ -3104,7 +3137,7 @@ export default function App() {
         />
       ) : null}
 
-      {page === "scan-evaluate" ? (
+      {page === "scan" ? (
         <ScanEvaluateScreen
           activePageSections={activePageSections}
           appSettings={appSettings}
@@ -3118,7 +3151,7 @@ export default function App() {
         />
       ) : null}
 
-      {page === "portfolio" ? (
+      {page === "collection" ? (
         <PortfolioScreen
           activeDesk={activeDesk}
           activePageSections={activePageSections}
@@ -3136,6 +3169,23 @@ export default function App() {
           totalOpenPnl={totalOpenPnl}
           watchlistItems={watchlistResponse.items || []}
         />
+      ) : null}
+
+      {page === "exits" ? (
+        <ExitsScreen
+          openTrades={openTrades}
+          collectibles={collectibles}
+          jumpToPageSection={jumpToPageSection}
+          navigateToPage={navigateToPage}
+        />
+      ) : null}
+
+      {page === "verdict" ? <VerdictScreen navigateToPage={navigateToPage} /> : null}
+
+      {page === "set-analysis" ? <SetAnalysisScreen navigateToPage={navigateToPage} /> : null}
+
+      {page === "log-purchase" ? (
+        <LogPurchaseScreen navigateToPage={navigateToPage} jumpToPageSection={jumpToPageSection} />
       ) : null}
 
       {page === "reports" ? (
@@ -3279,61 +3329,32 @@ export default function App() {
     );
   }
 
+  if (v3OnboardingVisible) {
+    return (
+      <V3OnboardingFlow
+        onComplete={completeV3Onboarding}
+        onNavigateToScan={() => {
+          setV3OnboardingVisible(false);
+          jumpToPageSection("scan", "scan-evaluate", activeDesk);
+        }}
+        onNavigateToCollection={() => {
+          setV3OnboardingVisible(false);
+          jumpToPageSection("collection", "open-positions", activeDesk);
+        }}
+      />
+    );
+  }
+
   return (
-    <div className="appShell saasAppShell">
-      <aside className="sidebar premiumSidebar">
-        <div className="brandLockup">
-          <button type="button" className="brandButton" onClick={() => setSplashVisible(true)}>
-            <BrandLogo size="md" />
-          </button>
-          <div>
-            <button type="button" className="brandButton" onClick={() => setSplashVisible(true)}>
-              <div className="brandWordmark">{APP_WORDMARK}</div>
-              <div className="brandSub">{APP_TAGLINE}</div>
-            </button>
-          </div>
-        </div>
-
-        <section className="sidebarCard sidebarWorkspaceCard">
-          <span>Current workspace</span>
-          <strong>{currentWorkspaceCard.label}</strong>
-          <small>{currentWorkspaceCard.hint}</small>
-        </section>
-
-        <nav className="sideNav">
-          {NAV_GROUPS.map((group) => (
-            <div className="navGroup" key={group.id}>
-              <div className="navGroupLabel">{group.label}</div>
-              {NAV_ITEMS.filter((item) => item.section.toLowerCase() === group.id).map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={page === item.id ? "active" : ""}
-                  onClick={() => navigateToPage(item.id, false, activeDesk)}
-                >
-                  <div className="navButtonMain">
-                    <div className={`navGlyph${item.icon === "camera" ? " navGlyph-camera" : ""}`}>{item.glyph}</div>
-                    <div className="navButtonCopy">
-                      <span>{item.label}</span>
-                      <small>{item.hint}</small>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          ))}
-        </nav>
-
-        <div className="sidebarUserCard">
-          <div className="sidebarUserAvatar">
-            {(currentUser.name || currentUser.email || "U").slice(0, 1).toUpperCase()}
-          </div>
-          <div className="sidebarUserMeta">
-            <strong>{currentUser.name || currentUser.email}</strong>
-            <small>{labelDesk(activeDesk)} desk</small>
-          </div>
-        </div>
-      </aside>
+    <div className="appShell saasAppShell v3AppShell">
+      <V3Sidebar
+        activePage={page}
+        workspaceHint={SCREEN_PREVIEWS[page]}
+        userLabel={currentUser.name || currentUser.email}
+        userInitial={(currentUser.name || currentUser.email || "U").slice(0, 1).toUpperCase()}
+        onNavigate={(nextPage) => navigateToPage(nextPage, false, activeDesk)}
+        onBrandClick={handleNavigateHome}
+      />
 
       <div className="workspaceShell">
         <div className="mobileStatusBar">
@@ -3357,7 +3378,7 @@ export default function App() {
                 <span>&lt;</span>
               </button>
             ) : null}
-            <button type="button" className="mobileBrandButton" onClick={() => setSplashVisible(true)}>
+            <button type="button" className="mobileBrandButton" onClick={handleNavigateHome}>
               <BrandLogo size="sm" />
               <div className="mobileBrandCopy">
                 <strong>{APP_NAME}</strong>
@@ -3367,10 +3388,12 @@ export default function App() {
           </div>
 
           <div className="mobileTitleActions">
-            <div className="mobileTitleMeta">
-              <span>{labelDesk(activeDesk)}</span>
-              <strong>{marketModeLabel(signalsResponse.marketData?.mode)}</strong>
-            </div>
+            {!legoJourneyActive ? (
+              <div className="mobileTitleMeta">
+                <span>{labelDesk(activeDesk)}</span>
+                <strong>{marketModeLabel(signalsResponse.marketData?.mode)}</strong>
+              </div>
+            ) : null}
             {!isAppInstalled ? (
               <button
                 type="button"
@@ -3494,19 +3517,7 @@ export default function App() {
           </Suspense>
         </main>
 
-        <nav className="mobileBottomNav" aria-label="Primary navigation">
-          {primaryNavItems.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={`mobileBottomNavItem ${page === item.id ? "active" : ""}`}
-              onClick={() => navigateToPage(item.id, false, activeDesk)}
-            >
-              <span>{item.glyph}</span>
-              <strong>{item.label}</strong>
-            </button>
-          ))}
-        </nav>
+        <V3BottomNav activePage={page} onNavigate={(nextPage) => navigateToPage(nextPage, false, activeDesk)} />
 
         {notificationCenterVisible ? (
           <NotificationCenter

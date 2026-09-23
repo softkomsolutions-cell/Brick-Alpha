@@ -293,20 +293,6 @@ aside[class*="Sidebar"] {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 
-  .saasSidebar,
-  .workspaceSidebar,
-  .appSidebar,
-  aside[class*="Sidebar"] {
-    position: fixed !important;
-    inset: auto 0 0 0 !important;
-    width: 100% !important;
-    height: 72px !important;
-    z-index: 1000 !important;
-    border-top: 1px solid var(--ba-line) !important;
-    border-right: 0 !important;
-    box-shadow: 0 -6px 18px rgba(21,23,28,0.05) !important;
-  }
-
   .brandLogoTagline {
     display: none;
   }
