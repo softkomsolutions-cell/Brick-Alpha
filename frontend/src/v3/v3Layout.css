@@ -472,8 +472,16 @@
 }
 
 .v3ExitRecommendation,
-.v3StatusLine {
+.v3StatusLine,
+.v3FeeAssumption,
+.v3FlywheelLine {
   margin: 8px 0 0;
+}
+
+.v3FeeAssumption,
+.v3FlywheelLine {
+  font-size: 13px;
+  color: var(--ba-ink-secondary, #4a4f5a);
 }
 
 @media (max-width: 820px) {

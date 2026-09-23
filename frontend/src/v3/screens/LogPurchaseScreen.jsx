@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { formatCollectiblePrice } from "../../appUtils";
+import { allInAcquisition } from "../collection/ownershipModel";
 import { readDecisionSnapshot } from "../decision/decisionSession";
 
 export function LogPurchaseScreen({ navigateToPage, onSubmitPurchase, busy = false }) {
@@ -10,8 +12,14 @@ export function LogPurchaseScreen({ navigateToPage, onSubmitPurchase, busy = fal
     retailer: "",
     quantity: String(snapshot?.verdict?.quantity || 1),
     condition: "sealed",
+    shipping: "",
+    vatReclaim: "",
+    rewards: "",
+    cashback: "",
+    vouchers: "",
     notes: "",
   }));
+  const allIn = useMemo(() => allInAcquisition(form), [form]);
 
   if (!snapshot) {
     return (
@@ -50,9 +58,15 @@ export function LogPurchaseScreen({ navigateToPage, onSubmitPurchase, busy = fal
             await onSubmitPurchase?.({
               collectibleId: snapshot.collectibleId,
               price: Number(form.price),
+              unitCost: allIn.unitCost,
+              shipping: form.shipping,
+              vatReclaim: form.vatReclaim,
+              rewards: form.rewards,
+              cashback: form.cashback,
+              vouchers: form.vouchers,
               date: form.date,
               retailer: form.retailer,
-              quantity: Number(form.quantity),
+              quantity: allIn.quantity,
               condition: form.condition,
               notes: form.notes,
               setName: snapshot.name,
@@ -64,9 +78,33 @@ export function LogPurchaseScreen({ navigateToPage, onSubmitPurchase, busy = fal
         }}
       >
         <label>
-          Actual price (ZAR)
-          <input type="number" min="1" required value={form.price} onChange={update("price")} />
+          Cash paid per unit (ZAR)
+          <input type="number" min="0" step="0.01" required value={form.price} onChange={update("price")} />
         </label>
+        <label>
+          Shipping for this purchase
+          <input type="number" min="0" step="0.01" value={form.shipping} onChange={update("shipping")} placeholder="0 if none" />
+        </label>
+        <p>All-in cost {formatCollectiblePrice(allIn.allInTotal)} · {formatCollectiblePrice(allIn.unitCost)} per unit. Leave adjustments blank when they do not apply.</p>
+        <details>
+          <summary>VAT, rewards, cashback, vouchers</summary>
+          <label>
+            VAT reclaim
+            <input type="number" min="0" step="0.01" value={form.vatReclaim} onChange={update("vatReclaim")} />
+          </label>
+          <label>
+            Rewards
+            <input type="number" min="0" step="0.01" value={form.rewards} onChange={update("rewards")} />
+          </label>
+          <label>
+            Cashback
+            <input type="number" min="0" step="0.01" value={form.cashback} onChange={update("cashback")} />
+          </label>
+          <label>
+            Vouchers
+            <input type="number" min="0" step="0.01" value={form.vouchers} onChange={update("vouchers")} />
+          </label>
+        </details>
         <label>
           Purchase date
           <input type="date" required value={form.date} onChange={update("date")} />

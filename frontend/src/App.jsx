@@ -56,8 +56,8 @@ import { BrandLogo } from "./components/brandLogo";
 import {
   enrichBrickAlphaCollectible,
   enrichBrickAlphaTrade,
-  summarizeBrickAlphaPortfolio,
 } from "./brickAlphaModel";
+import { summarizeOpenCollection } from "./v3/collection/ownershipModel";
 import { V3BottomNav } from "./v3/V3BottomNav";
 import { V3Sidebar } from "./v3/V3Sidebar";
 import { V3OnboardingFlow } from "./v3/onboarding/V3OnboardingFlow";
@@ -1917,6 +1917,11 @@ export default function App() {
           form.date ? `Date: ${form.date}` : "",
           form.retailer ? `Source: ${form.retailer}` : "",
           form.condition ? `Condition: ${form.condition}` : "",
+          form.shipping ? `Shipping: ${form.shipping}` : "",
+          form.vatReclaim ? `VAT reclaim: ${form.vatReclaim}` : "",
+          form.rewards ? `Rewards: ${form.rewards}` : "",
+          form.cashback ? `Cashback: ${form.cashback}` : "",
+          form.vouchers ? `Vouchers: ${form.vouchers}` : "",
           form.notes || "",
         ]
           .filter(Boolean)
@@ -1928,7 +1933,7 @@ export default function App() {
             collectibleId: form.collectibleId,
             side: "BUY",
             quantity: form.quantity,
-            acquisitionPrice: form.price,
+            acquisitionPrice: form.unitCost,
             orderNote: note,
           },
         });
@@ -2752,15 +2757,15 @@ export default function App() {
   );
 
   const brickAlphaSummary = useMemo(
-    () => summarizeBrickAlphaPortfolio(enrichedPortfolio),
+    () => summarizeOpenCollection(enrichedPortfolio),
     [enrichedPortfolio],
   );
   const topMetrics = [
     {
       id: "nav",
-      label: "Net Asset Value",
+      label: "Open collection value",
       value: formatCollectiblePrice(brickAlphaSummary.netAssetValue),
-      detail: brickAlphaSummary.collectionGrade || "No positions yet",
+      detail: `${brickAlphaSummary.collectionGrade || "No positions yet"} · owned sets only`,
       action: () => jumpToPageSection("home", "home-dashboard", activeDesk),
     },
     {
@@ -2768,8 +2773,8 @@ export default function App() {
       label: "Unrealised Gain",
       value: formatCollectiblePrice(brickAlphaSummary.unrealizedGain),
       detail: brickAlphaSummary.costBasis
-        ? `${((brickAlphaSummary.unrealizedGain / brickAlphaSummary.costBasis) * 100).toFixed(1)}% vs cost`
-        : "Awaiting cost basis",
+        ? `${((brickAlphaSummary.unrealizedGain / brickAlphaSummary.costBasis) * 100).toFixed(1)}% vs cost · realised ${formatCollectiblePrice(brickAlphaSummary.realizedGain)} net of fees`
+        : `Realised ${formatCollectiblePrice(brickAlphaSummary.realizedGain)} net of fees`,
       action: () => jumpToPageSection("collection", "portfolio-dashboard"),
     },
     {

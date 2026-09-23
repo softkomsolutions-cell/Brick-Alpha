@@ -96,6 +96,17 @@ test("known legacy behavior: no acquisition lots or cost-basis allocations exist
   assert.equal(response.body.trade.costBasisMethod, undefined);
 });
 
+test("collectible BUY can record a free gift at zero acquisition cost", async () => {
+  const user = await registerUser({ email: "financial-free-gift@example.test" });
+  const item = (await require("supertest")(app).get("/api/collectibles")).body.items[0];
+  const response = await authenticated(user.token)
+    .post("/api/collectibles/trades")
+    .send({ collectibleId: item.id, side: "BUY", quantity: 1, acquisitionPrice: 0 });
+
+  assert.equal(response.status, 201);
+  assert.equal(response.body.trade.entryPrice, 0);
+});
+
 test("known legacy behavior: closed collectible trades still contribute to frontend NAV and unrealized gain", async () => {
   const model = await import(
     pathToFileURL(path.join(__dirname, "..", "..", "frontend", "src", "brickAlphaModel.js")).href

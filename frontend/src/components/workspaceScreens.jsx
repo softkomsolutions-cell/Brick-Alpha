@@ -46,6 +46,7 @@ import {
   AlphaSignalBadges,
 } from "./workspaceCards";
 import { summarizeBrickAlphaPortfolio } from "../brickAlphaModel";
+import { summarizeOpenCollection } from "../v3/collection/ownershipModel";
 import { HomeExecutiveDashboard } from "./homeExecutiveDashboard";
 import { InvestmentAnalysisWorkspace } from "./investmentAnalysisWorkspace";
 import { RetirementIntelligenceWorkspace } from "./retirementIntelligenceWorkspace";
@@ -995,7 +996,7 @@ export function HomeScreen({
     };
 
   const brickAlphaPortfolio = useMemo(
-    () => summarizeBrickAlphaPortfolio([...openTrades, ...(closedTrades || [])]),
+    () => summarizeOpenCollection([...openTrades, ...(closedTrades || [])]),
     [closedTrades, openTrades],
   );
   const portfolioHoldings = useMemo(

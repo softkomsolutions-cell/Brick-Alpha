@@ -1,10 +1,13 @@
-import { enrichBrickAlphaTrade } from "../../brickAlphaModel";
+import { enrichBrickAlphaTrade, investmentGradeFor, themeAllocationFor } from "../../brickAlphaModel";
 
 export const EXIT_CHANNELS = [
   { id: "local", label: "Local buyer groups", feeRate: 0.05 },
   { id: "bricklink", label: "BrickLink", feeRate: 0.12 },
   { id: "ebay", label: "eBay", feeRate: 0.15 },
 ];
+
+export const EXIT_FEE_ASSUMPTION =
+  "Channel fees are planning assumptions, not live quotes: local buyer groups 5%, BrickLink 12%, eBay 15%.";
 
 function numberOrNull(value) {
   if (value == null || value === "") {
@@ -84,6 +87,58 @@ export function channelNets(gross) {
   });
 }
 
+function quantityOf(trade) {
+  const quantity = numberOrNull(trade?.quantity);
+  if (quantity == null || quantity <= 0) {
+    return 1;
+  }
+  return quantity;
+}
+
+function unitCostOf(trade) {
+  if (trade?.entryPrice != null && trade.entryPrice !== "") {
+    return numberOrZero(trade.entryPrice);
+  }
+  return numberOrZero(trade?.buyPrice);
+}
+
+export function allInAcquisition({
+  price,
+  quantity,
+  shipping,
+  vatReclaim,
+  rewards,
+  cashback,
+  vouchers,
+} = {}) {
+  const units = quantityOf({ quantity });
+  const cashPaid = numberOrZero(price) * units;
+  const shippingPaid = numberOrZero(shipping);
+  const credits =
+    numberOrZero(vatReclaim) + numberOrZero(rewards) + numberOrZero(cashback) + numberOrZero(vouchers);
+  const allInTotal = Math.max(0, cashPaid + shippingPaid - credits);
+  return {
+    quantity: units,
+    cashPaid,
+    shipping: shippingPaid,
+    credits,
+    allInTotal,
+    unitCost: units > 0 ? allInTotal / units : 0,
+  };
+}
+
+function flywheelFor(units, cost) {
+  const oneUnitValue = units.length ? Math.max(...units.map((unit) => numberOrZero(unit.marketValue))) : 0;
+  const recoveryGap = oneUnitValue - cost;
+  const recoveryPercent = cost > 0 ? (oneUnitValue / cost) * 100 : null;
+  return {
+    oneUnitValue,
+    recoveryGap,
+    recoveryPercent: recoveryPercent != null && Number.isFinite(recoveryPercent) ? recoveryPercent : null,
+    flywheelReady: units.length > 1 && oneUnitValue >= cost,
+  };
+}
+
 function unitRows(trade, stackCost) {
   const quantity = Math.max(1, Math.round(numberOrZero(trade.quantity || 1)));
   const unitCost = numberOrZero(trade.entryPrice ?? trade.buyPrice);
@@ -140,7 +195,8 @@ export function buildCollectionView(openTrades = [], collectibles = []) {
       .filter((value) => value != null);
     const sellWindowMonths = months.length ? Math.min(...months) : null;
     const profit = marketValue - cost;
-    const roi = cost > 0 ? (profit / cost) * 100 : null;
+    const roi = cost > 0 && Number.isFinite(profit / cost) ? (profit / cost) * 100 : null;
+    const flywheel = flywheelFor(units, cost);
     return {
       ...group,
       units: units.length,
@@ -152,7 +208,7 @@ export function buildCollectionView(openTrades = [], collectibles = []) {
       roi,
       annualised: annualisedReturnPercent(cost, marketValue, holdingDays),
       sellWindowMonths,
-      flywheelReady: units.length >= 2 && sellWindowMonths != null && sellWindowMonths <= 18,
+      ...flywheel,
       belowCost: marketValue < cost,
       isStack: units.length > 1,
     };
@@ -179,6 +235,7 @@ export function buildCollectionView(openTrades = [], collectibles = []) {
     themes: [...new Set(sets.map((set) => set.theme))].sort(),
     summary: {
       positions: sets.reduce((sum, set) => sum + set.units, 0),
+      openValue: sets.reduce((sum, set) => sum + set.marketValue, 0),
       uniqueSets: sets.length,
       stacks: sets.filter((set) => set.isStack).length,
       inProfit: sets.filter((set) => set.profit > 0).length,
@@ -245,7 +302,7 @@ export function buildRealisedLedger(closedTrades = []) {
       const channel = channelFromText(`${trade.exitReason || ""} ${trade.orderNote || ""}`);
       const fees = Math.round(gross * channel.feeRate);
       const net = gross - fees;
-      const realisedProfit = numberOrNull(trade.pnlAmount) ?? gross - cost;
+      const realisedProfit = net - cost;
       return {
         id: trade.id,
         name: trade.label || trade.name || "LEGO set",
@@ -261,4 +318,36 @@ export function buildRealisedLedger(closedTrades = []) {
       };
     })
     .sort((left, right) => String(right.saleDate).localeCompare(String(left.saleDate)));
+}
+
+export function summarizeOpenCollection(trades = []) {
+  const collectibleTrades = (trades || []).filter((trade) => trade?.assetClass === "collectible");
+  const openTrades = collectibleTrades.filter((trade) => trade.status !== "closed");
+  const closedTrades = collectibleTrades.filter((trade) => trade.status === "closed");
+  const costBasis = openTrades.reduce((sum, trade) => sum + unitCostOf(trade) * quantityOf(trade), 0);
+  const netAssetValue = openTrades.reduce(
+    (sum, trade) => sum + numberOrZero(trade.currentPrice ?? trade.currentMarketValue) * quantityOf(trade),
+    0,
+  );
+  const ledger = buildRealisedLedger(closedTrades);
+  const realizedGain = ledger.reduce((sum, sale) => sum + numberOrZero(sale.realisedProfit), 0);
+  const realizedProceeds = ledger.reduce((sum, sale) => sum + numberOrZero(sale.net), 0);
+  const averageScore = openTrades.length
+    ? openTrades.reduce((sum, trade) => sum + numberOrZero(trade.brickAlphaScore), 0) / openTrades.length
+    : 0;
+  const categoryCount = new Set(openTrades.map((trade) => trade.category).filter(Boolean)).size;
+  const diversificationScore = Math.min(100, Math.max(0, categoryCount * 22 + openTrades.length * 4));
+
+  return {
+    netAssetValue,
+    costBasis,
+    unrealizedGain: netAssetValue - costBasis,
+    realizedGain,
+    realizedProceeds,
+    openPositions: openTrades.reduce((sum, trade) => sum + quantityOf(trade), 0),
+    averageBrickAlphaScore: averageScore,
+    collectionGrade: investmentGradeFor(averageScore),
+    diversificationScore,
+    themeAllocation: themeAllocationFor(openTrades),
+  };
 }

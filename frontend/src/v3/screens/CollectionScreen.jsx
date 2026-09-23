@@ -98,6 +98,16 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
                       <span>Cost <strong>{formatCollectiblePrice(set.cost)}</strong></span>
                       <span>Profit <strong>{formatCollectiblePrice(set.profit)}</strong></span>
                     </div>
+                    {set.isStack ? (
+                      <p className="v3FlywheelLine">
+                        Stack cost {formatCollectiblePrice(set.cost)} · One unit{" "}
+                        {formatCollectiblePrice(set.oneUnitValue)} · Recovery{" "}
+                        {formatSignedPercent(set.recoveryPercent)} ·{" "}
+                        {formatCollectiblePrice(Math.abs(set.recoveryGap))}{" "}
+                        {set.recoveryGap >= 0 ? "above" : "below"} recovery
+                        {set.flywheelReady ? " · Flywheel ready" : ""}
+                      </p>
+                    ) : null}
                   </button>
                   {set.isStack && expanded ? (
                     <ul className="v3UnitList">

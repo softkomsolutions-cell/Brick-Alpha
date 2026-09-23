@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { formatCollectiblePrice } from "../../appUtils";
 import {
   EXIT_CHANNELS,
+  EXIT_FEE_ASSUMPTION,
   buildExitCandidates,
   buildRealisedLedger,
   formatSignedPercent,
@@ -100,9 +101,10 @@ export function ExitsScreen({
       <header className="v3WorkflowHero">
         <h1>Exits</h1>
         <p>
-          Flywheel-ready stacks, sell-window proximity, and net proceeds by channel. Recording a sale
-          closes the holding with the existing ledger.
+          A stack is flywheel-ready when one unit’s current value covers the whole stack cost.
+          Retirement timing still shapes the sell-window note.
         </p>
+        <p className="v3FeeAssumption">{EXIT_FEE_ASSUMPTION}</p>
       </header>
 
       <section className="v3StatGrid" aria-label="Exit summary">
@@ -134,6 +136,14 @@ export function ExitsScreen({
                   <span>Gain <strong>{formatSignedPercent(set.roi)}</strong></span>
                   <span>Annualised <strong>{formatSignedPercent(set.annualised)}</strong></span>
                   <span>Net, one unit <strong>{formatCollectiblePrice(set.bestNet)}</strong></span>
+                  {set.isStack ? (
+                    <span>
+                      Recovery <strong>{formatSignedPercent(set.recoveryPercent)}</strong>
+                      {" · "}
+                      one unit {formatCollectiblePrice(set.oneUnitValue)} vs stack{" "}
+                      {formatCollectiblePrice(set.cost)}
+                    </span>
+                  ) : null}
                 </div>
                 <p className="v3ExitRecommendation">{set.recommendation}</p>
                 <div className="v3ChannelGrid" aria-label="Channel comparison">
@@ -141,7 +151,7 @@ export function ExitsScreen({
                     <div key={channel.id}>
                       <span>{channel.label}</span>
                       <strong>{formatCollectiblePrice(channel.net)}</strong>
-                      <small>{Math.round(channel.feeRate * 100)}% fees</small>
+                      <small>Assumed {Math.round(channel.feeRate * 100)}% fees</small>
                     </div>
                   ))}
                 </div>

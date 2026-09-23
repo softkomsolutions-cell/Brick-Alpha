@@ -3002,6 +3002,15 @@ function sanitizeTradePlanValue(value) {
   return numeric;
 }
 
+function sanitizeAcquisitionPrice(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return null;
+  }
+
+  return Number(numeric.toFixed(2));
+}
+
 function applyTradePlan(trade) {
   const stopPrice = normalizeTradePrice(trade, sanitizeTradePlanValue(trade.stopPrice));
   const targetPrice = normalizeTradePrice(trade, sanitizeTradePlanValue(trade.targetPrice));
@@ -3032,7 +3041,9 @@ function updateTradeValuation(trade, price) {
   const quantity = normalizeStoredQuantity(trade.quantity);
   const direction = trade.side === "SELL" ? -1 : 1;
   const pnlPercent =
-    ((normalizedPrice - trade.entryPrice) / trade.entryPrice) * 100 * direction;
+    trade.entryPrice > 0
+      ? ((normalizedPrice - trade.entryPrice) / trade.entryPrice) * 100 * direction
+      : 0;
   const pnlAmount =
     (normalizedPrice - trade.entryPrice) * quantity * direction;
   const entryValue = trade.entryPrice * quantity;
@@ -5360,7 +5371,8 @@ app.post("/api/collectibles/trades", requireAuth, async (req, res) => {
   const stopPrice = sanitizeTradePlanValue(req.body?.stopPrice);
   const targetPrice = sanitizeTradePlanValue(req.body?.targetPrice);
   const riskBudget = sanitizeTradePlanValue(req.body?.riskBudget);
-  const acquisitionPrice = sanitizeTradePlanValue(req.body?.acquisitionPrice);
+  const acquisitionProvided = req.body?.acquisitionPrice != null && req.body?.acquisitionPrice !== "";
+  const acquisitionPrice = acquisitionProvided ? sanitizeAcquisitionPrice(req.body?.acquisitionPrice) : null;
   const item = findTradeableCollectibleById(collectibleId);
 
   if (!item) {
@@ -5380,6 +5392,11 @@ app.post("/api/collectibles/trades", requireAuth, async (req, res) => {
 
   if (!quantity) {
     res.status(400).json({ ok: false, error: "invalid_quantity" });
+    return;
+  }
+
+  if (side === "BUY" && acquisitionProvided && acquisitionPrice == null) {
+    res.status(400).json({ ok: false, error: "invalid_acquisition_price" });
     return;
   }
 
@@ -5426,7 +5443,7 @@ app.post("/api/collectibles/trades", requireAuth, async (req, res) => {
     stopPrice,
     targetPrice,
     riskBudget,
-    ...(side === "BUY" && acquisitionPrice
+    ...(side === "BUY" && acquisitionProvided && acquisitionPrice != null
       ? {
           entryPrice: acquisitionPrice,
         }
