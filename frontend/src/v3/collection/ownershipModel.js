@@ -218,6 +218,8 @@ export function buildCollectionView(openTrades = [], collectibles = []) {
       roi,
       annualised: annualisedReturnPercent(cost, marketValue, holdingDays),
       sellWindowMonths,
+      expectedRetirementDate:
+        group.trades.map((trade) => trade.expectedRetirementDate).find(Boolean) || null,
       ...flywheel,
       belowCost: marketValue < cost,
       isStack: units.length > 1,

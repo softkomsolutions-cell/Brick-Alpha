@@ -7,6 +7,7 @@ import {
   buildRealisedLedger,
   formatSignedPercent,
 } from "../collection/ownershipModel";
+import { buildCanonicalRetirement, retirementReminderLabel } from "../retirement/retirementModel";
 
 function proximityLabel(months) {
   if (months == null || !Number.isFinite(months)) {
@@ -39,7 +40,13 @@ export function ExitsScreen({
   busy = false,
 }) {
   const candidates = useMemo(
-    () => buildExitCandidates(openTrades, collectibles),
+    () =>
+      buildExitCandidates(openTrades, collectibles).map((set) => {
+        const retirement = buildCanonicalRetirement({
+          expectedRetirementDate: set.expectedRetirementDate,
+        });
+        return { ...set, retirement, reminder: retirementReminderLabel(retirement) };
+      }),
     [collectibles, openTrades],
   );
   const ledger = useMemo(() => buildRealisedLedger(closedTrades), [closedTrades]);
@@ -146,6 +153,10 @@ export function ExitsScreen({
                   ) : null}
                 </div>
                 <p className="v3ExitRecommendation">{set.recommendation}</p>
+                {set.retirement?.insideSixMonths ? (
+                  <p className="v3RetirementWarning">Inside 6 months. Retirement does not change flywheel ready.</p>
+                ) : null}
+                {set.reminder ? <p>{set.reminder}</p> : null}
                 <div className="v3ChannelGrid" aria-label="Channel comparison">
                   {set.channels.map((channel) => (
                     <div key={channel.id}>

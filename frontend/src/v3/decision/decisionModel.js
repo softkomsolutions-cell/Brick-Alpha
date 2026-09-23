@@ -2,7 +2,6 @@ import { confidenceFor, buildBrickAlphaScoreBreakdown, letterGradeFor } from "..
 import {
   PREMIUM_COMPARABLES,
   buildMarketPricing,
-  buildRetirementSnapshot,
   riskLabel,
 } from "../../scanEvaluationData";
 import { formatCollectiblePrice } from "../../appUtils";
@@ -13,6 +12,8 @@ import {
   formatRecordedGrowth,
   recordedGrowth,
 } from "../valuation/valuationAuthority";
+import { buildCanonicalRetirement } from "../retirement/retirementModel";
+import { personaliseRecommendation } from "../personalisation/personalisationModel";
 
 const CHANNELS = [
   { id: "private", label: "Private sale", feeRate: 0.05 },
@@ -84,7 +85,7 @@ function factor(id, title, score, summary, detail) {
 
 export function buildNineFactors(evaluation, extras = {}) {
   const verdict = extras.verdict || mapVerdictVocabulary(evaluation);
-  const retirement = extras.retirement || buildRetirementSnapshot(evaluation);
+  const retirement = extras.retirement || buildCanonicalRetirement(evaluation);
   const minifigCount = evaluation?.numberOfMinifigures || extras.profile?.minifigures || "—";
   const reprintRisk = Math.max(
     0,
@@ -160,12 +161,13 @@ export function buildNineFactors(evaluation, extras = {}) {
   ];
 }
 
-export function buildThesisChecklist(evaluation, verdict) {
+export function buildThesisChecklist(evaluation, verdict, retirement) {
   const signals = Array.isArray(evaluation?.alphaSignals) ? evaluation.alphaSignals : [];
   const fromSignals = signals.slice(0, 4).map((signal) => signal.label || signal.title || String(signal));
+  const retirementState = retirement?.retirementState || evaluation?.retirementStatus || "";
   const checklist = [
     verdict.label,
-    evaluation?.retirementStatus ? `Retirement: ${evaluation.retirementStatus}` : null,
+    retirementState ? `Retirement: ${retirementState}` : null,
     numberOrZero(evaluation?.discountPercentage) > 0
       ? `${numberOrZero(evaluation.discountPercentage).toFixed(0)}% below retail`
       : "Pricing is at or above retail",
@@ -194,14 +196,14 @@ export function buildCanonicalAdvisor({ name, verdict, valuation, retirement }) 
   };
 }
 
-export function presentResearchFields(item) {
+export function presentResearchFields(item, asOf) {
   const valuation = buildCanonicalValuation(item);
   const verdict = mapVerdictVocabulary(item);
-  const retirement = buildRetirementSnapshot(item);
+  const retirement = buildCanonicalRetirement(item, asOf);
   return {
     ...valuation,
     verdictLabel: verdict.label,
-    retirementStatus: retirement.status,
+    retirementStatus: retirement.retirementState,
     monthsRemaining: retirement.monthsRemaining,
   };
 }
@@ -210,15 +212,29 @@ export function buildDecisionSnapshot({
   evaluation,
   imageUrl = "",
   profile = null,
+  buyingProfile = null,
+  openTrades = [],
+  closedTrades = [],
   analyzedAt = new Date().toISOString(),
 }) {
   const frozen = JSON.parse(JSON.stringify(evaluation || {}));
-  const retirement = buildRetirementSnapshot(frozen);
+  const retirement = buildCanonicalRetirement(frozen, analyzedAt);
   const verdict = mapVerdictVocabulary(frozen);
   const valuation = buildCanonicalValuation(frozen);
   const confidence = confidenceFor(frozen);
   const breakdown = buildBrickAlphaScoreBreakdown(frozen);
   const marketPricing = buildMarketPricing(frozen, profile);
+  const personalisation = personaliseRecommendation({
+    baseVerdict: verdict,
+    profile: buyingProfile || {},
+    theme: frozen.legoTheme || profile?.theme || "",
+    setNumber: setNumberOf(frozen),
+    currentValue: valuation.currentMarketValue,
+    riskScore: frozen.riskScore,
+    retirement,
+    openTrades,
+    closedTrades,
+  });
 
   return {
     analyzedAt,
@@ -241,10 +257,11 @@ export function buildDecisionSnapshot({
     grade: letterGradeFor(frozen.brickAlphaScore),
     investmentGrade: frozen.investmentGrade || "",
     verdict,
+    personalisation,
     confidence,
     risk: riskLabel(frozen.riskScore),
     riskScore: Math.round(numberOrZero(frozen.riskScore)),
-    thesis: buildThesisChecklist(frozen, verdict),
+    thesis: buildThesisChecklist(frozen, verdict, retirement),
     retirement,
     netExits: buildNetExitChannels(valuation.currentMarketValue),
     factors: buildNineFactors(frozen, { verdict, retirement, profile }),

@@ -88,10 +88,26 @@ export function VerdictScreen({ navigateToPage, onWatch, onAddToCollection, appS
 
       <section className="v3DecisionCard">
         <h2>Retirement</h2>
+        {snapshot.retirement.insideSixMonths ? (
+          <p className="v3RetirementWarning">Inside 6 months. The sell window is open.</p>
+        ) : null}
         <p>
-          {snapshot.retirement.status} · {snapshot.retirement.monthsRemaining} months · expected{" "}
+          {snapshot.retirement.retirementState || snapshot.retirement.status} ·{" "}
+          {snapshot.retirement.monthsRemaining == null ? "—" : `${snapshot.retirement.monthsRemaining} months`} · expected{" "}
           {snapshot.retirement.expectedRetirement}
         </p>
+        {snapshot.retirement.reminders?.thirtyDay ? <p>30-day reminder</p> : null}
+        {snapshot.retirement.reminders?.sixtyDay ? <p>60-day reminder</p> : null}
+        {snapshot.personalisation?.reasons?.length ? (
+          <div>
+            <strong>For your book: {snapshot.personalisation.verdict.label}</strong>
+            <ul className="v3Checklist">
+              {snapshot.personalisation.reasons.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </section>
 
       <section className="v3DecisionCard">

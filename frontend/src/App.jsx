@@ -78,9 +78,8 @@ const HomeScreen = lazy(() =>
 );
 const NewsScreen = lazyNamedExport(() => import("./components/workspaceScreens"), "NewsScreen");
 const ToolsScreen = lazyNamedExport(() => import("./components/workspaceScreens"), "ToolsScreen");
-const CollectiblesScreen = lazyNamedExport(
-  () => import("./components/workspaceScreens"),
-  "CollectiblesScreen",
+const ResearchScreen = lazy(() =>
+  import("./v3/screens/ResearchScreen").then((module) => ({ default: module.ResearchScreen })),
 );
 const ScanEvaluateScreen = lazyNamedExport(
   () => import("./components/workspaceScreens"),
@@ -921,11 +920,11 @@ export default function App() {
   );
 
   const [selectedSignalTicker, setSelectedSignalTicker] = useState(null);
-  const [selectedCollectibleId, setSelectedCollectibleId] = useState(null);
+  const [_selectedCollectibleId, setSelectedCollectibleId] = useState(null);
   const [orderTicket, setOrderTicket] = useState(null);
-  const [collectibleQuery, setCollectibleQuery] = useState("");
-  const [collectibleBrand, setCollectibleBrand] = useState("all");
-  const [collectibleCategory, setCollectibleCategory] = useState("all");
+  const [_collectibleQuery, _setCollectibleQuery] = useState("");
+  const [_collectibleBrand, _setCollectibleBrand] = useState("all");
+  const [_collectibleCategory, _setCollectibleCategory] = useState("all");
 
   const clearSession = useCallback(() => {
     window.localStorage.removeItem(TOKEN_KEY);
@@ -1421,43 +1420,7 @@ export default function App() {
     [collectiblesResponse],
   );
 
-  const filteredCollectibles = useMemo(() => {
-    const query = collectibleQuery.trim().toLowerCase();
-    return (enrichedCollectiblesResponse.items || []).filter((item) => {
-      const matchesQuery =
-        !query ||
-        [
-          item.name,
-          item.brand,
-          item.category,
-          item.description,
-          item.thesis,
-          item.sku,
-          item.recommendation,
-          item.investmentGrade,
-          item.retirementStatus,
-          item.legoTheme,
-          ...(item.alphaSignals || []),
-          item.storeSource,
-        ]
-          .filter(Boolean)
-          .some((value) => String(value).toLowerCase().includes(query));
-      const matchesBrand = collectibleBrand === "all" || item.brand === collectibleBrand;
-      const matchesCategory =
-        collectibleCategory === "all" || item.category === collectibleCategory;
-      return matchesQuery && matchesBrand && matchesCategory;
-    });
-  }, [collectibleBrand, collectibleCategory, collectibleQuery, enrichedCollectiblesResponse.items]);
   const collectibles = enrichedCollectiblesResponse.items || [];
-  const resolvedSelectedCollectibleId =
-    filteredCollectibles.some((item) => item.id === selectedCollectibleId)
-      ? selectedCollectibleId
-      : filteredCollectibles[0]?.id || null;
-
-  const activeCollectible =
-    filteredCollectibles.find((item) => item.id === resolvedSelectedCollectibleId) ||
-    filteredCollectibles[0] ||
-    null;
 
   const enrichedPortfolio = useMemo(
     () => portfolio.map((trade) => enrichBrickAlphaTrade(trade, collectibles, portfolio)),
@@ -3083,25 +3046,12 @@ export default function App() {
       ) : null}
 
       {page === "research" ? (
-        <CollectiblesScreen
-          activeCollectible={activeCollectible}
-          activePageSections={activePageSections}
-          appSettings={appSettings}
-          brickAlphaPortfolio={brickAlphaSummary}
-          collectibleBrand={collectibleBrand}
-          collectibleCategory={collectibleCategory}
-          collectibleQuery={collectibleQuery}
+        <ResearchScreen
           collectibles={collectibles}
-          collectiblesResponse={enrichedCollectiblesResponse}
-          filteredCollectibles={filteredCollectibles}
-          handleCollectibleSelect={handleCollectibleSelect}
-          jumpToPageSection={jumpToPageSection}
-          onAddToWatchlist={addSignalToWatchlist}
-          openCollectibleTicket={openCollectibleTicket}
           openTrades={openTrades}
-          setCollectibleBrand={setCollectibleBrand}
-          setCollectibleCategory={setCollectibleCategory}
-          setCollectibleQuery={setCollectibleQuery}
+          closedTrades={closedTrades}
+          navigateToPage={navigateToPage}
+          onWatch={addSignalToWatchlist}
         />
       ) : null}
 
