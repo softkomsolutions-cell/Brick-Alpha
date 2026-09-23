@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { formatCollectiblePrice } from "../../appUtils";
+import { resolveExchangeRate } from "../valuation/exchangeRate";
+import { formatCanonicalValue, formatRecordedGrowth } from "../valuation/valuationAuthority";
 import { readDecisionSnapshot } from "../decision/decisionSession";
 
 function wholeScore(value) {
@@ -20,8 +22,9 @@ function Disclosure({ title, children }) {
   );
 }
 
-export function SetAnalysisScreen({ navigateToPage }) {
+export function SetAnalysisScreen({ navigateToPage, appSettings }) {
   const snapshot = readDecisionSnapshot();
+  const exchange = resolveExchangeRate(appSettings);
 
   if (!snapshot) {
     return (
@@ -107,9 +110,10 @@ export function SetAnalysisScreen({ navigateToPage }) {
 
       <Disclosure title="Evidence and provenance">
         <p>
-          Analysis frozen {snapshot.analyzedAt}. Current value {formatCollectiblePrice(snapshot.currentValue)}.
-          Retail {formatCollectiblePrice(snapshot.retailPrice)}. Secondary average{" "}
-          {formatCollectiblePrice(snapshot.marketPricing?.averageMarketPrice)}.
+          Analysis frozen {snapshot.analyzedAt}. Current value {formatCanonicalValue(snapshot.currentValue)} from{" "}
+          {snapshot.valuationSource}. Valuation date {snapshot.valuationDate || "—"}. Exchange rate {exchange.label}. Annual growth {formatRecordedGrowth(snapshot.annualGrowth)}. 90-day
+          growth {formatRecordedGrowth(snapshot.growth90Day)}. Retail {formatCollectiblePrice(snapshot.retailPrice)} is
+          not the market value.
         </p>
       </Disclosure>
 

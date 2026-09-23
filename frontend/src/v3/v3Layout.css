@@ -517,3 +517,95 @@
     min-width: 0;
   }
 }
+
+.v3Home {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  gap: 16px;
+}
+
+.v3HomeHeader,
+.v3BookToggle,
+.v3HomeGrid,
+.v3AttentionList,
+.v3ThemeTable,
+.v3ExchangeForm {
+  display: flex;
+  gap: 12px;
+}
+
+.v3HomeHeader {
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.v3BookToggle button,
+.v3AttentionList button {
+  min-height: 44px;
+}
+
+.v3BookToggle button.active {
+  background: var(--ba-brick-yellow, #f2c230);
+  color: var(--ba-ink, #15171c);
+}
+
+.v3HomeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.v3HomeMeta {
+  margin: 0;
+  color: var(--ba-muted, #5c6158);
+}
+
+.v3AttentionList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.v3AttentionList button {
+  width: 100%;
+  text-align: left;
+  display: grid;
+  gap: 2px;
+}
+
+.v3ThemeTable {
+  display: grid;
+  gap: 8px;
+}
+
+.v3ThemeTable > div {
+  display: grid;
+  grid-template-columns: 1.2fr repeat(4, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.v3ThemeTable > div[data-over-cap="true"] strong {
+  color: #8a3b12;
+}
+
+.v3ExchangeForm {
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.v3ExchangeForm input {
+  display: block;
+  margin-top: 6px;
+  min-height: 44px;
+  padding: 8px 10px;
+}
+
+@media (max-width: 720px) {
+  .v3ThemeTable > div {
+    grid-template-columns: 1fr 1fr;
+  }
+}

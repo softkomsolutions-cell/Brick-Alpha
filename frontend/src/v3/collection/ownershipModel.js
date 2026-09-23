@@ -1,4 +1,5 @@
 import { enrichBrickAlphaTrade, investmentGradeFor, themeAllocationFor } from "../../brickAlphaModel";
+import { canonicalMarketValue } from "../valuation/valuationAuthority";
 
 export const EXIT_CHANNELS = [
   { id: "local", label: "Local buyer groups", feeRate: 0.05 },
@@ -95,6 +96,15 @@ function quantityOf(trade) {
   return quantity;
 }
 
+function marketUnitValue(trade) {
+  const explicit = trade?.brickEconomyValue ?? trade?.currentMarketValue;
+  const mark = explicit != null && explicit !== "" ? explicit : trade?.currentPrice;
+  return canonicalMarketValue({
+    brickEconomyValue: trade?.brickEconomyValue,
+    currentMarketValue: mark,
+  }).value;
+}
+
 function unitCostOf(trade) {
   if (trade?.entryPrice != null && trade.entryPrice !== "") {
     return numberOrZero(trade.entryPrice);
@@ -142,7 +152,7 @@ function flywheelFor(units, cost) {
 function unitRows(trade, stackCost) {
   const quantity = Math.max(1, Math.round(numberOrZero(trade.quantity || 1)));
   const unitCost = numberOrZero(trade.entryPrice ?? trade.buyPrice);
-  const unitValue = numberOrZero(trade.currentPrice ?? trade.currentMarketValue);
+  const unitValue = marketUnitValue(trade) ?? 0;
   return Array.from({ length: quantity }, (_, index) => {
     const share = stackCost > 0 ? (unitCost / stackCost) * 100 : null;
     return {
@@ -184,7 +194,7 @@ export function buildCollectionView(openTrades = [], collectibles = []) {
       0,
     );
     const marketValue = group.trades.reduce(
-      (sum, trade) => sum + numberOrZero(trade.currentPrice ?? trade.currentMarketValue) * numberOrZero(trade.quantity || 1),
+      (sum, trade) => sum + (marketUnitValue(trade) ?? 0) * numberOrZero(trade.quantity || 1),
       0,
     );
     const units = group.trades.flatMap((trade) => unitRows(trade, cost));
@@ -326,7 +336,7 @@ export function summarizeOpenCollection(trades = []) {
   const closedTrades = collectibleTrades.filter((trade) => trade.status === "closed");
   const costBasis = openTrades.reduce((sum, trade) => sum + unitCostOf(trade) * quantityOf(trade), 0);
   const netAssetValue = openTrades.reduce(
-    (sum, trade) => sum + numberOrZero(trade.currentPrice ?? trade.currentMarketValue) * quantityOf(trade),
+    (sum, trade) => sum + (marketUnitValue(trade) ?? 0) * quantityOf(trade),
     0,
   );
   const ledger = buildRealisedLedger(closedTrades);

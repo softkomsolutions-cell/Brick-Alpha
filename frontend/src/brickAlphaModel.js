@@ -517,7 +517,10 @@ export function enrichBrickAlphaTrade(trade, collectibleItems = [], allTrades = 
     venue: trade.venue || base.venue || "Brick Alpha Paper",
     thesis: trade.note || base.thesis,
   });
-  const portfolioFit = portfolioFitFor(enrichedLikeItem, allTrades);
+  const decisionTrades = (allTrades || []).filter(
+    (candidate) => candidate?.collectionBook !== "full" && candidate?.curated !== false,
+  );
+  const portfolioFit = portfolioFitFor(enrichedLikeItem, decisionTrades);
   const brickAlphaScore = Math.round(
     enrichedLikeItem.brickAlphaScore -
       0.03 * numberOrZero(enrichedLikeItem.portfolioFit) +

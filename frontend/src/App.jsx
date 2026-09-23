@@ -73,7 +73,9 @@ function lazyNamedExport(factory, exportName) {
 }
 
 const TradeScreen = lazy(() => import("./components/tradeScreen"));
-const HomeScreen = lazyNamedExport(() => import("./components/workspaceScreens"), "HomeScreen");
+const HomeScreen = lazy(() =>
+  import("./v3/screens/HomeScreen").then((module) => ({ default: module.HomeScreen })),
+);
 const NewsScreen = lazyNamedExport(() => import("./components/workspaceScreens"), "NewsScreen");
 const ToolsScreen = lazyNamedExport(() => import("./components/workspaceScreens"), "ToolsScreen");
 const CollectiblesScreen = lazyNamedExport(
@@ -891,16 +893,16 @@ export default function App() {
   const [targetInput, setTargetInput] = useState("");
   const [connectors, setConnectors] = useState([]);
   const [feedbackResponse, setFeedbackResponse] = useState(EMPTY_FEEDBACK_RESPONSE);
-  const [watchlistResponse, setWatchlistResponse] = useState(EMPTY_WATCHLIST_RESPONSE);
+  const [_watchlistResponse, setWatchlistResponse] = useState(EMPTY_WATCHLIST_RESPONSE);
   const [alertsResponse, setAlertsResponse] = useState(EMPTY_ALERTS_RESPONSE);
   const [notificationsResponse, setNotificationsResponse] = useState(EMPTY_NOTIFICATIONS_RESPONSE);
-  const [routineResponse, setRoutineResponse] = useState(EMPTY_ROUTINE_RESPONSE);
+  const [_routineResponse, setRoutineResponse] = useState(EMPTY_ROUTINE_RESPONSE);
   const [shareStatus, setShareStatus] = useState(EMPTY_SHARE_STATUS);
   const [appSettings, setAppSettings] = useState(DEFAULT_SETTINGS);
   const [settingsStatus, setSettingsStatus] = useState("");
   const [feedbackStatus, setFeedbackStatus] = useState("");
   const [watchlistStatus, setWatchlistStatus] = useState("");
-  const [routineStatus, setRoutineStatus] = useState("");
+  const [_routineStatus, setRoutineStatus] = useState("");
   const [feedbackForm, setFeedbackForm] = useState(INITIAL_FEEDBACK_FORM);
   const [feedbackBusyKey, setFeedbackBusyKey] = useState("");
   const [watchlistBusyKey, setWatchlistBusyKey] = useState("");
@@ -2296,7 +2298,7 @@ export default function App() {
     [authToken],
   );
 
-  const openWatchlistSignal = useCallback(
+    const _openWatchlistSignal = useCallback(
     (item) => {
       if (!item?.ticker) {
         return;
@@ -2351,7 +2353,7 @@ export default function App() {
     [authToken],
   );
 
-  const removeWatchlistItem = useCallback(
+    const _removeWatchlistItem = useCallback(
     async (watchId) => {
       if (!authToken || !watchId) {
         return;
@@ -2377,7 +2379,7 @@ export default function App() {
     [authToken],
   );
 
-  const updateRoutineStep = useCallback(
+  const _updateRoutineStep = useCallback(
     async (stepId, completed) => {
       if (!authToken || !stepId) {
         return;
@@ -2406,7 +2408,7 @@ export default function App() {
     [authToken],
   );
 
-  const updateRoutineSessionMode = useCallback(
+  const _updateRoutineSessionMode = useCallback(
     async (sessionMode) => {
       if (!authToken || !sessionMode) {
         return;
@@ -2435,7 +2437,7 @@ export default function App() {
     [authToken],
   );
 
-  const resetRoutineForToday = useCallback(async () => {
+  const _resetRoutineForToday = useCallback(async () => {
     if (!authToken) {
       return;
     }
@@ -2461,7 +2463,7 @@ export default function App() {
     }
   }, [authToken]);
 
-  const dismissRoutineReminder = useCallback(async () => {
+  const _dismissRoutineReminder = useCallback(async () => {
     if (!authToken) {
       return;
     }
@@ -2487,7 +2489,7 @@ export default function App() {
     }
   }, [authToken]);
 
-  const acknowledgeRoutineCompletion = useCallback(async () => {
+  const _acknowledgeRoutineCompletion = useCallback(async () => {
     if (!authToken) {
       return;
     }
@@ -2550,7 +2552,7 @@ export default function App() {
       [alertsResponse.plan?.maxAlerts, appSettings.subscriptionTier, authToken],
     );
 
-  const toggleAlertRule = useCallback(
+  const _toggleAlertRule = useCallback(
     async (alertId, enabled) => {
       if (!authToken || !alertId) {
         return;
@@ -2574,7 +2576,7 @@ export default function App() {
     [authToken],
   );
 
-  const removeAlertRule = useCallback(
+  const _removeAlertRule = useCallback(
     async (alertId) => {
       if (!authToken || !alertId) {
         return;
@@ -2999,40 +3001,11 @@ export default function App() {
     <>
       {page === "home" ? (
         <HomeScreen
-          activeDesk={effectiveDeskKey}
-          activePageSections={activePageSections}
-          alertsResponse={alertsResponse}
           appSettings={appSettings}
           closedTrades={closedTrades}
-          collectiblesResponse={collectiblesResponse}
-          connectedProviderCount={connectedProviderCount}
-          feedbackResponse={feedbackResponse}
-          health={health}
-          jumpToPageSection={jumpToPageSection}
-          liveReadyDeskCount={liveReadyDeskCount}
-          markAllNotificationsRead={markAllNotificationsRead}
-          markNotificationRead={markNotificationRead}
+          collectibles={collectibles}
           navigateToPage={navigateToPage}
-          newsResponse={newsResponse}
-          notificationsResponse={notificationsResponse}
-          onOpenWatchlistSignal={openWatchlistSignal}
-          onRemoveAlertRule={removeAlertRule}
-          onRemoveWatchlistItem={removeWatchlistItem}
-          onToggleAlertRule={toggleAlertRule}
           openTrades={openTrades}
-          routineResponse={routineResponse}
-          routineStatus={routineStatus}
-          dismissRoutineReminder={dismissRoutineReminder}
-          acknowledgeRoutineCompletion={acknowledgeRoutineCompletion}
-          setRoutineMode={updateRoutineSessionMode}
-          resetRoutine={resetRoutineForToday}
-          setRoutineStep={updateRoutineStep}
-          shareStatus={shareStatus}
-          signalsResponse={signalsResponse}
-          totalOpenPnl={totalOpenPnl}
-          watchlistBusyKey={watchlistBusyKey}
-          watchlistResponse={watchlistResponse}
-          watchlistStatus={watchlistStatus}
         />
       ) : null}
 
@@ -3168,13 +3141,14 @@ export default function App() {
 
       {page === "verdict" ? (
         <VerdictScreen
+          appSettings={appSettings}
           navigateToPage={navigateToPage}
           onWatch={addSignalToWatchlist}
           onAddToCollection={() => navigateToPage("log-purchase")}
         />
       ) : null}
 
-      {page === "set-analysis" ? <SetAnalysisScreen navigateToPage={navigateToPage} /> : null}
+      {page === "set-analysis" ? <SetAnalysisScreen appSettings={appSettings} navigateToPage={navigateToPage} /> : null}
 
       {page === "log-purchase" ? (
         <LogPurchaseScreen

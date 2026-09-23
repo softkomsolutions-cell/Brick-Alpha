@@ -6,8 +6,9 @@ import {
   letterGradeFor,
 } from "../brickAlphaModel";
 import { formatCollectiblePrice } from "../appUtils";
+import { presentResearchFields, buildCanonicalAdvisor } from "../v3/decision/decisionModel";
+import { formatCanonicalValue } from "../v3/valuation/valuationAuthority";
 import {
-  buildAiInvestmentSummary,
   buildForecastCards,
   buildMarketPricing,
   buildRetirementSnapshot,
@@ -316,10 +317,21 @@ export function ScanEvaluateWorkspace({
   );
 
   const forecasts = useMemo(() => (evaluation ? buildForecastCards(evaluation) : []), [evaluation]);
-  const aiSummary = useMemo(
-    () => (evaluation ? buildAiInvestmentSummary(evaluation, demoProfile) : null),
-    [demoProfile, evaluation],
-  );
+  const aiSummary = useMemo(() => {
+    if (!evaluation) {
+      return null;
+    }
+    const presented = presentResearchFields(evaluation);
+    return buildCanonicalAdvisor({
+      name: evaluation.name,
+      verdict: { label: presented.verdictLabel },
+      valuation: presented,
+      retirement: {
+        status: presented.retirementStatus,
+        monthsRemaining: presented.monthsRemaining,
+      },
+    });
+  }, [evaluation]);
   const retirementSnapshot = useMemo(
     () => (evaluation ? buildRetirementSnapshot(evaluation) : null),
     [evaluation],
@@ -694,7 +706,7 @@ export function ScanEvaluateWorkspace({
                   <div><span>Pieces</span><strong>{demoProfile?.pieces || evaluation.numberOfPieces || "—"}</strong></div>
                   <div><span>Minifigures</span><strong>{demoProfile?.minifigures || evaluation.numberOfMinifigures || "—"}</strong></div>
                   <div><span>Retail price</span><strong>{formatCollectiblePrice(evaluation.retailPrice)}</strong></div>
-                  <div><span>Current market value</span><strong>{formatCollectiblePrice(evaluation.currentMarketValue)}</strong></div>
+                  <div><span>Current market value</span><strong>{formatCanonicalValue(presentResearchFields(evaluation).currentMarketValue)}</strong></div>
                   <div><span>Retirement status</span><strong>{evaluation.retirementStatus}</strong></div>
                   <div><span>Expected retirement</span><strong>{retirementSnapshot?.expectedRetirement}</strong></div>
                   <div><span>BrickEconomy status</span><strong>{demoProfile?.brickEconomyStatus || "Tracked"}</strong></div>
@@ -776,27 +788,28 @@ export function ScanEvaluateWorkspace({
                 <div className="seMetric"><span>Current value</span><strong>{formatCollectiblePrice(marketPricing?.currentValue)}</strong></div>
                 <div className="seMetric"><span>Lowest price</span><strong>{formatCollectiblePrice(marketPricing?.lowestPrice)}</strong></div>
                 <div className="seMetric"><span>Highest price</span><strong>{formatCollectiblePrice(marketPricing?.highestPrice)}</strong></div>
-                <div className="seMetric"><span>Average market price</span><strong>{formatCollectiblePrice(marketPricing?.averageMarketPrice)}</strong></div>
+                <div className="seMetric"><span>Illustrative blend</span><strong>{formatCollectiblePrice(marketPricing?.averageMarketPrice)}</strong><small>Not BrickEconomy</small></div>
                 <div className="seMetric"><span>Expected retirement pop</span><strong>{formatCollectiblePrice(marketPricing?.expectedRetirementPop)}</strong></div>
               </div>
             </article>
 
             <article className="seGlassCard">
               <div className="seSectionHeader">
-                <span className="executiveDashboardEyebrow">Forecasts</span>
-                <h2>Price outlook</h2>
+                <span className="executiveDashboardEyebrow">Non-canonical</span>
+                <h2>Illustrative outlook</h2>
               </div>
-              <div className="seForecastGrid">
-                {forecasts.map((forecast) => (
-                  <div key={forecast.years} className="seForecastCard">
-                    <span>{forecast.label}</span>
-                    <strong>{formatCollectiblePrice(forecast.value)}</strong>
-                    <em className="seMetric-positive">
-                      {Number.isFinite(forecast.roi) ? `+${forecast.roi.toFixed(1)}%` : "Unavailable"}
-                    </em>
-                  </div>
-                ))}
-              </div>
+              <p>These 1-year, 5-year, and 10-year figures are illustrative. They do not set the verdict or the BrickEconomy value.</p>
+              <details>
+                <summary>Show illustrative figures</summary>
+                <div className="seForecastGrid">
+                  {forecasts.map((forecast) => (
+                    <div key={forecast.years} className="seForecastCard">
+                      <span>{forecast.label}</span>
+                      <strong>{formatCollectiblePrice(forecast.value)}</strong>
+                    </div>
+                  ))}
+                </div>
+              </details>
             </article>
           </div>
 

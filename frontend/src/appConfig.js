@@ -47,6 +47,7 @@ export const DEFAULT_SETTINGS = {
     celebrationEnabled: true,
   },
   executionProfiles: DEFAULT_EXECUTION_PROFILES,
+  usdZarRate: 18.5,
 };
 
 export const ALERT_SUBSCRIPTION_OPTIONS = [

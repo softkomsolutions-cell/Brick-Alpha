@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { presentResearchFields } from "../v3/decision/decisionModel";
+import { formatRecordedGrowth } from "../v3/valuation/valuationAuthority";
 import { VALR_PAIR_OPTIONS } from "../appConfig";
 import {
   actionTone,
@@ -159,6 +161,7 @@ export function SignalCard({ signal, executionPlan, marketSource, isActive, onSe
 }
 
 export function TradeCollectibleCard({ item, isActive, onSelect, onTrade }) {
+  const research = item.brand === "LEGO" ? presentResearchFields(item) : null;
   return (
     <article
       className={`collectibleCard interactiveCard ${isActive ? "active" : ""}`}
@@ -189,11 +192,23 @@ export function TradeCollectibleCard({ item, isActive, onSelect, onTrade }) {
         </div>
         <div>
           <span>Action</span>
-          <strong>{item.recommendation || "Watch"}</strong>
+          <strong>{research ? research.verdictLabel : item.recommendation || "Watch"}</strong>
         </div>
         <div>
-          <span>Theme</span>
-          <strong>{item.legoTheme || "--"}</strong>
+          <span>Value</span>
+          <strong>{research ? (research.currentMarketValue == null ? "No recorded value" : formatCollectiblePrice(research.currentMarketValue)) : formatCollectiblePrice(item.price)}</strong>
+        </div>
+        <div>
+          <span>Annual</span>
+          <strong>{research ? formatRecordedGrowth(research.annualGrowth) : "--"}</strong>
+        </div>
+        <div>
+          <span>90-day</span>
+          <strong>{research ? formatRecordedGrowth(research.ninetyDayGrowth) : "--"}</strong>
+        </div>
+        <div>
+          <span>Retirement</span>
+          <strong>{research ? research.retirementStatus : item.legoTheme || "--"}</strong>
         </div>
         <div>
           <span>Discount</span>

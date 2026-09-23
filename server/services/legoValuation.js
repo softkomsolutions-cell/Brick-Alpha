@@ -3,7 +3,7 @@ const brickLink = require("./bricklinkService");
 const rateLimits = require("./rateLimitManager");
 
 const VALUATION_CACHE_TTL_MS = Number(process.env.LEGO_VALUATION_CACHE_TTL_MS || 6 * 60 * 60 * 1000);
-const USD_ZAR_RATE = Number(process.env.USD_ZAR_RATE || 17.8);
+const USD_ZAR_RATE = Number(process.env.USD_ZAR_RATE || 18.5);
 const cache = new Map();
 
 const BETA_BENCHMARKS = {

@@ -226,7 +226,16 @@ export function normalizeAppSettings(input) {
         celebrationEnabled: input?.routinePreferences?.celebrationEnabled !== false,
       },
       executionProfiles: normalizeExecutionProfiles(input?.executionProfiles),
+      usdZarRate: sanitizeUsdZarRate(input?.usdZarRate),
     };
+}
+
+function sanitizeUsdZarRate(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return 18.5;
+  }
+  return Math.round(numeric * 100) / 100;
 }
 
 export function formatDateTime(value, timeZone) {

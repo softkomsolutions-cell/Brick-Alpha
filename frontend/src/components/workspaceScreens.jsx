@@ -29,6 +29,7 @@ import {
   subscriptionTierLabel,
   venueDetailLabel,
 } from "../appUtils";
+import { resolveExchangeRate } from "../v3/valuation/exchangeRate";
 import {
   EmptyState,
   WorkspaceCommandBar,
@@ -3261,7 +3262,7 @@ export function CollectiblesScreen({
                 <h2>{group.brand}</h2>
                 <p>
                   {group.brand === "LEGO"
-                    ? "Display-led sets, minifigures, and collector holdings with the market intelligence shelf available beside the trade flow."
+                    ? `BrickEconomy current value, recorded growth, and the verdict vocabulary. ${resolveExchangeRate(appSettings).label}.`
                     : group.brand === "Pokemon"
                       ? "Sealed and graded trading-card holdings with faster collector demand read-through."
                       : "collectibles tracked inside the same ticket and portfolio workflow."}
@@ -3317,7 +3318,7 @@ export function ScanEvaluateScreen({
         tone="collectibles"
         eyebrow="Scan & Evaluate"
         title="AI Investment Advisor for LEGO"
-        description="Photograph a set, upload an image, or enter a set number — Brick Alpha delivers a complete investment analysis with score, forecast, and portfolio actions in seconds."
+        description="Photograph a set, upload an image, or enter a set number — Brick Alpha opens a verdict from the BrickEconomy value."
         statusLabel="Engine"
         statusValue="Brick Alpha AI"
         metrics={[
@@ -5047,6 +5048,36 @@ export function SettingsScreen({
               </button>
             ))}
           </div>
+        </section>
+
+        <section className="panel" id="exchange-rate">
+          <div className="panelHeader">
+            <div>
+              <h2>Exchange rate</h2>
+              <p>One USD/ZAR rate for every converted valuation. Default R18.50 / USD.</p>
+            </div>
+          </div>
+          <form
+            className="v3ExchangeForm"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const formRate = Number(new FormData(event.currentTarget).get("usdZarRate"));
+              updateSettings({ usdZarRate: formRate });
+            }}
+          >
+            <label>
+              Rand per US dollar
+              <input
+                name="usdZarRate"
+                type="number"
+                min="0.01"
+                step="0.01"
+                defaultValue={appSettings.usdZarRate}
+                key={appSettings.usdZarRate}
+              />
+            </label>
+            <button type="submit" className="primaryButton">Save rate</button>
+          </form>
         </section>
       </div>
 

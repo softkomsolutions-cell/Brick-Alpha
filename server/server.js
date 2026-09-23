@@ -88,7 +88,7 @@ const DEFAULT_SETTINGS = {
     nudgeWindow: "active",
     celebrationEnabled: true,
   },
-  executionProfiles: {
+    executionProfiles: {
     forex: {
       mode: "paper",
       providerId: "saxo",
@@ -107,6 +107,7 @@ const DEFAULT_SETTINGS = {
       providerId: "easyequities",
     },
   },
+  usdZarRate: 18.5,
 };
 
 const ALERT_SUBSCRIPTION_TIERS = {
@@ -373,6 +374,12 @@ const DEMO_LEGO_SETS = [
     retailPrice: 27999,
     buyPrice: 23300,
     currentMarketValue: 26999,
+    valuationDate: "2026-09-23",
+    valuationHistory: [
+      { date: "2025-09-23", value: 24000 },
+      { date: "2026-06-25", value: 26100 },
+      { date: "2026-09-23", value: 26999 },
+    ],
     projectedFutureValue: 34500,
     minifigureQuality: 88,
     exclusiveMinifigures: 2,
@@ -1439,7 +1446,16 @@ function sanitizeSettings(input) {
     alertPreferences: sanitizeAlertPreferences(input?.alertPreferences, subscriptionTier),
     routinePreferences,
     executionProfiles: sanitizeExecutionProfiles(input?.executionProfiles),
+    usdZarRate: sanitizeUsdZarRate(input?.usdZarRate),
   };
+}
+
+function sanitizeUsdZarRate(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return 18.5;
+  }
+  return Math.round(numeric * 100) / 100;
 }
 
 function sanitizeRoutineStepId(value) {

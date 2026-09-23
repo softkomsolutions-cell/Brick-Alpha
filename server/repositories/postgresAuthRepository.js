@@ -1,5 +1,5 @@
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const SETTINGS = ['preferredRegion', 'timezone', 'riskMode', 'subscriptionTier', 'alertPreferences', 'routinePreferences', 'executionProfiles'];
+const SETTINGS = ['preferredRegion', 'timezone', 'riskMode', 'subscriptionTier', 'alertPreferences', 'routinePreferences', 'executionProfiles', 'usdZarRate'];
 const selectSettings = settings => Object.fromEntries(SETTINGS.filter(key => settings[key] !== undefined).map(key => [key, settings[key]]));
 function view(user) {
   if (!user) return null;

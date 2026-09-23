@@ -1,14 +1,18 @@
 import { confidenceFor, buildBrickAlphaScoreBreakdown, letterGradeFor } from "../../brickAlphaModel";
 import {
   PREMIUM_COMPARABLES,
-  buildAiInvestmentSummary,
-  buildForecastCards,
   buildMarketPricing,
   buildRetirementSnapshot,
   riskLabel,
 } from "../../scanEvaluationData";
 import { formatCollectiblePrice } from "../../appUtils";
-import { canonicalMarketValue, recordedGrowth } from "../valuation/valuationAuthority";
+import {
+  buildCanonicalValuation,
+  canonicalMarketValue,
+  formatCanonicalValue,
+  formatRecordedGrowth,
+  recordedGrowth,
+} from "../valuation/valuationAuthority";
 
 const CHANNELS = [
   { id: "private", label: "Private sale", feeRate: 0.05 },
@@ -60,9 +64,10 @@ export function mapVerdictVocabulary(evaluation) {
 
 export function buildNetExitChannels(currentValue) {
   const value = numberOrZero(currentValue);
+  const priced = currentValue != null && value > 0;
   return CHANNELS.map((channel) => ({
     ...channel,
-    net: Math.round(value * (1 - channel.feeRate)),
+    net: priced ? Math.round(value * (1 - channel.feeRate)) : null,
     feePercent: Math.round(channel.feeRate * 100),
   }));
 }
@@ -86,6 +91,7 @@ export function buildNineFactors(evaluation, extras = {}) {
     100 - numberOrZero(evaluation?.supplyScarcity || numberOrZero(evaluation?.exclusiveMinifigures) * 12),
   );
   const months = retirement.monthsRemaining;
+  const growth = recordedGrowth(evaluation);
 
   return [
     factor(
@@ -126,9 +132,9 @@ export function buildNineFactors(evaluation, extras = {}) {
     factor(
       "retirement-pop",
       "Retirement pop",
-      evaluation?.projectedRoi,
-      formatCollectiblePrice(retirement.expectedRetirementPop),
-      "Estimated sealed value after retirement, derived from the frozen current value and projected return.",
+      growth.annualPercent == null ? 50 : Math.max(0, Math.min(100, 50 + growth.annualPercent)),
+      growth.annualPercent == null ? "Insufficient history" : formatRecordedGrowth(growth.annualPercent),
+      "Recorded valuation history only. A 1-year, 5-year, or 10-year forecast is not a decision input.",
     ),
     factor(
       "how-many",
@@ -168,6 +174,38 @@ export function buildThesisChecklist(evaluation, verdict) {
   return checklist.slice(0, 5);
 }
 
+export function buildCanonicalAdvisor({ name, verdict, valuation, retirement }) {
+  const annual =
+    valuation.annualGrowth == null ? "Insufficient history" : formatRecordedGrowth(valuation.annualGrowth);
+  const ninety =
+    valuation.ninetyDayGrowth == null ? "Insufficient history" : formatRecordedGrowth(valuation.ninetyDayGrowth);
+  const months =
+    retirement?.monthsRemaining != null && Number.isFinite(Number(retirement.monthsRemaining))
+      ? ` · ${retirement.monthsRemaining} months`
+      : "";
+  return {
+    lead: `${name} is ${verdict.label} from the BrickEconomy value and the recorded set evidence.`,
+    bullets: [
+      `Current market value ${formatCanonicalValue(valuation.currentMarketValue)}. Source ${valuation.source}.`,
+      `Annual growth ${annual}. 90-day growth ${ninety}.`,
+      `Retirement ${retirement?.status || "Unavailable"}${months}.`,
+    ],
+    action: `Recommended action: ${verdict.label}. Forward forecasts are not part of this verdict.`,
+  };
+}
+
+export function presentResearchFields(item) {
+  const valuation = buildCanonicalValuation(item);
+  const verdict = mapVerdictVocabulary(item);
+  const retirement = buildRetirementSnapshot(item);
+  return {
+    ...valuation,
+    verdictLabel: verdict.label,
+    retirementStatus: retirement.status,
+    monthsRemaining: retirement.monthsRemaining,
+  };
+}
+
 export function buildDecisionSnapshot({
   evaluation,
   imageUrl = "",
@@ -177,14 +215,10 @@ export function buildDecisionSnapshot({
   const frozen = JSON.parse(JSON.stringify(evaluation || {}));
   const retirement = buildRetirementSnapshot(frozen);
   const verdict = mapVerdictVocabulary(frozen);
-  const valuation = canonicalMarketValue(frozen);
-  const growth = recordedGrowth(frozen);
-  const currentValue = valuation.value ?? 0;
+  const valuation = buildCanonicalValuation(frozen);
   const confidence = confidenceFor(frozen);
   const breakdown = buildBrickAlphaScoreBreakdown(frozen);
   const marketPricing = buildMarketPricing(frozen, profile);
-  const forecasts = buildForecastCards(frozen);
-  const aiSummary = buildAiInvestmentSummary(frozen, profile);
 
   return {
     analyzedAt,
@@ -193,28 +227,35 @@ export function buildDecisionSnapshot({
     name: frozen.name || profile?.name || "LEGO set",
     theme: frozen.legoTheme || profile?.theme || "",
     collectibleId: frozen.id,
-    currentValue,
+    currentValue: valuation.currentMarketValue,
     valuationSource: valuation.source,
     valuationAuthoritative: valuation.authoritative,
-    annualGrowth: growth.annualPercent,
-    growth90Day: growth.ninetyDayPercent,
+    valuationDate: valuation.valuationDate,
+    annualGrowth: valuation.annualGrowth,
+    growth90Day: valuation.ninetyDayGrowth,
+    annualGrowthLabel: valuation.annualGrowthLabel,
+    ninetyDayGrowthLabel: valuation.ninetyDayGrowthLabel,
+    provenance: valuation.provenance,
     retailPrice: numberOrZero(frozen.retailPrice),
     score: Math.round(numberOrZero(frozen.brickAlphaScore)),
     grade: letterGradeFor(frozen.brickAlphaScore),
     investmentGrade: frozen.investmentGrade || "",
     verdict,
     confidence,
-    roi: Math.round(numberOrZero(profile?.expectedRoi || frozen.projectedRoi || frozen.estimatedRoi)),
     risk: riskLabel(frozen.riskScore),
     riskScore: Math.round(numberOrZero(frozen.riskScore)),
     thesis: buildThesisChecklist(frozen, verdict),
     retirement,
-    netExits: buildNetExitChannels(currentValue),
+    netExits: buildNetExitChannels(valuation.currentMarketValue),
     factors: buildNineFactors(frozen, { verdict, retirement, profile }),
     breakdown,
     marketPricing,
-    forecasts,
-    aiSummary,
+    aiSummary: buildCanonicalAdvisor({
+      name: frozen.name || profile?.name || "LEGO set",
+      verdict,
+      valuation,
+      retirement,
+    }),
     comparables: PREMIUM_COMPARABLES,
     drivers: Array.isArray(breakdown?.displayGroups) ? breakdown.displayGroups : [],
     evaluation: frozen,

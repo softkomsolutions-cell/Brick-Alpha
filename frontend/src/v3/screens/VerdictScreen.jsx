@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { formatCollectiblePrice } from "../../appUtils";
+import { resolveExchangeRate } from "../valuation/exchangeRate";
+import { formatCanonicalValue, formatRecordedGrowth } from "../valuation/valuationAuthority";
 import { ScoreRing } from "../../components/brickAlphaScoreDisplay";
 import { readDecisionSnapshot } from "../decision/decisionSession";
 
-export function VerdictScreen({ navigateToPage, onWatch, onAddToCollection }) {
+export function VerdictScreen({ navigateToPage, onWatch, onAddToCollection, appSettings }) {
   const snapshot = readDecisionSnapshot();
   const [watchStatus, setWatchStatus] = useState("");
   const [openThesis, setOpenThesis] = useState(true);
+  const exchange = resolveExchangeRate(appSettings);
 
   if (!snapshot) {
     return (
@@ -49,11 +52,22 @@ export function VerdictScreen({ navigateToPage, onWatch, onAddToCollection }) {
           </div>
           <div className="v3Metric">
             <span>Current value</span>
-            <strong>{formatCollectiblePrice(snapshot.currentValue)}</strong>
-            <small>{snapshot.valuationSource || "BrickEconomy"}</small>
+            <strong>{formatCanonicalValue(snapshot.currentValue)}</strong>
+            <small>
+              {snapshot.valuationSource || "BrickEconomy"} · {snapshot.valuationDate || "—"} · {exchange.label}
+            </small>
           </div>
           <div className="v3Metric"><span>Confidence</span><strong>{snapshot.confidence}%</strong></div>
-          <div className="v3Metric"><span>ROI</span><strong>+{snapshot.roi}%</strong></div>
+          <div className="v3Metric">
+            <span>Annual growth</span>
+            <strong>{formatRecordedGrowth(snapshot.annualGrowth)}</strong>
+            <small>{snapshot.annualGrowth == null ? "Insufficient history" : "Recorded"}</small>
+          </div>
+          <div className="v3Metric">
+            <span>90-day growth</span>
+            <strong>{formatRecordedGrowth(snapshot.growth90Day)}</strong>
+            <small>{snapshot.growth90Day == null ? "Insufficient history" : "Recorded"}</small>
+          </div>
           <div className="v3Metric"><span>Risk</span><strong>{snapshot.risk}</strong></div>
           <div className="v3Metric"><span>Grade</span><strong>{snapshot.grade}</strong></div>
         </div>
@@ -78,7 +92,6 @@ export function VerdictScreen({ navigateToPage, onWatch, onAddToCollection }) {
           {snapshot.retirement.status} · {snapshot.retirement.monthsRemaining} months · expected{" "}
           {snapshot.retirement.expectedRetirement}
         </p>
-        <small>Retirement pop {formatCollectiblePrice(snapshot.retirement.expectedRetirementPop)}</small>
       </section>
 
       <section className="v3DecisionCard">
@@ -87,7 +100,7 @@ export function VerdictScreen({ navigateToPage, onWatch, onAddToCollection }) {
           {snapshot.netExits.map((channel) => (
             <div key={channel.id}>
               <span>{channel.label}</span>
-              <strong>{formatCollectiblePrice(channel.net)}</strong>
+              <strong>{channel.net == null ? "No recorded value" : formatCollectiblePrice(channel.net)}</strong>
               <small>{channel.feePercent}% fees</small>
             </div>
           ))}

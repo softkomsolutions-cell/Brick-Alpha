@@ -3,7 +3,7 @@
  * Keeps demo content out of UI components — swap for API calls when backend is ready.
  */
 
-import { formatCollectiblePrice } from "./appUtils";
+import { canonicalMarketValue, formatCanonicalValue, formatRecordedGrowth, recordedGrowth } from "./v3/valuation/valuationAuthority";
 
 export const PROCESSING_STEPS = [
   { id: "uploading", label: "Uploading..." },
@@ -172,7 +172,7 @@ export const PREMIUM_COMPARABLES = [
 
 export const COPILOT_DEMO_RESPONSES = {
   "should i buy three of these?":
-    "Three sealed copies would diversify your exit strategy — one for long-term hold, one for retirement pop, and one for liquidity. At current pricing with a Strong Buy rating, accumulating 2–3 units before retirement is aligned with Brick Alpha's model for high-conviction UCS sets.",
+    "The verdict is Buy ×2 flywheel, Buy ×1, Only below a price, or Skip. It uses the BrickEconomy value and recorded growth. A 1-year, 5-year, or 10-year forecast is not a reason to buy three.",
   default:
     "Based on the Brick Alpha score and retirement window, this set fits a core accumulation strategy. Monitor discount periods and consider staged entries rather than a single lump-sum purchase.",
 };
@@ -430,72 +430,55 @@ export function riskLabel(riskScore) {
 }
 
 function copilotContext(evaluation, demoProfile) {
-  const current = Number(evaluation?.currentMarketValue || evaluation?.price) || 0;
+  const valuation = canonicalMarketValue(evaluation);
+  const growth = recordedGrowth(evaluation);
   const retail = Number(evaluation?.retailPrice || demoProfile?.retailPrice) || 0;
-  const basedOnCurrent = current > 0 ? current : retail;
-  const expectedPop = Math.round(
-    basedOnCurrent * (1 + (Number(demoProfile?.expectedRoi) || Number(evaluation?.projectedRoi) || 30) / 100),
-  );
 
   return {
     name: evaluation?.name || demoProfile?.name || "this set",
     score: Math.round(Number(evaluation?.brickAlphaScore)),
     recommendation: evaluation?.recommendation || "Buy",
-    current,
+    current: valuation.value,
+    valueText: formatCanonicalValue(valuation.value),
+    source: valuation.source,
     retail,
-    expectedPop,
-    projectedRoi: Number(evaluation?.projectedRoi),
-    estimatedRoi: Number(evaluation?.estimatedRoi),
-    expectedRoi: Number(demoProfile?.expectedRoi) || Number(evaluation?.projectedRoi),
+    annualText: growth.annualPercent == null ? "Insufficient history" : formatRecordedGrowth(growth.annualPercent),
+    ninetyText: growth.ninetyDayPercent == null ? "Insufficient history" : formatRecordedGrowth(growth.ninetyDayPercent),
     retirementStatus: evaluation?.retirementStatus || "Available",
-    expectedRetirementDate: evaluation?.expectedRetirementDate || demoProfile?.investmentHorizon || "the projected window",
+    expectedRetirementDate: evaluation?.expectedRetirementDate || demoProfile?.investmentHorizon || "the recorded window",
     riskScore: Number(evaluation?.riskScore),
     riskLabel: riskLabel(evaluation?.riskScore),
     discount: Number(evaluation?.discountPercentage),
-    horizon: evaluation?.holdingPeriod || demoProfile?.investmentHorizon || "3–5 years",
     theme: evaluation?.legoTheme || demoProfile?.theme,
   };
 }
 
 function copilotRecommendationLine(ctx) {
-  const action = ctx.recommendation === "Strong Buy" ? "accumulate 2–3 units while it is still broadly available" : ctx.recommendation === "Buy" ? "start with a single unit and ladder in on dips" : `${ctx.recommendation.toLowerCase()} and avoid chasing premium retail`;
-  return `The ${ctx.name} scores ${ctx.score}/100 with a ${ctx.recommendation} rating — a ${ctx.riskLabel.toLowerCase()} risk profile, so ${action}.`;
+  return `The ${ctx.name} scores ${ctx.score}/100. The verdict uses Buy ×2 flywheel, Buy ×1, Only below a price, or Skip, and it does not use a forward forecast.`;
 }
 
 function copilotAnswerFor(question, ctx) {
   const normalized = String(question || "").trim().toLowerCase();
-  const priceLine =
-    ctx.current && ctx.retail
-      ? `Retail is ${formatCollectiblePrice(ctx.retail)} against a secondary market value of ${formatCollectiblePrice(ctx.current)}${ctx.discount > 0 ? ` (${ctx.discount.toFixed(0)}% below retail).` : "."}`
-      : "Current secondary pricing is tracked daily by Brick Alpha.";
+  const priceLine = `Current market value is ${ctx.valueText} from ${ctx.source}. Annual growth is ${ctx.annualText}. 90-day growth is ${ctx.ninetyText}.`;
 
   if (normalized.includes("buy") || normalized.includes("three") || normalized.includes("stock")) {
-    return `${copilotRecommendationLine(ctx)} ${priceLine} A projected retirement-pop value of ${formatCollectiblePrice(ctx.expectedPop)} supports staged entries across ${ctx.horizon}.`;
+    return `${copilotRecommendationLine(ctx)} ${priceLine}`;
   }
 
   if (normalized.includes("roi") || normalized.includes("return") || normalized.includes("profit")) {
-    const projected = Number.isFinite(ctx.projectedRoi)
-      ? `forecast return of ${ctx.projectedRoi.toFixed(0)}%`
-      : Number.isFinite(ctx.expectedRoi)
-        ? `expected return of ${ctx.expectedRoi.toFixed(0)}%`
-        : "a strong return profile";
-    return `Brick Alpha projects ${projected} on the ${ctx.name} over ${ctx.horizon}. With a score of ${ctx.score}/100 and a ${ctx.recommendation} rating, the risk-adjusted profile is favourable for a patient holder.`;
+    return `${priceLine} Recorded growth is the return evidence.`;
   }
 
   if (normalized.includes("retir")) {
-    const statusLine =
-      ctx.retirementStatus === "Retired"
-        ? "already retired, so sealed supply is fixed and scarcity is rising"
-        : `tracking toward retirement with an expected window of ${ctx.expectedRetirementDate}`;
-    return `The ${ctx.name} is ${statusLine}. A realistic retirement-pop value is ${formatCollectiblePrice(ctx.expectedPop)}, which is what a ${ctx.recommendation} rating is priced around.`;
+    return `The ${ctx.name} retirement status is ${ctx.retirementStatus}, expected ${ctx.expectedRetirementDate}. ${priceLine}`;
   }
 
   if (normalized.includes("score") || normalized.includes("grade") || normalized.includes("good")) {
-    return `The ${ctx.name} scores ${ctx.score}/100 on the Brick Alpha model — a ${ctx.recommendation}. ${ctx.theme ? `Theme exposure (${ctx.theme}) ` : ""}and retirement timing are the strongest contributors right now. ${priceLine}`;
+    return `The ${ctx.name} scores ${ctx.score}/100. ${ctx.theme ? `Theme exposure (${ctx.theme}) ` : ""}and retirement timing are recorded contributors. ${priceLine}`;
   }
 
   if (normalized.includes("risk") || normalized.includes("safe")) {
-    return `Risk for the ${ctx.name} is ${ctx.riskLabel} (${ctx.riskScore}/100). ${ctx.riskLabel === "LOW" ? "That supports a scaled entry now." : ctx.riskLabel === "HIGH" ? "Wait for a discount or a lower entry before sizing in." : "Pyramiding on dips keeps the profile balanced."} ${priceLine}`;
+    return `Risk for the ${ctx.name} is ${ctx.riskLabel} (${ctx.riskScore}/100). ${priceLine}`;
   }
 
   if (normalized.includes("price") || normalized.includes("cost") || normalized.includes("value") || normalized.includes("worth")) {
@@ -503,11 +486,11 @@ function copilotAnswerFor(question, ctx) {
   }
 
   if (normalized.includes("sell") || normalized.includes("exit") || normalized.includes("when")) {
-    return `Exit timing matters more than entry. For the ${ctx.name}, plan an exit once realised ROI clears the model threshold or supply tightens after retirement — typically within ${ctx.horizon}.`;
+    return `Exit timing follows the retirement window and whether one unit covers the stack cost. ${priceLine}`;
   }
 
   if (normalized.includes("hold") || normalized.includes("keep")) {
-    return `Holding the ${ctx.name} through its retirement window is consistent with its ${ctx.recommendation} rating and a projected-pop value of ${formatCollectiblePrice(ctx.expectedPop)}. Review at each quarterly repricing.`;
+    return `Holding the ${ctx.name} is judged from the BrickEconomy value and recorded growth, not from a forward price path. ${priceLine}`;
   }
 
   return `${copilotRecommendationLine(ctx)} ${priceLine}`;
