@@ -1,0 +1,336 @@
+/* Brick Alpha v3 — visual system from Brick_Alpha_App_Structure_Spec_v3.pdf */
+
+:root {
+  --ba-paper: #F6F5F1;
+  --ba-surface: #FFFFFF;
+  --ba-ink: #15171C;
+  --ba-ink-secondary: #4A4F5A;
+  --ba-line: #E4E2DC;
+  --ba-primary: #2344A3;
+  --ba-primary-tint: #E8EDFB;
+  --ba-brick-yellow: #F2C230;
+  --ba-gain: #16794A;
+  --ba-caution: #8A5300;
+  --ba-loss: #B42318;
+  --ba-radius: 16px;
+  --ba-radius-sm: 10px;
+  --ba-shadow: 0 8px 28px rgba(21, 23, 28, 0.07);
+}
+
+html,
+body,
+#root {
+  background: var(--ba-paper);
+  color: var(--ba-ink);
+}
+
+body {
+  color-scheme: light;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.brandLogoLockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brandLogoTextStack {
+  display: grid;
+  gap: 2px;
+}
+
+.brandLogoWordmark {
+  display: inline-flex;
+  gap: 0.24em;
+  align-items: baseline;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+.brandLogoName {
+  color: var(--ba-ink);
+  text-transform: none;
+}
+
+.brandLogoNameAccent {
+  color: var(--ba-primary);
+}
+
+.brandLogoTagline {
+  color: var(--ba-ink-secondary);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.saasTopNav,
+.saasSidebar,
+.workspaceSidebar,
+.appSidebar,
+aside[class*="Sidebar"] {
+  background: var(--ba-surface) !important;
+  color: var(--ba-ink) !important;
+  border-color: var(--ba-line) !important;
+  box-shadow: none !important;
+}
+
+.saasTopNav {
+  border-bottom: 1px solid var(--ba-line) !important;
+}
+
+.saasTopNavBreadcrumb,
+.saasTopNavBreadcrumb span,
+.saasTopNavBreadcrumb strong {
+  color: var(--ba-ink) !important;
+}
+
+.saasTopNavSearch,
+.ghostButton,
+.secondaryButton {
+  background: var(--ba-surface) !important;
+  border-color: var(--ba-line) !important;
+  color: var(--ba-ink) !important;
+}
+
+.saasTopNavSearch:hover,
+.ghostButton:hover,
+.secondaryButton:hover {
+  border-color: #C8C6BF !important;
+  background: #FBFAF7 !important;
+}
+
+.primaryButton {
+  background: var(--ba-primary) !important;
+  border-color: var(--ba-primary) !important;
+  color: #fff !important;
+  min-height: 44px;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+}
+
+.primaryButton:hover {
+  filter: brightness(0.96);
+}
+
+.saasTopNavPill,
+.statusPill,
+[class*="Pill"] {
+  border-color: var(--ba-line);
+}
+
+.workspaceHero,
+.executiveKpiCard,
+.workspaceSectionBar,
+.workspaceCommandBar,
+.workspaceCommandCard,
+.panel,
+.card,
+[class*="Card"],
+[class*="Panel"],
+[class*="Section"] {
+  box-shadow: none;
+}
+
+.workspaceHero {
+  background: var(--ba-surface) !important;
+  color: var(--ba-ink) !important;
+  border: 1px solid var(--ba-line) !important;
+  border-radius: var(--ba-radius) !important;
+}
+
+.workspaceHero h1,
+.workspaceHero strong,
+.workspaceHeroMetric strong,
+.workspaceHeroStatus strong {
+  color: var(--ba-ink) !important;
+}
+
+.workspaceHero p,
+.workspaceHero span,
+.workspaceHero small {
+  color: var(--ba-ink-secondary) !important;
+}
+
+.executiveSummaryStrip {
+  gap: 12px;
+}
+
+.executiveKpiCard {
+  background: var(--ba-surface) !important;
+  border: 1px solid var(--ba-line) !important;
+  color: var(--ba-ink) !important;
+  border-radius: var(--ba-radius-sm) !important;
+}
+
+.executiveKpiCard span,
+.executiveKpiCard small {
+  color: var(--ba-ink-secondary) !important;
+}
+
+.executiveKpiCard strong {
+  color: var(--ba-ink) !important;
+}
+
+.workspaceSectionBar {
+  background: transparent !important;
+  border: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.workspaceSectionBarHeader small {
+  display: none;
+}
+
+.workspaceSectionChip {
+  background: var(--ba-surface) !important;
+  border: 1px solid var(--ba-line) !important;
+  color: var(--ba-ink-secondary) !important;
+}
+
+.workspaceSectionChip:hover,
+.workspaceSectionChip.active {
+  background: var(--ba-primary-tint) !important;
+  border-color: #BFCBF3 !important;
+  color: var(--ba-primary) !important;
+}
+
+/* v3 explicitly removes repeated hero/filler structures from task screens. */
+.workspaceHero + .workspaceSectionBar,
+.workspaceSectionBar + .workspaceCommandBar {
+  margin-top: 8px;
+}
+
+.landingShell,
+.splashShell,
+.authShell,
+.premiumAuthShell {
+  background: var(--ba-paper) !important;
+}
+
+.landingPanel,
+.authPanel,
+.onboardingPanel,
+.splashPanel {
+  background: var(--ba-surface) !important;
+  border: 1px solid var(--ba-line) !important;
+  color: var(--ba-ink) !important;
+  box-shadow: var(--ba-shadow) !important;
+}
+
+.authBrandStageHeadline,
+.authPanel h2,
+.landingHero h1,
+.splashPanel h1 {
+  color: var(--ba-ink) !important;
+}
+
+.authBlurb,
+.authBrandStageSubheadline,
+.landingHero p,
+.splashPanel p {
+  color: var(--ba-ink-secondary) !important;
+}
+
+.authFeatureCard,
+.landingValueCard,
+.landingFeatureChip,
+.splashPreviewCard {
+  background: #FBFAF7 !important;
+  border-color: var(--ba-line) !important;
+  color: var(--ba-ink) !important;
+}
+
+/* Verdict and analysis semantics */
+[class*="gain"],
+[class*="positive"],
+[class*="success"] {
+  --accent: var(--ba-gain);
+}
+
+[class*="caution"],
+[class*="warning"] {
+  --accent: var(--ba-caution);
+}
+
+[class*="loss"],
+[class*="danger"],
+[class*="negative"] {
+  --accent: var(--ba-loss);
+}
+
+/* Scan should be the one yellow primary navigation/action surface. */
+[data-page="scan-evaluate"] .primaryButton,
+.scanEvaluateWorkspace .primaryButton,
+.seWorkspace .primaryButton {
+  background: var(--ba-primary) !important;
+}
+
+/* Mobile v3 bottom navigation */
+@media (max-width: 820px) {
+  body {
+    background: var(--ba-paper);
+  }
+
+  .saasTopNavSearch,
+  .executiveSummaryStrip {
+    display: none !important;
+  }
+
+  .workspaceHero {
+    border-radius: 12px !important;
+  }
+
+  .workspaceHeroRail,
+  .workspaceHeroMetricGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .saasSidebar,
+  .workspaceSidebar,
+  .appSidebar,
+  aside[class*="Sidebar"] {
+    position: fixed !important;
+    inset: auto 0 0 0 !important;
+    width: 100% !important;
+    height: 72px !important;
+    z-index: 1000 !important;
+    border-top: 1px solid var(--ba-line) !important;
+    border-right: 0 !important;
+    box-shadow: 0 -6px 18px rgba(21,23,28,0.05) !important;
+  }
+
+  .brandLogoTagline {
+    display: none;
+  }
+}
+
+/* Mobile screen density should follow the PDF: one primary action, readable cards, 44px taps. */
+@media (max-width: 600px) {
+  button,
+  a[role="button"] {
+    min-height: 44px;
+  }
+
+  .workspaceHero {
+    padding: 18px !important;
+  }
+
+  .workspaceHero h1 {
+    font-size: clamp(24px, 8vw, 34px) !important;
+    line-height: 1.05 !important;
+  }
+
+  .workspaceCommandGrid,
+  .landingValueGrid,
+  .splashGrid {
+    grid-template-columns: 1fr !important;
+  }
+}
