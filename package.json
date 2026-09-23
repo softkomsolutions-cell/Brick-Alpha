@@ -8,6 +8,7 @@
     "build": "npm --prefix frontend run build",
     "check": "npm --prefix frontend run lint && npm --prefix server run check",
     "partner:staging": "npm --prefix frontend run build && npm --prefix server start",
+    "demo": "node scripts/start-demo.mjs",
     "partner:share": "node scripts/partner-share.mjs",
     "render:smoke": "node scripts/render-smoke-test.mjs",
     "test:backend": "npm --prefix server run test",

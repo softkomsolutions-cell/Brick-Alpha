@@ -699,7 +699,7 @@ export function LandingShell({ initialLaunch, onContinue, onDemo, demoBusy = fal
                   }
                   disabled={demoBusy}
                 >
-                  {demoBusy ? "Opening Demo..." : "Explore Live Demo"}
+                  {demoBusy ? "Opening Demo..." : "Enter Demo"}
                 </button>
               ) : null}
             </div>
@@ -898,7 +898,7 @@ export function LandingShell({ initialLaunch, onContinue, onDemo, demoBusy = fal
               }
               disabled={demoBusy}
             >
-              {demoBusy ? "Opening Demo..." : "Explore Live Demo"}
+              {demoBusy ? "Opening Demo..." : "Enter Demo"}
             </button>
           ) : null}
         </div>
@@ -1138,7 +1138,7 @@ export function AuthShell({
                 </button>
                 {onDemo ? (
                   <button type="button" className="secondaryButton" onClick={onDemo} disabled={demoBusy}>
-                    {demoBusy ? "Opening demo..." : "Explore demo"}
+                    {demoBusy ? "Opening demo..." : "Enter Demo"}
                   </button>
                 ) : null}
               </form>

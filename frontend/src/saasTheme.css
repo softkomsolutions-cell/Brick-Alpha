@@ -2174,6 +2174,12 @@
   gap: 10px;
 }
 
+.iaHeroActionNote {
+  margin: 10px 0 0;
+  color: var(--ba-text-muted);
+  font-size: 13px;
+}
+
 .iaGlassCard {
   padding: 24px;
   border-radius: var(--ba-radius-xl);

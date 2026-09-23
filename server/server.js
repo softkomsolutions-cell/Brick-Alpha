@@ -267,6 +267,8 @@ const PRODUCT_CATALOG_DATA = loadProductCatalog();
 const PRODUCT_CATALOG = PRODUCT_CATALOG_DATA.items;
 const PRODUCT_CATALOG_BRANDS = uniqueStrings(PRODUCT_CATALOG.map((item) => item.brand)).sort();
 const PRODUCT_CATALOG_FAMILIES = uniqueStrings(PRODUCT_CATALOG.map((item) => item.family)).sort();
+const DEMO_MODE = String(process.env.DEMO_MODE || "").toLowerCase() === "true";
+
 const TRADEABLE_COLLECTIBLES = [
   {
     id: "lego-star-wars-75252",
@@ -353,6 +355,213 @@ const TRADEABLE_COLLECTIBLES = [
     liquidity: "Medium",
   },
 ];
+
+const DEMO_LEGO_SETS = [
+  {
+    id: "lego-star-wars-75367",
+    brand: "LEGO",
+    name: "UCS Venator-Class Republic Attack Cruiser",
+    category: "LEGO Star Wars (UCS)",
+    market: "South Africa / Global",
+    sku: "75367",
+    description: "Large UCS flagship with a deep collector moat and a strong sealed-box resale tape.",
+    thesis: "UCS flagships tend to reprice in steps as clean stock dries up around retirement.",
+    venue: "Private market / eBay",
+    price: 26999,
+    changePercent: 3.2,
+    liquidity: "Medium",
+    retailPrice: 27999,
+    buyPrice: 23300,
+    currentMarketValue: 26999,
+    projectedFutureValue: 34500,
+    minifigureQuality: 88,
+    exclusiveMinifigures: 2,
+    numberOfMinifigures: 5,
+    themeStrength: 94,
+    retirementTimeline: 92,
+    demandForSet: 92,
+    supplyScarcity: 84,
+    displayAppeal: 92,
+    partOutValue: 74,
+    liquidityScore: 74,
+    historicalPerformance: 84,
+    portfolioFit: 80,
+    riskScore: 42,
+    expectedRetirementDate: "2027-06-30",
+    sellByTargetDate: "2030-06-30",
+  },
+  {
+    id: "lego-icons-10316",
+    brand: "LEGO",
+    name: "The Lord of the Rings: Rivendell",
+    category: "LEGO Icons",
+    market: "South Africa / Global",
+    sku: "10316",
+    description: "Display-heavy Icons set with strong AFOL and LOTR crossover demand.",
+    thesis: "Premium display sets tend to hold price better when local stock gets patchy.",
+    venue: "Retail / collector resale",
+    price: 18300,
+    changePercent: 2.1,
+    liquidity: "Medium",
+    retailPrice: 19999,
+    buyPrice: 17500,
+    currentMarketValue: 18300,
+    projectedFutureValue: 23000,
+    minifigureQuality: 86,
+    exclusiveMinifigures: 4,
+    numberOfMinifigures: 15,
+    themeStrength: 90,
+    retirementTimeline: 90,
+    demandForSet: 86,
+    supplyScarcity: 78,
+    displayAppeal: 93,
+    partOutValue: 76,
+    liquidityScore: 80,
+    historicalPerformance: 82,
+    portfolioFit: 72,
+    riskScore: 50,
+    expectedRetirementDate: "2028-12-31",
+    sellByTargetDate: "2030-12-31",
+  },
+  {
+    id: "lego-harry-potter-71043",
+    brand: "LEGO",
+    name: "Harry Potter: Hogwarts Castle",
+    category: "LEGO Harry Potter (Retired)",
+    market: "South Africa / Global",
+    sku: "71043",
+    description: "Retired flagship with a massive piece count and steady sealed-box demand.",
+    thesis: "Retired LEGO flagships usually tighten in supply before the next repricing leg.",
+    venue: "Private market / eBay",
+    price: 18000,
+    changePercent: -1.4,
+    liquidity: "Medium",
+    retailPrice: 16999,
+    buyPrice: 14900,
+    currentMarketValue: 18000,
+    projectedFutureValue: 22500,
+    minifigureQuality: 80,
+    exclusiveMinifigures: 4,
+    numberOfMinifigures: 27,
+    themeStrength: 92,
+    retirementTimeline: 88,
+    demandForSet: 74,
+    supplyScarcity: 76,
+    displayAppeal: 95,
+    partOutValue: 70,
+    liquidityScore: 72,
+    historicalPerformance: 80,
+    portfolioFit: 76,
+    riskScore: 52,
+    actualRetirementDate: "2022-12-31",
+    expectedRetirementDate: "2022-12-31",
+    sellByTargetDate: "2028-12-31",
+  },
+  {
+    id: "lego-marvel-76218",
+    brand: "LEGO",
+    name: "Marvel Sanctum Sanctorum",
+    category: "LEGO Marvel",
+    market: "South Africa / Global",
+    sku: "76218",
+    description: "Shared franchise set with strong display appeal and a deep minifigure cast.",
+    thesis: "Widely available sets track retail closely until clean stock starts to thin out.",
+    venue: "Retail / collector resale",
+    price: 8690,
+    changePercent: 1.2,
+    liquidity: "High",
+    retailPrice: 8999,
+    buyPrice: 8500,
+    currentMarketValue: 8690,
+    projectedFutureValue: 9800,
+    minifigureQuality: 74,
+    exclusiveMinifigures: 4,
+    numberOfMinifigures: 8,
+    themeStrength: 78,
+    retirementTimeline: 80,
+    demandForSet: 72,
+    supplyScarcity: 62,
+    displayAppeal: 84,
+    partOutValue: 66,
+    liquidityScore: 64,
+    historicalPerformance: 70,
+    portfolioFit: 68,
+    riskScore: 58,
+    expectedRetirementDate: "2026-12-31",
+    sellByTargetDate: "2029-12-31",
+  },
+  {
+    id: "lego-spider-man-76261",
+    brand: "LEGO",
+    name: "Spider-Man Final Battle",
+    category: "LEGO Spider-Man",
+    market: "South Africa / Global",
+    sku: "76261",
+    description: "Mainline playset with reliable retail availability and moderate collectibility.",
+    thesis: "Current shelf sets rarely repriced yet; patience is the edge while retail holds supply.",
+    venue: "Retail",
+    price: 3799,
+    changePercent: 0.4,
+    liquidity: "High",
+    retailPrice: 3799,
+    buyPrice: 3799,
+    currentMarketValue: 3799,
+    projectedFutureValue: 4200,
+    minifigureQuality: 66,
+    exclusiveMinifigures: 0,
+    numberOfMinifigures: 8,
+    themeStrength: 60,
+    retirementTimeline: 58,
+    demandForSet: 60,
+    supplyScarcity: 46,
+    displayAppeal: 64,
+    partOutValue: 58,
+    liquidityScore: 56,
+    historicalPerformance: 55,
+    portfolioFit: 60,
+    riskScore: 60,
+    expectedRetirementDate: "2028-06-30",
+    sellByTargetDate: "2029-12-31",
+  },
+  {
+    id: "lego-city-76208",
+    brand: "LEGO",
+    name: "Pirate Ship Adventure",
+    category: "LEGO City (4+)",
+    market: "South Africa / Global",
+    sku: "76208",
+    description: "Small entry set trading above retail with thin collector scarcity.",
+    thesis: "Entry sets above retail rarely compensate for the opportunity cost of a flagship.",
+    venue: "Retail / supermarkets",
+    price: 2499,
+    changePercent: -2.8,
+    liquidity: "High",
+    retailPrice: 2249,
+    buyPrice: 2399,
+    currentMarketValue: 2499,
+    projectedFutureValue: 2550,
+    minifigureQuality: 54,
+    exclusiveMinifigures: 0,
+    numberOfMinifigures: 5,
+    themeStrength: 55,
+    retirementTimeline: 50,
+    demandForSet: 52,
+    supplyScarcity: 38,
+    displayAppeal: 58,
+    partOutValue: 62,
+    liquidityScore: 45,
+    historicalPerformance: 48,
+    portfolioFit: 55,
+    riskScore: 68,
+    expectedRetirementDate: "2027-12-31",
+    sellByTargetDate: "2028-12-31",
+  },
+];
+
+const TRADEABLE_COLLECTIBLES_ACTIVE = DEMO_MODE
+  ? TRADEABLE_COLLECTIBLES.concat(DEMO_LEGO_SETS)
+  : TRADEABLE_COLLECTIBLES;
+
 const OFFICIAL_COLLECTIBLE_REFERENCE_SHELVES = [
   {
     id: "lego-za-minifigures",
@@ -439,10 +648,10 @@ const OFFICIAL_COLLECTIBLE_REFERENCE_SHELVES = [
   },
 ];
 const TRADEABLE_COLLECTIBLE_CATEGORIES = uniqueStrings(
-  TRADEABLE_COLLECTIBLES.map((item) => item.category),
+  TRADEABLE_COLLECTIBLES_ACTIVE.map((item) => item.category),
 ).sort();
 const TRADEABLE_COLLECTIBLE_BRANDS = uniqueStrings(
-  TRADEABLE_COLLECTIBLES.map((item) => item.brand),
+  TRADEABLE_COLLECTIBLES_ACTIVE.map((item) => item.brand),
 ).sort();
 
 const NEWS_SOURCES = [
@@ -819,6 +1028,9 @@ function sanitizeFeedbackStatus(value) {
 }
 
 function sanitizeWatchlistDesk(value) {
+  if (value === "collectible") {
+    return "collectibles";
+  }
   return ["forex", "etfs", "crypto", "jse", "collectibles"].includes(value) ? value : "forex";
 }
 
@@ -1708,6 +1920,96 @@ function getUserState(userId) {
   return userStates[userId];
 }
 
+function seedDemoUserState(state, userId) {
+  if (!state || !DEMO_MODE || state.trades.length || state.watchlistItems.length) {
+    return;
+  }
+
+  const catalog = TRADEABLE_COLLECTIBLES_ACTIVE;
+  const findBySku = (sku) => catalog.find((item) => item.sku === sku);
+
+  const holdings = [
+    {
+      sku: "10305",
+      quantity: 1,
+      acquisitionPrice: 6999,
+      note: "Demo seeded position: strong-buy anchor bought through the ticket flow.",
+    },
+    {
+      sku: "10316",
+      quantity: 1,
+      acquisitionPrice: 14900,
+      note: "Demo seeded position: buy candidate against a neat discount to retail.",
+    },
+    {
+      sku: "75252",
+      quantity: 1,
+      acquisitionPrice: 22999,
+      note: "Demo seeded position: retired flagship held for the next repricing leg.",
+    },
+  ];
+
+  const seededTrades = [];
+  for (const holding of holdings) {
+    const item = findBySku(holding.sku);
+    if (!item) {
+      continue;
+    }
+    seededTrades.push(
+      createCollectibleTrade(item, "BUY", userId, {
+        quantity: holding.quantity,
+        entryPrice: holding.acquisitionPrice,
+        orderNote: holding.note,
+        executionMode: "paper",
+        executionProvider: "collecttrade",
+        executionLabel: "Brick Alpha Paper",
+      }),
+    );
+  }
+
+  if (seededTrades.length) {
+    state.trades = seededTrades.concat(state.trades);
+  }
+
+  const watchlistSkus = ["75367", "71043", "76218"];
+  for (const sku of watchlistSkus) {
+    const item = findBySku(sku);
+    if (!item) {
+      continue;
+    }
+    state.watchlistItems.push(
+      sanitizeWatchlistItem({
+        id: crypto.randomUUID(),
+        ticker: item.sku,
+        label: item.name,
+        desk: "collectibles",
+        createdAt: nowIso(),
+        updatedAt: nowIso(),
+      }),
+    );
+  }
+  state.watchlistItems = sortWatchlistItems(state.watchlistItems).slice(0, 24);
+
+  appendNotification(state, {
+    ticker: "DEMO",
+    label: "Demo",
+    desk: "collectibles",
+    title: "Demo portfolio seeded",
+    message:
+      "Three LEGO positions were seeded with realistic acquisition prices so the dashboard, P/L, and retirement alerts start alive.",
+    type: "portfolio",
+  });
+
+  appendNotification(state, {
+    ticker: "DEMO",
+    label: "Demo",
+    desk: "collectibles",
+    title: "Watchlist preloaded",
+    message: "Save more sets from Scan & Evaluate or Investment Analysis to grow the watchlist.",
+    type: "portfolio",
+  });
+}
+
 const legacyStoreRepository = createLegacyStoreRepository({
   getFeedback: () => feedbackItems,
   getStoreSnapshot,
@@ -1856,6 +2158,7 @@ function financialErrorStatus(error) {
 }
 
 function publicUser(user) {
+  const isDemo = /@collecttrade\.local$/.test(String(user.email || ""));
   return {
     id: user.id,
     name: user.name,
@@ -1863,6 +2166,7 @@ function publicUser(user) {
     role: sanitizeUserRole(user.role),
     createdAt: user.createdAt,
     lastLoginAt: user.lastLoginAt,
+    ...(isDemo ? { isDemo: true } : {}),
   };
 }
 
@@ -3225,6 +3529,56 @@ function buildFallbackNews() {
   ];
 }
 
+function buildDemoNews() {
+  const seenAt = nowIso();
+  return [
+    {
+      id: "demo-lego-venue",
+      title: "SEALED-BOX TAPE: Venator UCS keeps repricing as clean stock dries up ahead of retirement",
+      link: "",
+      sourceId: "demo",
+      sourceName: "Brick Alpha Demo Feed",
+      region: "global",
+      marketTicker: "COLLECTIBLE:lego-star-wars-75367",
+      publishedAt: null,
+      seenAt,
+      summary: "Demonstration headlines run locally under DEMO_MODE so the dashboard stays populated offline.",
+    },
+    {
+      id: "demo-za-retail",
+      title: "Local ZA retail shelves still turning for Icons and Marvel sets while resale holds a premium",
+      link: "",
+      sourceId: "demo",
+      sourceName: "Brick Alpha Demo Feed",
+      region: "south-africa",
+      marketTicker: "COLLECTIBLE:lego-icons-10316",
+      publishedAt: null,
+      seenAt,
+      summary: "Demonstration headlines run locally under DEMO_MODE so the dashboard stays populated offline.",
+    },
+    {
+      id: "demo-forex",
+      title: "USD/ZAR consolidates near the 21 EMA while the macro desk keeps its selective stance",
+      link: "",
+      sourceId: "demo",
+      sourceName: "Brick Alpha Demo Feed",
+      region: "south-africa",
+      marketTicker: "USDZAR",
+      publishedAt: null,
+      seenAt,
+      summary: "Demonstration headlines run locally under DEMO_MODE so the dashboard stays populated offline.",
+    },
+  ];
+}
+
+function seedDemoNews() {
+  const fresh = buildDemoNews().concat(buildFallbackNews());
+  newsItems = [...new Map(fresh.map((item) => [item.id, item])).values()].sort(
+    (left, right) => Date.parse(right.createdAt || right.publishedAt || right.seenAt || 0) -
+      Date.parse(left.createdAt || left.publishedAt || left.seenAt || 0),
+  );
+}
+
 function detectMarketTicker(title) {
   const headline = String(title || "").toLowerCase();
   if (/rand|zar|jse|south africa|sa\b/.test(headline)) {
@@ -3362,7 +3716,15 @@ function findCatalogItemById(collectibleId) {
 }
 
 function findTradeableCollectibleById(collectibleId) {
-  return TRADEABLE_COLLECTIBLES.find((item) => item.id === collectibleId);
+  return TRADEABLE_COLLECTIBLES_ACTIVE.find((item) => item.id === collectibleId);
+}
+
+function findTradeableCollectibleBySkuOrId(value) {
+  const key = String(value || "").toUpperCase();
+  return TRADEABLE_COLLECTIBLES_ACTIVE.find(
+    (item) =>
+      String(item.id).toUpperCase() === key || String(item.sku).toUpperCase() === key,
+  );
 }
 
 function collectionForRequest(req) {
@@ -3438,6 +3800,25 @@ function buildWatchlistView(items) {
   const signalMap = latestSignalMap();
   return items.map((item) => {
     const signal = signalMap.get(item.ticker);
+    const collectible = findTradeableCollectibleBySkuOrId(item.ticker);
+    if (!signal && collectible) {
+      return {
+        ...item,
+        kind: "collectible",
+        assetClass: "collectible",
+        collectibleId: collectible.id,
+        category: collectible.category || collectible.brand,
+        brand: collectible.brand,
+        currentPrice: Number(collectible.price || 0),
+        currentRsi: null,
+        changePercent: Number(collectible.changePercent || 0),
+        action: "WATCH",
+        confidence: 72,
+        headline: collectible.thesis || collectible.description || null,
+        thesis: collectible.description || null,
+        feedMode: "catalogue",
+      };
+    }
     return {
       ...item,
       currentPrice: signal ? signal.price : null,
@@ -4238,7 +4619,18 @@ app.post('/api/auth/register', authRateLimiter.middleware('register'), authHandl
 app.post('/api/auth/login', authRateLimiter.middleware('login'), authHandler(req => authService.login(req.body)));
 app.post('/api/auth/forgot-password/request', authRateLimiter.middleware('forgot-password/request'), authHandler(req => authService.requestReset(req.body)));
 app.post('/api/auth/forgot-password/confirm', authRateLimiter.middleware('forgot-password/confirm'), authHandler(req => authService.confirmReset(req.body)));
-app.post('/api/auth/demo', authRateLimiter.middleware('demo'), authHandler(req => authService.register(req.body, true), 201));
+app.post('/api/auth/demo', authRateLimiter.middleware('demo'), authHandler(async req => {
+  const result = await authService.register(req.body, true);
+  if (DEMO_MODE && result?.user && !isFinancialPostgresMode()) {
+    const state = getUserState(result.user.id);
+    seedDemoUserState(state, result.user.id);
+    persistStore();
+    if (state.settings) {
+      result.settings = state.settings;
+    }
+  }
+  return result;
+}, 201));
 app.post('/api/auth/logout', requireAuth, authHandler(req => authService.revoke(readBearerToken(req))));
 app.get('/api/auth/me', requireAuth, (req, res) => {
   res.json({ ok: true, user: publicUser(req.user), settings: req.userState.settings });
@@ -4319,8 +4711,9 @@ app.get("/api/collectibles", (_req, res) => {
     updatedAt: nowIso(),
     categories: TRADEABLE_COLLECTIBLE_CATEGORIES,
     brands: TRADEABLE_COLLECTIBLE_BRANDS,
-    items: TRADEABLE_COLLECTIBLES,
+    items: TRADEABLE_COLLECTIBLES_ACTIVE,
     referenceShelves: OFFICIAL_COLLECTIBLE_REFERENCE_SHELVES,
+    demoMode: DEMO_MODE,
   });
 });
 
@@ -4346,8 +4739,9 @@ app.get("/api/watchlist", requireAuth, (req, res) => {
 app.post("/api/watchlist", requireAuth, (req, res) => {
   const ticker = sanitizeOptionalText(req.body?.ticker, 40).toUpperCase();
   const signal = latestSignals.find((candidate) => candidate.ticker === ticker);
+  const collectible = findTradeableCollectibleBySkuOrId(ticker);
 
-  if (!signal) {
+  if (!signal && !collectible) {
     res.status(400).json({ ok: false, error: "unknown_market" });
     return;
   }
@@ -4368,8 +4762,8 @@ app.post("/api/watchlist", requireAuth, (req, res) => {
   const item = sanitizeWatchlistItem({
     id: crypto.randomUUID(),
     ticker,
-    label: req.body?.label || signal.label,
-    desk: req.body?.desk || signal.desk,
+    label: req.body?.label || signal?.label || collectible?.name || ticker,
+    desk: req.body?.desk || signal?.desk || "collectibles",
     createdAt: nowIso(),
     updatedAt: nowIso(),
   });
@@ -4966,6 +5360,7 @@ app.post("/api/collectibles/trades", requireAuth, async (req, res) => {
   const stopPrice = sanitizeTradePlanValue(req.body?.stopPrice);
   const targetPrice = sanitizeTradePlanValue(req.body?.targetPrice);
   const riskBudget = sanitizeTradePlanValue(req.body?.riskBudget);
+  const acquisitionPrice = sanitizeTradePlanValue(req.body?.acquisitionPrice);
   const item = findTradeableCollectibleById(collectibleId);
 
   if (!item) {
@@ -5031,6 +5426,11 @@ app.post("/api/collectibles/trades", requireAuth, async (req, res) => {
     stopPrice,
     targetPrice,
     riskBudget,
+    ...(side === "BUY" && acquisitionPrice
+      ? {
+          entryPrice: acquisitionPrice,
+        }
+      : {}),
     executionMode: "paper",
     executionProvider: "collecttrade",
     executionLabel: "Brick Alpha Paper",
@@ -5701,24 +6101,30 @@ if (DISABLE_RUNTIME) {
   engineTick();
 } else {
   engineTick();
-  refreshMarketDataOnce().catch((error) => {
-    marketDataMeta.lastError = error.message;
-  });
-  refreshNewsOnce().catch((error) => {
-    newsMeta.lastError = error.message;
-  });
-
-  setInterval(engineTick, ENGINE_TICK_MS);
-  setInterval(() => {
+  if (DEMO_MODE) {
+    seedDemoNews();
+  } else {
     refreshMarketDataOnce().catch((error) => {
       marketDataMeta.lastError = error.message;
     });
-  }, MARKET_REFRESH_MS);
-  setInterval(() => {
     refreshNewsOnce().catch((error) => {
       newsMeta.lastError = error.message;
     });
-  }, NEWS_REFRESH_MS);
+  }
+
+  setInterval(engineTick, ENGINE_TICK_MS);
+  if (!DEMO_MODE) {
+    setInterval(() => {
+      refreshMarketDataOnce().catch((error) => {
+        marketDataMeta.lastError = error.message;
+      });
+    }, MARKET_REFRESH_MS);
+    setInterval(() => {
+      refreshNewsOnce().catch((error) => {
+        newsMeta.lastError = error.message;
+      });
+    }, NEWS_REFRESH_MS);
+  }
 
   app.listen(PORT, () => {
     console.log(`Brick Alpha API listening on ${PORT}`);

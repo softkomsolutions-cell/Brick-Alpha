@@ -1077,6 +1077,19 @@ export function OrderTicketModal({
             />
           </label>
 
+          {ticket.kind === "collectible" ? (
+            <label className="formField">
+              <span>Acquisition price (ZAR)</span>
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={ticket.price}
+                onChange={(event) => onFieldChange("price", event.target.value)}
+              />
+            </label>
+          ) : null}
+
           <div className="ticketPlanGrid">
             <label className="formField">
               <span>Stop</span>

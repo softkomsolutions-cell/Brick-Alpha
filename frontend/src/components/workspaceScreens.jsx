@@ -2988,6 +2988,7 @@ export function CollectiblesScreen({
   filteredCollectibles,
   handleCollectibleSelect,
   jumpToPageSection,
+  onAddToWatchlist,
   openCollectibleTicket,
   openTrades,
   setCollectibleBrand,
@@ -3115,6 +3116,7 @@ export function CollectiblesScreen({
         collectibles={collectibles}
         handleCollectibleSelect={handleCollectibleSelect}
         jumpToPageSection={jumpToPageSection}
+        onAddToWatchlist={onAddToWatchlist}
         openCollectibleTicket={openCollectibleTicket}
         openTrades={openTrades}
       />
@@ -3564,7 +3566,7 @@ export function PortfolioScreen({
                   <div className="tableCellStack">
                     <strong>{trade.ticker}</strong>
                     <small>
-                      {trade.assetClass === "collectible" ? trade.category : trade.setup} Â·{" "}
+                      {trade.assetClass === "collectible" ? trade.category : trade.setup} ·{" "}
                       {trade.executionMode === "live"
                         ? venueDetailLabel(providerLabel(trade.executionProvider), trade.executionPair)
                         : "Paper"}
@@ -3636,7 +3638,7 @@ export function PortfolioScreen({
                 <div className="tableCellStack">
                   <strong>{trade.ticker}</strong>
                   <small>
-                    {trade.exitReason || trade.setup} Â·{" "}
+                    {trade.exitReason || trade.setup} ·{" "}
                     {trade.executionMode === "live"
                       ? venueDetailLabel(providerLabel(trade.executionProvider), trade.executionPair)
                       : "Paper"}
@@ -4774,6 +4776,7 @@ export function SettingsScreen({
   targets,
   updateFeedbackStatus,
   updateSettings,
+  onDemoReset,
 }) {
   const feedbackItems = useMemo(() => feedbackResponse.items || [], [feedbackResponse.items]);
   const feedbackSummary = feedbackResponse.summary || {};
@@ -4960,6 +4963,22 @@ export function SettingsScreen({
               <strong>{canManageFeedback ? "Owner" : "Partner tester"}</strong>
             </div>
           </div>
+
+          {currentUser.isDemo ? (
+            <div className="subPanel">
+              <div className="panelHeader">
+                <div>
+                  <h3>Demo reset</h3>
+                  <p>Restart with a fresh demo account, seeded portfolio, and watchlist.</p>
+                </div>
+              </div>
+              <div className="panelActions">
+                <button type="button" className="primaryButton" onClick={onDemoReset}>
+                  Reset Demo
+                </button>
+              </div>
+            </div>
+          ) : null}
         </section>
 
         <section className="panel" id="install-app">

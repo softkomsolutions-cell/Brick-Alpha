@@ -2,7 +2,10 @@ const crypto = require('node:crypto');
 const { normalizeEmail, passwordFields, verifyPassword, tokenHash, signToken, decodeToken, resetHash } = require('./auth-crypto');
 class AuthError extends Error { constructor(status, code) { super(code); this.status = status; } }
 const fail = (status, code) => { throw new AuthError(status, code); };
-const publicUser = user => Object.fromEntries(['id', 'name', 'email', 'role', 'createdAt', 'lastLoginAt'].map(key => [key, user[key]]));
+const publicUser = user => ({
+  ...Object.fromEntries(['id', 'name', 'email', 'role', 'createdAt', 'lastLoginAt'].map(key => [key, user[key]])),
+  ...(/@collecttrade\.local$/.test(String(user?.email || '')) ? { isDemo: true } : {}),
+});
 function createAuthService({ repository, config, defaultSettings, now = Date.now }) {
   const iso = () => new Date(now()).toISOString();
   const audit = (repo, action, user) => repo.audit(`auth.${action}`, user?.id || null, iso());

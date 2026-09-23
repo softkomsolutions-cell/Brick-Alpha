@@ -9,7 +9,12 @@ function assertAuthEnvelope(body) {
   assert.deepEqual(Object.keys(body).sort(), ['ok', 'settings', 'token', 'user']);
   assert.equal(body.ok, true);
   assert.equal(typeof body.token, 'string');
-  assert.deepEqual(Object.keys(body.user).sort(), ['createdAt', 'email', 'id', 'lastLoginAt', 'name', 'role']);
+  const baseKeys = ['createdAt', 'email', 'id', 'lastLoginAt', 'name', 'role'];
+  const expectedKeys = [...baseKeys];
+  if (body.user?.isDemo) {
+    expectedKeys.push('isDemo');
+  }
+  assert.deepEqual(Object.keys(body.user).sort(), expectedKeys.sort());
   assert.equal(typeof body.settings, 'object');
 }
 

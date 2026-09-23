@@ -1727,6 +1727,30 @@ export default function App() {
     [handleAuthenticatedRoute],
   );
 
+  const handleDemoReset = useCallback(async () => {
+    clearSession();
+    setDemoLaunchBusy(true);
+    try {
+      const data = await requestJson("/api/auth/demo", {
+        method: "POST",
+        body: {
+          name: "Partner Demo",
+        },
+      });
+      await handleAuthenticatedRoute(data.token, data.user, data.settings, {
+        page: "home",
+        desk: "collectibles",
+        introId: null,
+        sectionId: null,
+        landingId: null,
+      });
+    } catch (error) {
+      setAuthStatus(String(error.message || "Could not reset demo mode."));
+    } finally {
+      setDemoLaunchBusy(false);
+    }
+  }, [clearSession, handleAuthenticatedRoute]);
+
   const handleSplashLaunch = useCallback(
     (selection) => {
       rememberLaunch(selection);
@@ -1882,6 +1906,7 @@ export default function App() {
               collectibleId: orderTicket.collectibleId,
               side: orderTicket.side,
               quantity: orderTicket.quantity,
+              acquisitionPrice: orderTicket.side === "BUY" ? orderTicket.price : undefined,
               orderNote: orderTicket.orderNote,
               stopPrice: orderTicket.stopPrice,
               targetPrice: orderTicket.targetPrice,
@@ -2247,10 +2272,23 @@ export default function App() {
       if (!item?.ticker) {
         return;
       }
+      if (item.kind === "collectible" || item.collectibleId || item.assetClass === "collectible") {
+        const collectible = (collectiblesResponse.items || []).find(
+          (candidate) =>
+            candidate.id === item.collectibleId ||
+            candidate.sku === item.ticker ||
+            candidate.id === item.ticker,
+        );
+        if (collectible) {
+          handleCollectibleSelect(collectible);
+          jumpToPageSection("collectibles", "investment-analysis");
+          return;
+        }
+      }
       setSelectedSignalTicker(item.ticker);
       jumpToPageSection("signals", "chart-panel", item.desk || activeDesk);
     },
-    [activeDesk, jumpToPageSection],
+    [activeDesk, collectiblesResponse.items, handleCollectibleSelect, jumpToPageSection],
   );
 
   const addSignalToWatchlist = useCallback(
@@ -3056,6 +3094,7 @@ export default function App() {
           filteredCollectibles={filteredCollectibles}
           handleCollectibleSelect={handleCollectibleSelect}
           jumpToPageSection={jumpToPageSection}
+          onAddToWatchlist={addSignalToWatchlist}
           openCollectibleTicket={openCollectibleTicket}
           openTrades={openTrades}
           setCollectibleBrand={setCollectibleBrand}
@@ -3185,6 +3224,7 @@ export default function App() {
           targets={targets}
           updateFeedbackStatus={updateFeedbackStatus}
           updateSettings={updateSettings}
+          onDemoReset={handleDemoReset}
         />
       ) : null}
     </>
