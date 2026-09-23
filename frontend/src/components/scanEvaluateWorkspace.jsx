@@ -25,6 +25,8 @@ import { monthsUntilRetirement, portfolioStatusFor } from "../retirementIntellig
 import { ScoreBar, ScoreRing } from "./brickAlphaScoreDisplay";
 import { ScoreExplanationPanel } from "./scoreExplanationPanel";
 import { AlphaSignalBadges } from "./workspaceCards";
+import { buildDecisionSnapshot } from "../v3/decision/decisionModel";
+import { saveDecisionSnapshot } from "../v3/decision/decisionSession";
 
 const ACQUISITION_METHODS = [
   { id: "camera", icon: "📷", label: "Take Photo", detail: "Use your device camera" },
@@ -282,6 +284,7 @@ export function ScanEvaluateWorkspace({
   jumpToPageSection,
   onAddToWatchlist,
   openCollectibleTicket,
+  navigateToPage,
 }) {
   const fileInputRef = useRef(null);
   const hasWebcam = typeof navigator !== "undefined" && Boolean(navigator.mediaDevices?.getUserMedia);
@@ -388,6 +391,19 @@ export function ScanEvaluateWorkspace({
       });
 
       setIdentifiedSetNumber(normalized);
+      const snapshot = buildDecisionSnapshot({
+        evaluation: enriched,
+        imageUrl: previewUrl || profile?.imageUrl || "",
+        profile,
+      });
+      saveDecisionSnapshot(snapshot);
+      handleCollectibleSelect(enriched);
+      setPhase("landing");
+      setActionStatus("");
+      if (navigateToPage) {
+        navigateToPage("verdict");
+        return;
+      }
       setEvaluation(enriched);
       setImageFailed(false);
       if (previewUrl) {
@@ -397,9 +413,8 @@ export function ScanEvaluateWorkspace({
         setImageName(fileName);
       }
       setPhase("results");
-      handleCollectibleSelect(enriched);
     },
-    [collectibles, handleCollectibleSelect],
+    [collectibles, handleCollectibleSelect, navigateToPage],
   );
 
   const handleImageFile = useCallback(

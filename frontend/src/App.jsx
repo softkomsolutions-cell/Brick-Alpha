@@ -1923,6 +1923,41 @@ export default function App() {
     });
   }, []);
 
+  const submitLoggedPurchase = useCallback(
+    async (form) => {
+      if (!authToken) {
+        throw new Error("Sign in to save a purchase.");
+      }
+      setTradeActionBusy(true);
+      try {
+        const note = [
+          form.date ? `Date: ${form.date}` : "",
+          form.retailer ? `Source: ${form.retailer}` : "",
+          form.condition ? `Condition: ${form.condition}` : "",
+          form.notes || "",
+        ]
+          .filter(Boolean)
+          .join(". ");
+        const data = await requestJson("/api/collectibles/trades", {
+          method: "POST",
+          token: authToken,
+          body: {
+            collectibleId: form.collectibleId,
+            side: "BUY",
+            quantity: form.quantity,
+            acquisitionPrice: form.price,
+            orderNote: note,
+          },
+        });
+        setPortfolio(data.portfolio || []);
+        await refreshContext();
+      } finally {
+        setTradeActionBusy(false);
+      }
+    },
+    [authToken, refreshContext],
+  );
+
   const submitOrderTicket = useCallback(async () => {
     if (!orderTicket || !authToken) {
       return;
@@ -3148,6 +3183,7 @@ export default function App() {
           onAddToWatchlist={addSignalToWatchlist}
           openCollectibleTicket={openCollectibleTicket}
           openTrades={openTrades}
+          navigateToPage={navigateToPage}
         />
       ) : null}
 
@@ -3180,12 +3216,22 @@ export default function App() {
         />
       ) : null}
 
-      {page === "verdict" ? <VerdictScreen navigateToPage={navigateToPage} /> : null}
+      {page === "verdict" ? (
+        <VerdictScreen
+          navigateToPage={navigateToPage}
+          onWatch={addSignalToWatchlist}
+          onAddToCollection={() => navigateToPage("log-purchase")}
+        />
+      ) : null}
 
       {page === "set-analysis" ? <SetAnalysisScreen navigateToPage={navigateToPage} /> : null}
 
       {page === "log-purchase" ? (
-        <LogPurchaseScreen navigateToPage={navigateToPage} jumpToPageSection={jumpToPageSection} />
+        <LogPurchaseScreen
+          navigateToPage={navigateToPage}
+          busy={tradeActionBusy}
+          onSubmitPurchase={submitLoggedPurchase}
+        />
       ) : null}
 
       {page === "reports" ? (

@@ -229,6 +229,123 @@
   gap: 8px;
 }
 
+.v3DecisionCard,
+.v3PurchaseForm {
+  background: var(--ba-surface, #fff);
+  border: 1px solid var(--ba-line, #e4e2dc);
+  border-radius: var(--ba-radius, 16px);
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.v3DecisionIdentity {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.v3DecisionImage {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 12px;
+  background: #f3f2ee;
+}
+
+.v3DecisionImageFallback {
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+
+.v3Eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ba-ink-secondary, #4a4f5a);
+}
+
+.v3VerdictBanner {
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--ba-primary-tint, #e8edfb);
+  display: grid;
+  gap: 2px;
+}
+
+.v3VerdictBanner strong {
+  font-size: 22px;
+}
+
+.v3VerdictBanner[data-verdict="skip"] {
+  background: #fdecea;
+}
+
+.v3VerdictGrid,
+.v3ExitChannels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.v3Metric span,
+.v3ExitChannels span,
+.v3ExitChannels small {
+  display: block;
+  color: var(--ba-ink-secondary, #4a4f5a);
+  font-size: 12px;
+}
+
+.v3Checklist {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+}
+
+.v3DisclosureToggle {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+}
+
+.v3FactorList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.v3FactorHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.v3PurchaseForm label {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.v3PurchaseForm input,
+.v3PurchaseForm select,
+.v3PurchaseForm textarea {
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--ba-line, #e4e2dc);
+  padding: 8px 12px;
+}
+
 .v3ExitList {
   display: grid;
   gap: 8px;
@@ -266,8 +383,8 @@
 }
 
 @media (max-width: 820px) {
-  .v3AppShell .sidebar.premiumSidebar {
-    display: none !important;
+  .v3AppShell .v3Sidebar {
+    display: none;
   }
 
   .v3BottomNav {

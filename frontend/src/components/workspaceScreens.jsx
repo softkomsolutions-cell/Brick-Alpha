@@ -3306,6 +3306,7 @@ export function ScanEvaluateScreen({
   onAddToWatchlist,
   openCollectibleTicket,
   openTrades,
+  navigateToPage,
 }) {
   const legoCount = collectibles.filter((item) => item.brand === "LEGO").length;
 
@@ -3351,7 +3352,7 @@ export function ScanEvaluateScreen({
       />
       <WorkspaceSectionBar
         sections={activePageSections}
-        onSelect={(sectionId) => jumpToPageSection("scan-evaluate", sectionId)}
+        onSelect={(sectionId) => jumpToPageSection("scan", sectionId)}
       />
       <ScanEvaluateWorkspace
         collectibles={collectibles}
@@ -3360,6 +3361,7 @@ export function ScanEvaluateScreen({
         jumpToPageSection={jumpToPageSection}
         onAddToWatchlist={onAddToWatchlist}
         openCollectibleTicket={openCollectibleTicket}
+        navigateToPage={navigateToPage}
       />
     </>
   );
