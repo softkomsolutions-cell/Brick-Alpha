@@ -84,9 +84,8 @@ const ScanEvaluateScreen = lazyNamedExport(
   () => import("./components/workspaceScreens"),
   "ScanEvaluateScreen",
 );
-const PortfolioScreen = lazyNamedExport(
-  () => import("./components/workspaceScreens"),
-  "PortfolioScreen",
+const CollectionScreen = lazy(() =>
+  import("./v3/screens/CollectionScreen").then((module) => ({ default: module.CollectionScreen })),
 );
 const ReportsScreen = lazyNamedExport(
   () => import("./components/workspaceScreens"),
@@ -107,10 +106,6 @@ const SettingsScreen = lazyNamedExport(
 const OrderTicketModal = lazyNamedExport(
   () => import("./components/workspaceCards"),
   "OrderTicketModal",
-);
-const CloseTradeModal = lazyNamedExport(
-  () => import("./components/workspaceCards"),
-  "CloseTradeModal",
 );
 const ExitsScreen = lazy(() => import("./v3/screens/ExitsScreen").then((m) => ({ default: m.ExitsScreen })));
 const VerdictScreen = lazy(() =>
@@ -925,9 +920,7 @@ export default function App() {
 
   const [selectedSignalTicker, setSelectedSignalTicker] = useState(null);
   const [selectedCollectibleId, setSelectedCollectibleId] = useState(null);
-  const [selectedTradeId, setSelectedTradeId] = useState(null);
   const [orderTicket, setOrderTicket] = useState(null);
-  const [closeTicket, setCloseTicket] = useState(null);
   const [collectibleQuery, setCollectibleQuery] = useState("");
   const [collectibleBrand, setCollectibleBrand] = useState("all");
   const [collectibleCategory, setCollectibleCategory] = useState("all");
@@ -1477,16 +1470,6 @@ export default function App() {
     [enrichedPortfolio],
   );
 
-  const resolvedSelectedTradeId = enrichedPortfolio.some((trade) => trade.id === selectedTradeId)
-    ? selectedTradeId
-    : enrichedPortfolio[0]?.id || null;
-
-  const activePortfolioTrade =
-    enrichedPortfolio.find((trade) => trade.id === resolvedSelectedTradeId) ||
-    openTrades[0] ||
-    closedTrades[0] ||
-    null;
-
   const totalOpenPnl = useMemo(
     () => openTrades.reduce((sum, trade) => sum + Number(trade.pnl || 0), 0),
     [openTrades],
@@ -2011,56 +1994,28 @@ export default function App() {
     }
   }, [authToken, orderTicket, refreshContext]);
 
-  const handleCloseTrade = useCallback((trade) => {
-    setCloseTicket({
-      ...trade,
-      orderNote: "",
-    });
-  }, []);
-
-  const submitCloseTrade = useCallback(async () => {
-    if (!closeTicket || !authToken) {
-      return;
-    }
-
-    setTradeActionBusy(true);
-    setTradeStatus("");
-
-    try {
-      const data = await requestJson(`/api/trades/${closeTicket.id}/close`, {
-        method: "POST",
-        token: authToken,
-        body: { orderNote: closeTicket.orderNote },
-      });
-      setPortfolio(data.portfolio || []);
-      setTradeStatus(`Closed ${closeTicket.ticker}.`);
-      setCloseTicket(null);
-      await refreshContext();
-    } catch (error) {
-      setTradeStatus(String(error.message || "Close request failed."));
-    } finally {
-      setTradeActionBusy(false);
-    }
-  }, [authToken, closeTicket, refreshContext]);
-
-  const handlePortfolioTradeSelect = useCallback((trade) => {
-    setSelectedTradeId(trade.id);
-  }, []);
-
-  const handlePortfolioTradeNavigate = useCallback(
-    (trade) => {
-      if (trade.assetClass === "collectible") {
-        setSelectedCollectibleId(trade.collectibleId || trade.id);
-        jumpToPageSection("research", "collectibles-grid");
-        return;
+  const submitExitSale = useCallback(
+    async (form) => {
+      if (!authToken) {
+        throw new Error("Sign in to record a sale.");
       }
-
-      if (trade.marketTicker) {
-        setSelectedSignalTicker(trade.marketTicker);
+      setTradeActionBusy(true);
+      try {
+        const data = await requestJson(`/api/trades/${form.tradeId}/close`, {
+          method: "POST",
+          token: authToken,
+          body: {
+            orderNote: form.orderNote,
+            salePrice: form.salePrice,
+          },
+        });
+        setPortfolio(data.portfolio || []);
+        await refreshContext();
+      } finally {
+        setTradeActionBusy(false);
       }
-      jumpToPageSection("signals", "chart-panel", trade.desk || activeDesk);
     },
-    [activeDesk, jumpToPageSection],
+    [authToken, refreshContext],
   );
 
   const handleChartUpload = useCallback((event) => {
@@ -3188,31 +3143,21 @@ export default function App() {
       ) : null}
 
       {page === "collection" ? (
-        <PortfolioScreen
-          activeDesk={activeDesk}
-          activePageSections={activePageSections}
-          activePortfolioTrade={activePortfolioTrade}
-          appSettings={appSettings}
-          closedTrades={closedTrades}
-          collectibles={collectibles}
-          handleCloseTrade={handleCloseTrade}
-          handlePortfolioTradeNavigate={handlePortfolioTradeNavigate}
-          handlePortfolioTradeSelect={handlePortfolioTradeSelect}
-          health={health}
-          jumpToPageSection={jumpToPageSection}
-          onAddToWatchlist={addSignalToWatchlist}
+        <CollectionScreen
           openTrades={openTrades}
-          totalOpenPnl={totalOpenPnl}
-          watchlistItems={watchlistResponse.items || []}
+          collectibles={collectibles}
+          navigateToPage={navigateToPage}
         />
       ) : null}
 
       {page === "exits" ? (
         <ExitsScreen
           openTrades={openTrades}
+          closedTrades={closedTrades}
           collectibles={collectibles}
-          jumpToPageSection={jumpToPageSection}
           navigateToPage={navigateToPage}
+          onRecordSale={submitExitSale}
+          busy={tradeActionBusy}
         />
       ) : null}
 
@@ -3691,16 +3636,6 @@ export default function App() {
           onFieldChange={handleOrderFieldChange}
           onPlanAction={handleOrderPlanAction}
           onSubmit={submitOrderTicket}
-        />
-
-        <CloseTradeModal
-          trade={closeTicket}
-          busy={tradeActionBusy}
-          onClose={() => setCloseTicket(null)}
-          onFieldChange={(value) =>
-            setCloseTicket((current) => (current ? { ...current, orderNote: value } : current))
-          }
-          onSubmit={submitCloseTrade}
         />
       </Suspense>
     </div>

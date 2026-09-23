@@ -2,6 +2,11 @@ import { useState } from "react";
 import { formatCollectiblePrice } from "../../appUtils";
 import { readDecisionSnapshot } from "../decision/decisionSession";
 
+function wholeScore(value) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? Math.round(numeric) : "—";
+}
+
 function Disclosure({ title, children }) {
   const [open, setOpen] = useState(false);
   return (
@@ -55,7 +60,7 @@ export function SetAnalysisScreen({ navigateToPage }) {
           <li key={item.id} className="v3DecisionCard">
             <div className="v3FactorHead">
               <span>{index + 1}. {item.title}</span>
-              <strong>{item.score}</strong>
+              <strong>{wholeScore(item.score)}</strong>
             </div>
             <p>{item.summary}</p>
             <small>{item.detail}</small>
@@ -67,7 +72,7 @@ export function SetAnalysisScreen({ navigateToPage }) {
         <ul className="v3Checklist">
           {(snapshot.breakdown?.factors || snapshot.drivers || []).map((item) => (
             <li key={item.key || item.label}>
-              {item.label}: {item.score} — {item.explanation}
+              {item.label}: {wholeScore(item.score)} — {item.explanation}
             </li>
           ))}
         </ul>
@@ -84,7 +89,7 @@ export function SetAnalysisScreen({ navigateToPage }) {
         <ul className="v3Checklist">
           {(snapshot.breakdown?.displayGroups || []).map((group) => (
             <li key={group.key}>
-              {group.label} · weight {group.weight}% · score {group.score}
+              {group.label} · weight {group.weight}% · score {wholeScore(group.score)}
             </li>
           ))}
         </ul>

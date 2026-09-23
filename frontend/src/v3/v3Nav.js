@@ -81,7 +81,7 @@ export const V3_SECONDARY_NAV = [
     id: V3_PAGE.VERDICT,
     label: "Verdict",
     glyph: "VD",
-    hint: "Fast buy/hold/skip decision for the set in focus",
+    hint: "Buy ×2 flywheel, Buy ×1, Only below a price, or Skip",
   },
   {
     id: V3_PAGE.SET_ANALYSIS,

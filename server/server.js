@@ -5521,6 +5521,11 @@ app.post("/api/trades/:tradeId/close", requireAuth, async (req, res) => {
     return;
   }
 
+  const requestedSale = Number(req.body?.salePrice);
+  if (trade.assetClass === "collectible" && Number.isFinite(requestedSale) && requestedSale > 0) {
+    trade.currentPrice = Number(requestedSale.toFixed(2));
+  }
+
   const signal =
     trade.assetClass === "market"
       ? latestSignals.find((candidate) => candidate.ticker === trade.marketTicker)
