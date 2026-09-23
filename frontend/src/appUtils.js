@@ -293,11 +293,15 @@ export function formatTickerPrice(ticker, value) {
 }
 
 export function formatCollectiblePrice(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "Unavailable";
+  }
   return new Intl.NumberFormat("en-ZA", {
     style: "currency",
     currency: "ZAR",
     maximumFractionDigits: 0,
-  }).format(value);
+  }).format(numeric);
 }
 
 export function labelRegion(region) {

@@ -229,13 +229,15 @@ function ManualSearchPanel({ collectibles, onSelect, onCancel }) {
   );
 }
 
-function CopilotCard({ evaluation }) {
+function CopilotCard({ evaluation, demoProfile }) {
   const [question, setQuestion] = useState("Should I buy three of these?");
-  const [response, setResponse] = useState(() => getCopilotResponse("Should I buy three of these?"));
+  const [response, setResponse] = useState(() =>
+    getCopilotResponse("Should I buy three of these?", { evaluation, demoProfile }),
+  );
 
   const handleAsk = useCallback(() => {
-    setResponse(getCopilotResponse(question));
-  }, [question]);
+    setResponse(getCopilotResponse(question, { evaluation, demoProfile }));
+  }, [demoProfile, evaluation, question]);
 
   return (
     <article className="seGlassCard seCopilotCard">
@@ -287,6 +289,7 @@ export function ScanEvaluateWorkspace({
   const [phase, setPhase] = useState("landing");
   const [imagePreview, setImagePreview] = useState(null);
   const [imageName, setImageName] = useState("");
+  const [imageFailed, setImageFailed] = useState(false);
   const [processingIndex, setProcessingIndex] = useState(0);
   const [showCamera, setShowCamera] = useState(false);
   const [manualQuery, setManualQuery] = useState("");
@@ -326,6 +329,7 @@ export function ScanEvaluateWorkspace({
 
   const confidence = evaluation ? confidenceFor(evaluation) : 0;
   const displayImage = imagePreview || demoProfile?.imageUrl || null;
+  const showImage = Boolean(displayImage) && !imageFailed;
 
   const runAnalysis = useCallback(
     async (setNumber, file, previewUrl, fileName) => {
@@ -385,6 +389,7 @@ export function ScanEvaluateWorkspace({
 
       setIdentifiedSetNumber(normalized);
       setEvaluation(enriched);
+      setImageFailed(false);
       if (previewUrl) {
         setImagePreview(previewUrl);
       }
@@ -652,8 +657,13 @@ export function ScanEvaluateWorkspace({
           <article className="seGlassCard seIdentificationCard">
             <div className="seIdentificationLayout">
               <div className="seIdentificationVisual">
-                {displayImage ? (
-                  <img src={displayImage} alt={evaluation.name} className="seIdentificationImage" />
+                {showImage ? (
+                  <img
+                    src={displayImage}
+                    alt={evaluation.name}
+                    className="seIdentificationImage"
+                    onError={() => setImageFailed(true)}
+                  />
                 ) : (
                   <div className="seIdentificationPlaceholder">
                     <span>{extractSetNumber(evaluation)}</span>
@@ -766,7 +776,9 @@ export function ScanEvaluateWorkspace({
                   <div key={forecast.years} className="seForecastCard">
                     <span>{forecast.label}</span>
                     <strong>{formatCollectiblePrice(forecast.value)}</strong>
-                    <em className="seMetric-positive">+{forecast.roi.toFixed(1)}%</em>
+                    <em className="seMetric-positive">
+                      {Number.isFinite(forecast.roi) ? `+${forecast.roi.toFixed(1)}%` : "Unavailable"}
+                    </em>
                   </div>
                 ))}
               </div>
@@ -827,12 +839,12 @@ export function ScanEvaluateWorkspace({
               <div className="seMetric"><span>Expected retirement</span><strong>{retirementSnapshot?.expectedRetirement}</strong></div>
               <div className="seMetric"><span>Retirement probability</span><strong>{retirementSnapshot?.retirementProbability}%</strong></div>
               <div className="seMetric"><span>Retirement confidence</span><strong>{retirementSnapshot?.retirementConfidence}%</strong></div>
-              <div className="seMetric"><span>Months remaining</span><strong>{monthsUntilRetirement(evaluation) ?? retirementSnapshot?.monthsRemaining}</strong></div>
+              <div className="seMetric"><span>Months remaining</span><strong>{retirementSnapshot?.monthsRemaining ?? monthsUntilRetirement(evaluation)}</strong></div>
               <div className="seMetric"><span>Expected retirement pop</span><strong>{formatCollectiblePrice(retirementSnapshot?.expectedRetirementPop)}</strong></div>
             </div>
           </article>
 
-          <CopilotCard evaluation={evaluation} />
+          <CopilotCard evaluation={evaluation} demoProfile={demoProfile} />
 
           <article className="seGlassCard seActionsCard">
             <div className="seSectionHeader">

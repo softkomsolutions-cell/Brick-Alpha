@@ -1,4 +1,4 @@
-export const API_BASE_URL = import.meta.env.VITE_API_URL || "";
+export const API_BASE_URL = import.meta.env?.VITE_API_URL || "";
 
 export const TOKEN_KEY = "collecttrade_token";
 export const DESK_KEY = "collecttrade_active_desk";

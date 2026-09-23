@@ -401,6 +401,12 @@ export function enrichBrickAlphaCollectible(item, today = new Date()) {
     },
     today,
   );
+  const expectedRetirementMs = Date.parse(expectedRetirementDate);
+  const monthsUntilRetirement = actualRetirementDate
+    ? -1
+    : Number.isFinite(expectedRetirementMs)
+      ? (expectedRetirementMs - today.getTime()) / (MS_PER_DAY * 30)
+      : null;
   const demandForSet = numberOrZero(item.demandForSet ?? notes.demandForSet ?? 62);
   const supplyScarcity = numberOrZero(item.supplyScarcity ?? notes.supplyScarcity ?? 55);
   const liquidityScore = numberOrZero(
@@ -439,7 +445,9 @@ export function enrichBrickAlphaCollectible(item, today = new Date()) {
     expectedRetirementDate,
     actualRetirementDate,
     ...retirementOutlook,
+    monthsUntilRetirement,
     holdingPeriodDays,
+    holdingPeriodMonths,
     holdingPeriod: `${holdingPeriodMonths} months`,
     sellByTargetDate: item.sellByTargetDate || notes.sellByTargetDate || "2028-12-31",
     storeSource: item.storeSource || notes.storeSource || item.venue || "Tracked source",
