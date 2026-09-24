@@ -6,11 +6,12 @@ COPY frontend/package*.json ./frontend/
 COPY server/package*.json ./server/
 
 RUN npm --prefix frontend ci
-RUN npm --prefix server ci --omit=dev
+RUN npm --prefix server ci
 
 COPY frontend ./frontend
 COPY server ./server
 
+RUN npm --prefix server run db:generate
 RUN npm --prefix frontend run build
 
 ENV NODE_ENV=production
