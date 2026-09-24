@@ -711,3 +711,52 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+
+/* Production v3 readability guard: legacy dark workspace styles must not leak into
+   the PDF-inspired LEGO decision journey. */
+.v3AppShell .workspaceShell,
+.v3AppShell .workspaceMain,
+.v3AppShell .workspaceContent {
+  background: var(--ba-paper, #f6f5f1) !important;
+  color: var(--ba-ink, #15171c) !important;
+}
+
+.v3AppShell .v3WorkflowScreen,
+.v3AppShell .v3Home,
+.v3AppShell .v3Research {
+  color: var(--ba-ink, #15171c);
+}
+
+.v3AppShell .v3DecisionCard,
+.v3AppShell .v3PurchaseForm,
+.v3AppShell .v3StatGrid > div,
+.v3AppShell .v3ExitCard,
+.v3AppShell .v3CollectionRow,
+.v3AppShell .v3ResearchCard,
+.v3AppShell .v3WorkflowHero {
+  background: var(--ba-surface, #fff) !important;
+  color: var(--ba-ink, #15171c) !important;
+  border-color: var(--ba-line, #e4e2dc) !important;
+}
+
+.v3AppShell .v3ResearchOpen,
+.v3AppShell .v3CollectionMain,
+.v3AppShell .v3DisclosureToggle,
+.v3AppShell .v3ResearchFacts dd,
+.v3AppShell .v3StatGrid strong,
+.v3AppShell .v3Home strong,
+.v3AppShell .v3Home h1,
+.v3AppShell .v3Home h2,
+.v3AppShell .v3Research h1,
+.v3AppShell .v3Research h2 {
+  color: var(--ba-ink, #15171c) !important;
+}
+
+.v3AppShell .v3ResearchFacts dt,
+.v3AppShell .v3HomeMeta,
+.v3AppShell .v3FeeAssumption,
+.v3AppShell .v3FlywheelLine,
+.v3AppShell .v3StatGrid span {
+  color: var(--ba-ink-secondary, #4a4f5a) !important;
+}
