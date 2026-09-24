@@ -99,18 +99,11 @@ export const V3_SECONDARY_NAV = [
 
 export const V3_ACCOUNT_NAV = [
   {
-    id: "subscriptions",
-    label: "Subscriptions",
-    glyph: "SB",
-    section: "Account",
-    hint: "Plans and premium features",
-  },
-  {
     id: "settings",
     label: "Settings",
     glyph: "ST",
     section: "Account",
-    hint: "Account, alerts, and preferences",
+    hint: "Account and preferences",
   },
 ];
 
