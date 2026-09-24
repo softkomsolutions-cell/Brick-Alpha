@@ -484,6 +484,27 @@
   color: var(--ba-ink-secondary, #4a4f5a);
 }
 
+@media (max-width: 1023px) {
+  .v3AppShell.saasAppShell {
+    padding: 0;
+    background: var(--ba-paper, #f6f5f1);
+  }
+
+  .v3AppShell .workspaceShell {
+    width: 100%;
+    max-width: none;
+    min-height: 100vh;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .v3AppShell .workspaceShell::before,
+  .v3AppShell .mobileStatusBar {
+    display: none !important;
+  }
+}
+
 @media (max-width: 820px) {
   .v3AppShell .v3Sidebar {
     display: none;

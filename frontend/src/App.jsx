@@ -3066,6 +3066,7 @@ export default function App() {
           onAddToWatchlist={addSignalToWatchlist}
           openCollectibleTicket={openCollectibleTicket}
           openTrades={openTrades}
+          closedTrades={closedTrades}
           navigateToPage={navigateToPage}
         />
       ) : null}
@@ -3196,6 +3197,7 @@ export default function App() {
           updateFeedbackStatus={updateFeedbackStatus}
           updateSettings={updateSettings}
           onDemoReset={handleDemoReset}
+          legoJourney
         />
       ) : null}
     </>
@@ -3259,7 +3261,7 @@ export default function App() {
         }}
         onNavigateToCollection={() => {
           setV3OnboardingVisible(false);
-          jumpToPageSection("collection", "open-positions", activeDesk);
+          jumpToPageSection("log-purchase", "log-purchase", activeDesk);
         }}
       />
     );

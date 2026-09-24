@@ -1,10 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatCollectiblePrice } from "../../appUtils";
 import { buildDecisionSnapshot } from "../decision/decisionModel";
 import { saveDecisionSnapshot } from "../decision/decisionSession";
 import { readBuyingProfile } from "../onboarding/onboardingStorage";
-import { buildResearchCard, filterResearchCards, splitResearchSections } from "../research/researchModel";
-import { retirementReminderLabel } from "../retirement/retirementModel";
+import { buildResearchCard, consumeResearchSection, filterResearchCards, readResearchSection, splitResearchSections } from "../research/researchModel";
+import { CANONICAL_AS_OF, retirementReminderLabel } from "../retirement/retirementModel";
 import { applyWatchTriggers, readWatchTargets, upsertWatchTarget, writeWatchTargets } from "../watch/watchTargets";
 
 const SECTIONS = [
@@ -70,10 +70,14 @@ export function ResearchScreen({
   navigateToPage,
   onWatch,
 }) {
-  const [section, setSection] = useState("search");
+  const [section, setSection] = useState(() => readResearchSection());
+  useEffect(() => {
+    const timer = window.setTimeout(consumeResearchSection, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [targets, setTargets] = useState(() => readWatchTargets());
-  const asOf = "2026-09-23T12:00:00.000Z";
+  const asOf = CANONICAL_AS_OF;
   const profile = readBuyingProfile();
 
   const cards = useMemo(() => {

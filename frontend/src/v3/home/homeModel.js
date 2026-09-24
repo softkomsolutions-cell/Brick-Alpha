@@ -2,7 +2,31 @@ import { THEME_ALLOCATION_TARGETS } from "../../brickAlphaModel";
 import { tradesForBook } from "../collection/collectionBooks";
 import { buildCollectionView, buildRealisedLedger } from "../collection/ownershipModel";
 import { resolveExchangeRate } from "../valuation/exchangeRate";
+import { buildCanonicalRetirement } from "../retirement/retirementModel";
 import { canonicalMarketValue } from "../valuation/valuationAuthority";
+
+function retiringSoonDetail(set) {
+  if (set.expectedRetirementDate) {
+    const retirement = buildCanonicalRetirement({
+      expectedRetirementDate: set.expectedRetirementDate,
+    });
+    if (
+      retirement.retirementState === "Retired" ||
+      (retirement.monthsRemaining != null && retirement.monthsRemaining <= 0)
+    ) {
+      return "Already retired";
+    }
+    if (retirement.monthsRemaining != null && retirement.monthsRemaining <= 6) {
+      return `${retirement.monthsRemaining} months`;
+    }
+    return null;
+  }
+  if (set.sellWindowMonths != null && set.sellWindowMonths <= 6) {
+    const months = Math.round(set.sellWindowMonths);
+    return months <= 0 ? "Already retired" : `${months} months`;
+  }
+  return null;
+}
 
 function latestDate(values) {
   const dates = values.filter(Boolean).map(String).sort();
@@ -98,13 +122,15 @@ export function buildHomeView({
     });
   }
   for (const set of view.sets) {
-    if (set.sellWindowMonths != null && set.sellWindowMonths <= 6) {
+    const retirementDetail = retiringSoonDetail(set);
+    if (retirementDetail) {
       attention.push({
         id: `retire-${set.id}`,
         kind: "Retiring soon",
         title: set.name,
-        detail: `${Math.round(set.sellWindowMonths)} months`,
+        detail: retirementDetail,
         page: "research",
+        section: "retiring",
       });
     }
     if (set.belowCost) {

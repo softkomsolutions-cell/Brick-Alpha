@@ -4,6 +4,7 @@ import { resolveExchangeRate } from "../valuation/exchangeRate";
 import { formatCanonicalValue, formatRecordedGrowth } from "../valuation/valuationAuthority";
 import { ScoreRing } from "../../components/brickAlphaScoreDisplay";
 import { readDecisionSnapshot } from "../decision/decisionSession";
+import { readWatchTargets, upsertWatchTarget, writeWatchTargets } from "../watch/watchTargets";
 
 export function VerdictScreen({ navigateToPage, onWatch, onAddToCollection, appSettings }) {
   const snapshot = readDecisionSnapshot();
@@ -92,8 +93,11 @@ export function VerdictScreen({ navigateToPage, onWatch, onAddToCollection, appS
           <p className="v3RetirementWarning">Inside 6 months. The sell window is open.</p>
         ) : null}
         <p>
-          {snapshot.retirement.retirementState || snapshot.retirement.status} ·{" "}
-          {snapshot.retirement.monthsRemaining == null ? "—" : `${snapshot.retirement.monthsRemaining} months`} · expected{" "}
+          {snapshot.retirement.retirementState || snapshot.retirement.status}
+          {snapshot.retirement.retirementState === "Retired" || snapshot.retirement.monthsRemaining == null
+            ? ""
+            : ` · ${snapshot.retirement.monthsRemaining} months`}
+          {" · expected "}
           {snapshot.retirement.expectedRetirement}
         </p>
         {snapshot.retirement.reminders?.thirtyDay ? <p>30-day reminder</p> : null}
@@ -130,6 +134,17 @@ export function VerdictScreen({ navigateToPage, onWatch, onAddToCollection, appS
           type="button"
           className="ghostButton"
           onClick={() => {
+            const target = {
+              setNumber: snapshot.setNumber,
+              name: snapshot.name,
+              collectibleId: snapshot.collectibleId,
+              currentValue: snapshot.currentValue,
+              targetBuyPrice: snapshot.verdict.targetPrice,
+              targetVerdict: snapshot.verdict.label,
+              retirementState: snapshot.retirement.retirementState,
+              createdAt: snapshot.analyzedAt,
+            };
+            writeWatchTargets(upsertWatchTarget(readWatchTargets(), target));
             onWatch?.({
               ticker: snapshot.setNumber,
               label: snapshot.name,

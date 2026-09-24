@@ -135,7 +135,7 @@ export function V3OnboardingFlow({ onComplete, onNavigateToScan, onNavigateToCol
             <div className="v3OnboardingImportRow">
               <button type="button" className="v3OnboardingImportCard" onClick={onNavigateToScan}>
                 <strong>Scan a set</strong>
-                <small>Photo or set number — fastest path to your first holding.</small>
+                <small>Photo or set number — fastest path to the first set in your collection.</small>
               </button>
               <button
                 type="button"
@@ -143,11 +143,11 @@ export function V3OnboardingFlow({ onComplete, onNavigateToScan, onNavigateToCol
                 onClick={onNavigateToCollection}
               >
                 <strong>Add manually</strong>
-                <small>Open Collection and log purchases with price, date, and source.</small>
+                <small>Open Log Purchase after a verdict, with price, date, source, and condition.</small>
               </button>
               <button type="button" className="v3OnboardingImportCard" disabled>
                 <strong>Import CSV</strong>
-                <small>Coming in Wave 3 — bulk import for existing spreadsheets.</small>
+                <small>Spreadsheet import is not part of this release.</small>
               </button>
             </div>
           </>

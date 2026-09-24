@@ -510,6 +510,8 @@ export function enrichBrickAlphaTrade(trade, collectibleItems = [], allTrades = 
     buyPrice,
     quantityOwned,
     purchaseDate: trade.createdAt || base.purchaseDate,
+    expectedRetirementDate: trade.expectedRetirementDate || base.expectedRetirementDate,
+    actualRetirementDate: trade.actualRetirementDate || base.actualRetirementDate,
     currentMarketValue,
     estimatedRoi,
     realizedRoi: trade.status === "closed" ? numberOrZero(trade.pnl) : 0,

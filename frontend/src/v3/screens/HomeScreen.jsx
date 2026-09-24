@@ -2,6 +2,7 @@ import { useState } from "react";
 import { formatCollectiblePrice } from "../../appUtils";
 import { buildHomeView } from "../home/homeModel";
 import { formatRecordedGrowth } from "../valuation/valuationAuthority";
+import { stageResearchSection } from "../research/researchModel";
 
 function money(value) {
   return formatCollectiblePrice(value);
@@ -88,7 +89,15 @@ export function HomeScreen({
           <ul className="v3AttentionList">
             {home.attention.map((item) => (
               <li key={item.id}>
-                <button type="button" onClick={() => navigateToPage?.(item.page)}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (item.section) {
+                      stageResearchSection(item.section);
+                    }
+                    navigateToPage?.(item.page);
+                  }}
+                >
                   <span>{item.kind}</span>
                   <strong>{item.title}</strong>
                   <small>{item.detail}</small>

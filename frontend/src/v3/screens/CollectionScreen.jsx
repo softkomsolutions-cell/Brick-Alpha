@@ -78,12 +78,8 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
                   <button
                     type="button"
                     className="v3CollectionMain"
-                    aria-expanded={set.isStack ? expanded : undefined}
-                    onClick={() => {
-                      if (set.isStack) {
-                        setExpandedId(expanded ? "" : set.id);
-                      }
-                    }}
+                    aria-expanded={expanded}
+                    onClick={() => setExpandedId(expanded ? "" : set.id)}
                   >
                     <div>
                       <strong>{set.name}</strong>
@@ -109,7 +105,7 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
                       </p>
                     ) : null}
                   </button>
-                  {set.isStack && expanded ? (
+                  {expanded ? (
                     <ul className="v3UnitList">
                       {set.unitRows.map((unit) => (
                         <li key={unit.id}>
@@ -136,7 +132,7 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
               : "No sets match this filter."}
           </p>
           <button type="button" className="primaryButton" onClick={() => navigateToPage("scan")}>
-            Scan a set
+            Log a purchase
           </button>
         </section>
       )}

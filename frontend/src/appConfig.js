@@ -561,7 +561,7 @@ export const PARTNER_TEST_FLOW = [
     id: "collection",
     ordinal: "04",
     title: "Collection",
-    detail: "Confirm holdings list, position detail, and activity history stay coherent and investment-focused.",
+    detail: "Confirm the collection list, set detail, and activity history stay coherent.",
     page: "collection",
     desk: null,
     sectionId: "open-positions",

@@ -3299,73 +3299,29 @@ export function CollectiblesScreen({
 }
 
 export function ScanEvaluateScreen({
-  activePageSections,
-  appSettings,
+  activePageSections: _activePageSections,
+  appSettings: _appSettings,
   collectibles,
-  collectiblesResponse,
+  collectiblesResponse: _collectiblesResponse,
   handleCollectibleSelect,
   jumpToPageSection,
   onAddToWatchlist,
   openCollectibleTicket,
   openTrades,
+  closedTrades = [],
   navigateToPage,
 }) {
-  const legoCount = collectibles.filter((item) => item.brand === "LEGO").length;
-
   return (
-    <>
-      <WorkspaceHero
-        tone="collectibles"
-        eyebrow="Scan & Evaluate"
-        title="AI Investment Advisor for LEGO"
-        description="Photograph a set, upload an image, or enter a set number — Brick Alpha opens a verdict from the BrickEconomy value."
-        statusLabel="Engine"
-        statusValue="Brick Alpha AI"
-        metrics={[
-          {
-            label: "Recognition",
-            value: "AI Vision",
-            detail: "Intelligent set identification",
-          },
-          {
-            label: "Analysis",
-            value: "Full verdict",
-            detail: "Score · grade · ROI · retirement",
-          },
-          {
-            label: "Catalog",
-            value: `${legoCount} sets`,
-            detail: "Live LEGO investment desk",
-          },
-          {
-            label: "Pipeline",
-            value: "~5 seconds",
-            detail: "Photo → score → recommendation",
-          },
-        ]}
-        primaryAction={{
-          label: "Investment Analysis",
-          onClick: () => jumpToPageSection("collectibles", "investment-analysis"),
-        }}
-        secondaryAction={{
-          label: "Portfolio Intelligence",
-          onClick: () => jumpToPageSection("portfolio", "portfolio-intelligence"),
-        }}
-      />
-      <WorkspaceSectionBar
-        sections={activePageSections}
-        onSelect={(sectionId) => jumpToPageSection("scan", sectionId)}
-      />
-      <ScanEvaluateWorkspace
-        collectibles={collectibles}
-        openTrades={openTrades}
-        handleCollectibleSelect={handleCollectibleSelect}
-        jumpToPageSection={jumpToPageSection}
-        onAddToWatchlist={onAddToWatchlist}
-        openCollectibleTicket={openCollectibleTicket}
-        navigateToPage={navigateToPage}
-      />
-    </>
+    <ScanEvaluateWorkspace
+      collectibles={collectibles}
+      openTrades={openTrades}
+      closedTrades={closedTrades}
+      handleCollectibleSelect={handleCollectibleSelect}
+      jumpToPageSection={jumpToPageSection}
+      onAddToWatchlist={onAddToWatchlist}
+      openCollectibleTicket={openCollectibleTicket}
+      navigateToPage={navigateToPage}
+    />
   );
 }
 
@@ -4781,6 +4737,7 @@ export function SettingsScreen({
   updateFeedbackStatus,
   updateSettings,
   onDemoReset,
+  legoJourney = false,
 }) {
   const feedbackItems = useMemo(() => feedbackResponse.items || [], [feedbackResponse.items]);
   const feedbackSummary = feedbackResponse.summary || {};
@@ -4898,7 +4855,11 @@ export function SettingsScreen({
         tone="settings"
         eyebrow="Workspace Setup"
         title="Settings"
-        description="Account details, regional preferences, and saved desk targets for your daily workflow."
+        description={
+          legoJourney
+            ? "Account, exchange rate, and demo controls. Valuations use this one USD/ZAR rate."
+            : "Account details, regional preferences, and saved desk targets for your daily workflow."
+        }
         statusLabel="Signed in"
         statusValue={currentUser.email}
         metrics={[
@@ -4918,14 +4879,22 @@ export function SettingsScreen({
             detail: canManageFeedback ? "Owner triage enabled" : "Shared testing lane",
           },
         ]}
-        primaryAction={{
-          label: "Open Connections",
-          onClick: () => navigateToPage("connections", false, activeDesk),
-        }}
-        secondaryAction={{
-          label: "Open News",
-          onClick: () => jumpToPageSection("news", "macro-feed", activeDesk),
-        }}
+        primaryAction={
+          legoJourney
+            ? undefined
+            : {
+                label: "Open Connections",
+                onClick: () => navigateToPage("connections", false, activeDesk),
+              }
+        }
+        secondaryAction={
+          legoJourney
+            ? undefined
+            : {
+                label: "Open News",
+                onClick: () => jumpToPageSection("news", "macro-feed", activeDesk),
+              }
+        }
       />
       <WorkspaceSectionBar
         sections={activePageSections}
@@ -4935,7 +4904,7 @@ export function SettingsScreen({
         tone="settings"
         title="Workspace Shortcuts"
         hint="Keep account setup, partner feedback, and targets close at hand."
-        actions={settingsActions}
+        actions={legoJourney ? settingsActions.filter((action) => action.id !== "connections") : settingsActions}
       />
 
       {settingsStatus ? <div className="statusBanner">{settingsStatus}</div> : null}
@@ -5493,14 +5462,16 @@ export function SettingsScreen({
             <span>Saved targets</span>
             <strong>{targets.length}</strong>
           </div>
-          <button
-            type="button"
-            className="summaryCard summaryCardButton"
-            onClick={() => navigateToPage("connections", false, activeDesk)}
-          >
-            <span>Connections</span>
-            <strong>{connectedProviderCount} configured</strong>
-          </button>
+          {legoJourney ? null : (
+            <button
+              type="button"
+              className="summaryCard summaryCardButton"
+              onClick={() => navigateToPage("connections", false, activeDesk)}
+            >
+              <span>Connections</span>
+              <strong>{connectedProviderCount} configured</strong>
+            </button>
+          )}
         </div>
       </section>
 
@@ -5525,14 +5496,16 @@ export function SettingsScreen({
             <span>High priority</span>
             <strong>{feedbackSummary.highSeverity || 0}</strong>
           </div>
-          <button
-            type="button"
-            className="summaryCard summaryCardButton"
-            onClick={() => navigateToPage("connections", false, activeDesk)}
-          >
-            <span>Live-ready desks</span>
-            <strong>{liveReadyDeskCount}</strong>
-          </button>
+          {legoJourney ? null : (
+            <button
+              type="button"
+              className="summaryCard summaryCardButton"
+              onClick={() => navigateToPage("connections", false, activeDesk)}
+            >
+              <span>Live-ready desks</span>
+              <strong>{liveReadyDeskCount}</strong>
+            </button>
+          )}
         </div>
 
         <div className="partnerTestingGrid">
@@ -5568,13 +5541,15 @@ export function SettingsScreen({
                 </>
               ) : (
                 <>
-                  <button
-                    type="button"
-                    className="ghostButton"
-                    onClick={() => navigateToPage("connections", false, activeDesk)}
-                  >
-                    Review Readiness
-                  </button>
+                  {legoJourney ? null : (
+                    <button
+                      type="button"
+                      className="ghostButton"
+                      onClick={() => navigateToPage("connections", false, activeDesk)}
+                    >
+                      Review Readiness
+                    </button>
+                  )}
                   <button type="button" className="ghostButton" onClick={copyPartnerInvite}>
                     Copy Test Brief
                   </button>
@@ -5584,10 +5559,15 @@ export function SettingsScreen({
           </div>
           <div className="partnerTestingCard">
             <span>Suggested partner pass</span>
-            <strong>Landing - News - Trade - LEGO Investments - Feedback</strong>
+            <strong>
+              {legoJourney
+                ? "Welcome - Home - Research or Scan - Verdict - Collection - Exits"
+                : "Landing - News - Trade - LEGO Investments - Feedback"}
+            </strong>
             <small>
-              That route covers the front door, tape, execution flow, alternative-assets lane, and the
-              final feedback handoff.
+              {legoJourney
+                ? "That route covers onboarding, the verdict, the collection, and the exit."
+                : "That route covers the front door, tape, execution flow, alternative-assets lane, and the final feedback handoff."}
             </small>
           </div>
           <div className="partnerTestingCard">

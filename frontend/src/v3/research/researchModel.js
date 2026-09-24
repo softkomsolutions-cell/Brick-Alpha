@@ -120,3 +120,40 @@ export function splitResearchSections(cards) {
       .sort((left, right) => right.annualGrowth - left.annualGrowth),
   };
 }
+
+const SECTION_KEY = "brick_alpha_v3_research_section";
+let stagedSection = "";
+
+export function stageResearchSection(section) {
+  stagedSection = section || "";
+  try {
+    window.sessionStorage.setItem(SECTION_KEY, stagedSection);
+  } catch {
+    // The in-memory stage still opens the requested section on the next visit.
+  }
+}
+
+export function readResearchSection() {
+  if (stagedSection) {
+    return stagedSection;
+  }
+  try {
+    return window.sessionStorage.getItem(SECTION_KEY) || "search";
+  } catch {
+    return "search";
+  }
+}
+
+export function consumeResearchSection() {
+  stagedSection = "";
+  try {
+    window.sessionStorage.removeItem(SECTION_KEY);
+  } catch {
+    // The in-memory stage is already cleared.
+  }
+}
+
+/** @deprecated Prefer readResearchSection. Kept so a single read does not drop the section. */
+export function takeResearchSection() {
+  return readResearchSection();
+}

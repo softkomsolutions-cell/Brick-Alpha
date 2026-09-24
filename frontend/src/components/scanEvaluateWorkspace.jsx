@@ -28,6 +28,8 @@ import { ScoreExplanationPanel } from "./scoreExplanationPanel";
 import { AlphaSignalBadges } from "./workspaceCards";
 import { buildDecisionSnapshot } from "../v3/decision/decisionModel";
 import { saveDecisionSnapshot } from "../v3/decision/decisionSession";
+import { readBuyingProfile } from "../v3/onboarding/onboardingStorage";
+import { CANONICAL_AS_OF } from "../v3/retirement/retirementModel";
 
 const ACQUISITION_METHODS = [
   { id: "camera", icon: "📷", label: "Take Photo", detail: "Use your device camera" },
@@ -196,7 +198,7 @@ function ManualSearchPanel({ collectibles, onSelect, onCancel }) {
     <article className="seGlassCard seManualPanel">
       <div className="seSectionHeader">
         <span className="executiveDashboardEyebrow">Manual identification</span>
-        <h2>AI could not identify automatically</h2>
+        <h2>Search the catalog</h2>
         <p>Search by set number, name, or theme — autocomplete against the Brick Alpha catalog.</p>
       </div>
       <label className="seField">
@@ -281,6 +283,7 @@ function CopilotCard({ evaluation, demoProfile }) {
 export function ScanEvaluateWorkspace({
   collectibles = [],
   openTrades = [],
+  closedTrades = [],
   handleCollectibleSelect,
   jumpToPageSection,
   onAddToWatchlist,
@@ -407,6 +410,10 @@ export function ScanEvaluateWorkspace({
         evaluation: enriched,
         imageUrl: previewUrl || profile?.imageUrl || "",
         profile,
+        buyingProfile: readBuyingProfile(),
+        openTrades,
+        closedTrades,
+        analyzedAt: CANONICAL_AS_OF,
       });
       saveDecisionSnapshot(snapshot);
       handleCollectibleSelect(enriched);
@@ -426,7 +433,7 @@ export function ScanEvaluateWorkspace({
       }
       setPhase("results");
     },
-    [collectibles, handleCollectibleSelect, navigateToPage],
+    [closedTrades, collectibles, handleCollectibleSelect, navigateToPage, openTrades],
   );
 
   const handleImageFile = useCallback(
@@ -558,8 +565,7 @@ export function ScanEvaluateWorkspace({
               <span className="executiveDashboardEyebrow">Hero Feature</span>
               <h2>Scan a LEGO set. Get an instant investment verdict.</h2>
               <p>
-                Photograph, upload, or enter a set number — Brick Alpha identifies the set, pulls market
-                data, and delivers a complete investment analysis in seconds.
+                Photograph, upload, or enter a set number. Brick Alpha identifies the set and opens the verdict.
               </p>
             </div>
             <div className="seHeroStats">

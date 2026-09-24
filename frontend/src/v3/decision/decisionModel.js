@@ -12,7 +12,7 @@ import {
   formatRecordedGrowth,
   recordedGrowth,
 } from "../valuation/valuationAuthority";
-import { buildCanonicalRetirement } from "../retirement/retirementModel";
+import { buildCanonicalRetirement, CANONICAL_AS_OF } from "../retirement/retirementModel";
 import { personaliseRecommendation } from "../personalisation/personalisationModel";
 
 const CHANNELS = [
@@ -91,6 +91,8 @@ export function buildNineFactors(evaluation, extras = {}) {
     0,
     100 - numberOrZero(evaluation?.supplyScarcity || numberOrZero(evaluation?.exclusiveMinifigures) * 12),
   );
+  const probability =
+    retirement.retirementProbability == null ? "—" : `${retirement.retirementProbability}%`;
   const months = retirement.monthsRemaining;
   const growth = recordedGrowth(evaluation);
 
@@ -113,8 +115,8 @@ export function buildNineFactors(evaluation, extras = {}) {
       "time-to-retirement",
       "Time to retirement",
       evaluation?.retirementTimeline,
-      months != null ? `${months} months · ${retirement.status}` : retirement.status,
-      `Expected retirement ${retirement.expectedRetirement}. Probability ${retirement.retirementProbability}%.`,
+      months != null && months > 0 ? `${months} months · ${retirement.status}` : retirement.status,
+      `Expected retirement ${retirement.expectedRetirement}. Probability ${probability}.`,
     ),
     factor(
       "minifig-value",
@@ -182,7 +184,9 @@ export function buildCanonicalAdvisor({ name, verdict, valuation, retirement }) 
   const ninety =
     valuation.ninetyDayGrowth == null ? "Insufficient history" : formatRecordedGrowth(valuation.ninetyDayGrowth);
   const months =
-    retirement?.monthsRemaining != null && Number.isFinite(Number(retirement.monthsRemaining))
+    retirement?.monthsRemaining != null &&
+    Number.isFinite(Number(retirement.monthsRemaining)) &&
+    Number(retirement.monthsRemaining) > 0
       ? ` · ${retirement.monthsRemaining} months`
       : "";
   return {
@@ -215,7 +219,7 @@ export function buildDecisionSnapshot({
   buyingProfile = null,
   openTrades = [],
   closedTrades = [],
-  analyzedAt = new Date().toISOString(),
+  analyzedAt = CANONICAL_AS_OF,
 }) {
   const frozen = JSON.parse(JSON.stringify(evaluation || {}));
   const retirement = buildCanonicalRetirement(frozen, analyzedAt);

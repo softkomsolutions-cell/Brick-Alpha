@@ -1,5 +1,8 @@
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/** Frozen analysis clock. UI actions must not move retirement math onto Date.now(). */
+export const CANONICAL_AS_OF = "2026-09-23T12:00:00.000Z";
+
 function finiteOrNull(value) {
   if (value == null || value === "") {
     return null;
@@ -21,8 +24,8 @@ function parseDate(value) {
  * Unrelated fields on the set do not move months remaining.
  * Retirement pop is recorded only. It is not a forward forecast.
  */
-export function buildCanonicalRetirement(item, asOf = "2026-09-23T12:00:00.000Z") {
-  const clock = parseDate(asOf) || new Date("2026-09-23T12:00:00.000Z");
+export function buildCanonicalRetirement(item, asOf = CANONICAL_AS_OF) {
+  const clock = parseDate(asOf) || new Date(CANONICAL_AS_OF);
   const actual = parseDate(item?.actualRetirementDate);
   const expected = parseDate(item?.expectedRetirementDate || item?.sellByTargetDate);
   const anchor = actual || expected;

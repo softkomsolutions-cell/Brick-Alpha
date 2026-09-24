@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { buildDecisionSnapshot } from "../src/v3/decision/decisionModel.js";
 import { readDecisionSnapshot, saveDecisionSnapshot } from "../src/v3/decision/decisionSession.js";
 import { personaliseRecommendation } from "../src/v3/personalisation/personalisationModel.js";
-import { buildResearchCard } from "../src/v3/research/researchModel.js";
-import { buildCanonicalRetirement } from "../src/v3/retirement/retirementModel.js";
+import { buildResearchCard, consumeResearchSection, readResearchSection, stageResearchSection } from "../src/v3/research/researchModel.js";
+import { buildCanonicalRetirement, CANONICAL_AS_OF } from "../src/v3/retirement/retirementModel.js";
 import { buildCanonicalValuation } from "../src/v3/valuation/valuationAuthority.js";
 import { applyWatchTriggers, upsertWatchTarget } from "../src/v3/watch/watchTargets.js";
 import { exitRecommendation } from "../src/v3/collection/ownershipModel.js";
@@ -172,6 +172,38 @@ test("flywheel ready stays a cost test when retirement is inside 6 months", () =
   const retirement = buildCanonicalRetirement({ expectedRetirementDate: "2026-10-20" }, AS_OF);
   assert.equal(retirement.insideSixMonths, true);
   assert.equal(ready.includes("Flywheel") || ready.includes("recycle"), true);
+});
+
+test("omitted analysis time stays on the canonical clock", () => {
+  const snapshot = buildDecisionSnapshot({ evaluation: SET });
+  const retirement = buildCanonicalRetirement(SET, CANONICAL_AS_OF);
+  assert.equal(snapshot.analyzedAt, CANONICAL_AS_OF);
+  assert.equal(snapshot.retirement.monthsRemaining, retirement.monthsRemaining);
+  const detail = snapshot.factors.find((factor) => factor.id === "time-to-retirement").detail;
+  assert.equal(detail.includes("null"), false);
+  assert.equal(detail.includes("undefined"), false);
+  assert.equal(detail.includes("Probability —"), true);
+});
+
+test("a staged research section survives two reads", () => {
+  stageResearchSection("retiring");
+  assert.equal(readResearchSection(), "retiring");
+  assert.equal(readResearchSection(), "retiring");
+  consumeResearchSection();
+  assert.equal(readResearchSection(), "search");
+});
+
+test("retired factor copy does not print a negative month count", () => {
+  const snapshot = buildDecisionSnapshot({
+    evaluation: { ...SET, expectedRetirementDate: "2022-12-31" },
+    analyzedAt: AS_OF,
+  });
+  const factor = snapshot.factors.find((item) => item.id === "time-to-retirement");
+  assert.equal(factor.summary.includes("-"), false);
+  assert.equal(factor.summary.includes("Retired"), true);
+  const advisor = snapshot.aiSummary.bullets.join(" ");
+  assert.equal(advisor.includes("months"), false);
+  assert.equal(advisor.includes("Retired"), true);
 });
 
 test("research numbers stay finite", () => {

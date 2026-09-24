@@ -140,6 +140,44 @@ test("a free gift adds market value and does not distort blended ROI", () => {
   assert.equal(Number.isFinite(home.blendedRoi), true);
 });
 
+test("retired home attention does not show a negative month count", () => {
+  const home = buildHomeView({
+    openTrades: [
+      trade({
+        id: "retired-set",
+        collectibleId: "lego-star-wars-75252",
+        label: "Imperial Star Destroyer",
+        entryPrice: 22999,
+        currentPrice: 28295,
+        expectedRetirementDate: "2022-12-31",
+        monthsUntilRetirement: -1,
+      }),
+    ],
+  });
+  const item = home.attention.find((entry) => entry.kind === "Retiring soon");
+  assert.equal(item.detail, "Already retired");
+  assert.equal(item.detail.includes("-"), false);
+  assert.equal(item.section, "retiring");
+});
+
+test("home retiring-soon attention uses the canonical retirement clock", () => {
+  const home = buildHomeView({
+    openTrades: [
+      trade({
+        id: "soon",
+        collectibleId: "lego-marvel-76218",
+        label: "Sanctum",
+        entryPrice: 5000,
+        currentPrice: 8690,
+        legoTheme: "Marvel",
+        expectedRetirementDate: "2026-12-31",
+      }),
+    ],
+  });
+  const item = home.attention.find((entry) => entry.kind === "Retiring soon");
+  assert.equal(item.detail, "3 months");
+});
+
 test("research, verdict, and valuation share one BrickEconomy record", () => {
   const valuation = buildCanonicalValuation(VENATOR);
   const research = presentResearchFields(VENATOR);

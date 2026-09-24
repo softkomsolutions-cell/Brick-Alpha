@@ -64,7 +64,7 @@ export const V3_PRIMARY_NAV = [
     id: V3_PAGE.COLLECTION,
     label: "Collection",
     glyph: "CL",
-    hint: "Holdings, cost basis, and performance",
+    hint: "Cost basis and performance",
     section: "Primary",
   },
   {
@@ -150,6 +150,7 @@ export function isV3LegoJourneyPage(page) {
   const id = canonicalPage(page);
   return (
     V3_PRIMARY_NAV.some((item) => item.id === id) ||
-    V3_SECONDARY_NAV.some((item) => item.id === id)
+    V3_SECONDARY_NAV.some((item) => item.id === id) ||
+    V3_ACCOUNT_NAV.some((item) => item.id === id)
   );
 }
