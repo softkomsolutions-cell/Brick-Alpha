@@ -2795,11 +2795,14 @@ export default function App() {
     [],
   );
   const globalSearchResults = useMemo(() => {
+    const source = isV3LegoJourneyPage(page)
+      ? globalSearchIndex.filter((item) => isV3LegoJourneyPage(item.page))
+      : globalSearchIndex;
     const query = searchQuery.trim().toLowerCase();
     if (!query) {
-      return globalSearchIndex.slice(0, 12);
+      return source.slice(0, 12);
     }
-    return globalSearchIndex
+    return source
       .filter(
         (item) =>
           item.label.toLowerCase().includes(query) ||
@@ -2807,7 +2810,7 @@ export default function App() {
           item.page.toLowerCase().includes(query),
       )
       .slice(0, 16);
-  }, [globalSearchIndex, searchQuery]);
+  }, [globalSearchIndex, page, searchQuery]);
   const openGlobalSearch = useCallback(() => {
     setSearchQuery("");
     setSearchVisible(true);
@@ -2844,10 +2847,12 @@ export default function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [closeGlobalSearch, currentUser, openGlobalSearch, searchVisible, splashVisible]);
 
-  const utilityNavItems = NAV_ITEMS.filter((item) =>
-    ["subscriptions", "tools", "reports", "connections", "settings"].includes(item.id),
-  );
   const legoJourneyActive = isV3LegoJourneyPage(page);
+  const utilityNavItems = legoJourneyActive
+    ? []
+    : NAV_ITEMS.filter((item) =>
+        ["subscriptions", "tools", "reports", "connections", "settings"].includes(item.id),
+      );
   const defaultTradingDesk = ["forex", "etfs", "jse"].includes(activeDesk) ? activeDesk : "forex";
   const menuPrimaryItems = [
     {
@@ -2963,6 +2968,12 @@ export default function App() {
       action: handleMenuLogout,
     },
   ];
+  const visibleMenuSupportItems = legoJourneyActive
+    ? menuSupportItems.filter((item) => ["menu-home", "menu-settings"].includes(item.id))
+    : menuSupportItems;
+  const visibleMenuActionItems = legoJourneyActive
+    ? menuActionItems.filter((item) => ["menu-inbox", "menu-feedback", "menu-logout"].includes(item.id))
+    : menuActionItems;
   const workspaceContent = (
     <>
       {page === "home" ? (
@@ -3515,7 +3526,7 @@ export default function App() {
               <div className="mobileMenuScreenSection">
                 <span>Workspace &amp; Support</span>
                 <div className="mobileMenuSupportList">
-                  {menuSupportItems.map((item) => (
+                  {visibleMenuSupportItems.map((item) => (
                     <button key={item.id} type="button" className="mobileMenuSupportCard" onClick={item.action}>
                       <strong>{item.label}</strong>
                       <small>{item.detail}</small>
@@ -3527,7 +3538,7 @@ export default function App() {
               <div className="mobileMenuScreenSection">
                 <span>Actions</span>
                 <div className="mobileMenuActionList">
-                  {menuActionItems.map((item) => (
+                  {visibleMenuActionItems.map((item) => (
                     <button key={item.id} type="button" className="mobileMenuActionRow" onClick={item.action}>
                       <div>
                         <strong>{item.label}</strong>
