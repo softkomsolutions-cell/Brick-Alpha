@@ -4,6 +4,7 @@ import { buildDecisionSnapshot } from "../decision/decisionModel";
 import { saveDecisionSnapshot } from "../decision/decisionSession";
 import { readBuyingProfile } from "../onboarding/onboardingStorage";
 import { buildResearchCard, filterResearchCards, splitResearchSections } from "../research/researchModel";
+import { retirementReminderLabel } from "../retirement/retirementModel";
 import { applyWatchTriggers, readWatchTargets, upsertWatchTarget, writeWatchTargets } from "../watch/watchTargets";
 
 const SECTIONS = [
@@ -49,9 +50,11 @@ function Card({ card, watching, onOpen, onWatch }) {
         <div><dt>Confidence</dt><dd>{card.confidence == null ? "—" : `${card.confidence}%`}</dd></div>
         <div><dt>Watch</dt><dd>{watching ? "Watching" : "Not watching"}</dd></div>
       </dl>
-      {card.retirement.insideSixMonths ? <p className="v3RetirementWarning">Inside 6 months</p> : null}
+      {retirementReminderLabel(card.retirement) ? (
+        <p className="v3RetirementWarning">{retirementReminderLabel(card.retirement)}</p>
+      ) : null}
       {card.personalisation.verdict.label !== card.verdict.label ? (
-        <p>For your book: {card.personalisation.verdict.label}</p>
+        <p className="v3ResearchBook">For your book: {card.personalisation.verdict.label}</p>
       ) : null}
       <button type="button" className="ghostButton" onClick={() => onWatch(card)}>
         {watching ? "Update watch target" : "Watch target"}

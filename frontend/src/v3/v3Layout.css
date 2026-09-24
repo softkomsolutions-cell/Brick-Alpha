@@ -676,9 +676,13 @@
   color: var(--ba-muted, #5c6158);
 }
 
-.v3ResearchFacts dd {
+.v3ResearchCard[data-triggered="true"] {
+  border-color: #16794a;
+}
+
+.v3ResearchBook {
   margin: 0;
-  font-weight: 650;
+  font-size: 13px;
 }
 
 @media (max-width: 720px) {

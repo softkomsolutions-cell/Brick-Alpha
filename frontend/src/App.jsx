@@ -3355,11 +3355,14 @@ export default function App() {
           onOpenNotifications={openNotificationCenter}
           onOpenFeedback={() => jumpToPageSection("settings", "feedback-board")}
           onLogout={clearSession}
+          hideMarketStatus={legoJourneyActive}
+          searchLabel={legoJourneyActive ? "Search sets and pages" : "Search workspaces..."}
           userInitial={(currentUser.name || currentUser.email || "U").slice(0, 1).toUpperCase()}
         />
 
-        {page !== "home" ? <ExecutiveSummaryStrip metrics={topMetrics} /> : null}
+        {!legoJourneyActive && page !== "home" ? <ExecutiveSummaryStrip metrics={topMetrics} /> : null}
 
+        {!legoJourneyActive ? (
         <header className={`topbar ${page === "home" ? "topbar-compactHome" : ""}`}>
           {page !== "home" ? (
           <div className="metricStrip">
@@ -3414,6 +3417,7 @@ export default function App() {
             </div>
           </div>
         </header>
+        ) : null}
 
         <div className="mobileUtilityRail">
           {utilityNavItems.map((item) => (

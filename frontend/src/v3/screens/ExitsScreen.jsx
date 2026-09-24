@@ -153,10 +153,17 @@ export function ExitsScreen({
                   ) : null}
                 </div>
                 <p className="v3ExitRecommendation">{set.recommendation}</p>
-                {set.retirement?.insideSixMonths ? (
-                  <p className="v3RetirementWarning">Inside 6 months. Retirement does not change flywheel ready.</p>
+                <p>
+                  Retirement {set.retirement?.retirementState || "—"}
+                  {set.retirement?.retirementState !== "Retired" && set.retirement?.monthsRemaining != null
+                    ? ` · ${set.retirement.monthsRemaining} months`
+                    : ""}
+                </p>
+                {set.reminder ? (
+                  <p className="v3RetirementWarning">{set.reminder}. The sell window is open.</p>
+                ) : set.retirement?.insideSixMonths ? (
+                  <p className="v3RetirementWarning">Inside 6 months. The sell window is open.</p>
                 ) : null}
-                {set.reminder ? <p>{set.reminder}</p> : null}
                 <div className="v3ChannelGrid" aria-label="Channel comparison">
                   {set.channels.map((channel) => (
                     <div key={channel.id}>
