@@ -125,6 +125,16 @@ export function SetAnalysisScreen({ navigateToPage, appSettings }) {
           ))}
         </ul>
         <p>{snapshot.aiSummary?.action}</p>
+        {snapshot.aiSummary?.book?.lines?.length ? (
+          <>
+            <p><strong>{snapshot.aiSummary.book.heading}</strong></p>
+            <ul className="v3Checklist">
+              {snapshot.aiSummary.book.lines.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          </>
+        ) : null}
       </Disclosure>
     </div>
   );

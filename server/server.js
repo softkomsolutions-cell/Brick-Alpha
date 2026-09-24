@@ -1936,12 +1936,14 @@ function getUserState(userId) {
   return userStates[userId];
 }
 
-function seedDemoUserState(state, userId) {
-  if (!state || !DEMO_MODE || state.trades.length || state.watchlistItems.length) {
+const GAVIN_V3_BASELINE_AS_OF = "2026-09-23T12:00:00.000Z";
+
+function seedDemoUserState(state, userId, options = {}) {
+  if (!state || (!DEMO_MODE && !options.force) || state.trades.length || state.watchlistItems.length) {
     return;
   }
 
-  const catalog = TRADEABLE_COLLECTIBLES_ACTIVE;
+  const catalog = TRADEABLE_COLLECTIBLES.concat(DEMO_LEGO_SETS);
   const findBySku = (sku) => catalog.find((item) => item.sku === sku);
 
   const holdings = [
@@ -1949,19 +1951,22 @@ function seedDemoUserState(state, userId) {
       sku: "10305",
       quantity: 1,
       acquisitionPrice: 6999,
-      note: "Demo seeded position: strong-buy anchor bought through the ticket flow.",
+      salePrice: 8540,
+      note: "Demo realised sale: Lion Knights' Castle. Channel: Local buyer groups.",
     },
     {
       sku: "10316",
       quantity: 1,
       acquisitionPrice: 14900,
-      note: "Demo seeded position: buy candidate against a neat discount to retail.",
+      salePrice: 18684,
+      note: "Demo realised sale: Rivendell. Channel: Local buyer groups.",
     },
     {
       sku: "75252",
       quantity: 1,
       acquisitionPrice: 22999,
-      note: "Demo seeded position: retired flagship held for the next repricing leg.",
+      currentPrice: 28295,
+      note: "Demo open holding: Imperial Star Destroyer at the BrickEconomy mark.",
     },
   ];
 
@@ -1971,16 +1976,21 @@ function seedDemoUserState(state, userId) {
     if (!item) {
       continue;
     }
-    seededTrades.push(
-      createCollectibleTrade(item, "BUY", userId, {
-        quantity: holding.quantity,
-        entryPrice: holding.acquisitionPrice,
-        orderNote: holding.note,
-        executionMode: "paper",
-        executionProvider: "collecttrade",
-        executionLabel: "Brick Alpha Paper",
-      }),
-    );
+    const trade = createCollectibleTrade(item, "BUY", userId, {
+      quantity: holding.quantity,
+      entryPrice: holding.acquisitionPrice,
+      currentPrice: holding.currentPrice || holding.acquisitionPrice,
+      orderNote: holding.note,
+      executionMode: "paper",
+      executionProvider: "collecttrade",
+      executionLabel: "Brick Alpha Paper",
+    });
+    if (holding.salePrice != null) {
+      closeTrade(trade, "Local buyer groups", { price: holding.salePrice });
+      trade.closedAt = GAVIN_V3_BASELINE_AS_OF;
+      trade.updatedAt = GAVIN_V3_BASELINE_AS_OF;
+    }
+    seededTrades.push(trade);
   }
 
   if (seededTrades.length) {
@@ -2012,7 +2022,7 @@ function seedDemoUserState(state, userId) {
     desk: "collectibles",
     title: "Demo portfolio seeded",
     message:
-      "Three LEGO positions were seeded with realistic acquisition prices so the dashboard, P/L, and retirement alerts start alive.",
+      "Imperial Star Destroyer is the open holding. Castle and Rivendell are already on the realised ledger.",
     type: "portfolio",
   });
 
@@ -4744,11 +4754,25 @@ app.get("/api/collectibles", (_req, res) => {
   });
 });
 
+function isDemoAccount(user) {
+  return /@collecttrade\.local$/.test(String(user?.email || ""));
+}
+
+// Demo accounts see only notes they authored, so Reset Demo starts from an empty board.
+// Feedback from non-demo accounts stays in the store and is still returned to those accounts.
+function feedbackForRequester(user) {
+  if (!user || !isDemoAccount(user)) {
+    return feedbackItems;
+  }
+  return feedbackItems.filter((item) => item.authorUserId === user.id);
+}
+
 app.get("/api/feedback", requireAuth, (req, res) => {
+  const items = feedbackForRequester(req.user);
   res.json({
     ok: true,
-    items: feedbackItems,
-    summary: buildFeedbackSummary(feedbackItems),
+    items,
+    summary: buildFeedbackSummary(items),
     permissions: {
       canManage: req.user.role === "owner",
     },
@@ -5064,11 +5088,12 @@ app.post("/api/feedback", requireAuth, (req, res) => {
   feedbackItems = sortFeedbackItems([item, ...feedbackItems]);
   persistStore();
 
+  const visibleItems = feedbackForRequester(req.user);
   res.status(201).json({
     ok: true,
     item,
-    items: feedbackItems,
-    summary: buildFeedbackSummary(feedbackItems),
+    items: visibleItems,
+    summary: buildFeedbackSummary(visibleItems),
     permissions: {
       canManage: req.user.role === "owner",
     },
@@ -6193,6 +6218,7 @@ if (process.env.COLLECTTRADE_TEST === "1") {
     loadStore,
     persistStore,
     resetStore: resetStoreForTests,
+    seedDemoUserState,
     runEngineTick: engineTick,
   };
 }

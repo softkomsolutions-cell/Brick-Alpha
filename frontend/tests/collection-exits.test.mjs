@@ -7,6 +7,7 @@ import {
   buildRealisedLedger,
   filterCollectionSets,
   formatSignedPercent,
+  previewRealisedSale,
   summarizeOpenCollection,
 } from "../src/v3/collection/ownershipModel.js";
 
@@ -207,4 +208,37 @@ test("a free gift keeps a zero cost basis and a finite ROI", () => {
   const encoded = JSON.stringify(view);
   assert.equal(encoded.includes("NaN"), false);
   assert.equal(encoded.includes("Infinity"), false);
+});
+
+test("sale preview uses the same fee math as the realised ledger", () => {
+  const local = previewRealisedSale({
+    gross: 28295,
+    quantity: 1,
+    cost: 22999,
+    channelId: "local",
+  });
+  const bricklink = previewRealisedSale({
+    gross: 28295,
+    quantity: 1,
+    cost: 22999,
+    channelId: "bricklink",
+  });
+  const ledger = buildRealisedLedger([
+    trade({
+      status: "closed",
+      entryPrice: 22999,
+      exitPrice: 28295,
+      currentPrice: 28295,
+      exitReason: "Local buyer groups",
+    }),
+  ]);
+  assert.equal(local.fees, 1415);
+  assert.equal(local.net, 26880);
+  assert.equal(local.realisedProfit, 3881);
+  assert.equal(local.fees, ledger[0].fees);
+  assert.equal(local.net, ledger[0].net);
+  assert.equal(local.realisedProfit, ledger[0].realisedProfit);
+  assert.equal(bricklink.fees, Math.round(28295 * 0.12));
+  assert.equal(bricklink.net, 28295 - bricklink.fees);
+  assert.notEqual(bricklink.net, local.net);
 });

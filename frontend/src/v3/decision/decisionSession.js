@@ -22,6 +22,15 @@ export function saveDecisionSnapshot(snapshot) {
   }
 }
 
+export function clearDecisionSnapshot() {
+  memorySnapshot = null;
+  try {
+    window.sessionStorage.removeItem(SNAPSHOT_KEY);
+  } catch {
+    // The in-memory snapshot is already cleared.
+  }
+}
+
 export function readDecisionSnapshot() {
   if (memorySnapshot) {
     return memorySnapshot;

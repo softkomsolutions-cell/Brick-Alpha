@@ -6,6 +6,7 @@ import {
   buildExitCandidates,
   buildRealisedLedger,
   formatSignedPercent,
+  previewRealisedSale,
 } from "../collection/ownershipModel";
 import { buildCanonicalRetirement, retirementReminderLabel } from "../retirement/retirementModel";
 
@@ -18,6 +19,35 @@ function proximityLabel(months) {
     return "In the sell window";
   }
   return `${rounded} months`;
+}
+
+function SalePreview({ form, saleFor }) {
+  const unit = saleFor?.unitRows?.[0];
+  const quantity = Math.max(
+    1,
+    (saleFor?.unitRows || []).filter((row) => row.tradeId === unit?.tradeId).length || 1,
+  );
+  const unitPrice = Number(form.salePrice);
+  const preview = unit && Number.isFinite(unitPrice)
+    ? previewRealisedSale({
+        gross: unitPrice,
+        quantity,
+        cost: Number(unit.cost) * quantity,
+        channelId: form.channel,
+      })
+    : null;
+  return (
+    <div className="v3SalePreview" aria-label="Sale preview">
+      <strong>Planning preview</strong>
+      <p>{EXIT_FEE_ASSUMPTION}</p>
+      <p>Channel {preview?.channel || "—"}</p>
+      <p>Gross sale amount {preview ? formatCollectiblePrice(preview.gross) : "—"}</p>
+      <p>Estimated fees {preview ? formatCollectiblePrice(preview.fees) : "—"}</p>
+      <p>Net proceeds {preview ? formatCollectiblePrice(preview.net) : "—"}</p>
+      <p>Cost basis {preview ? formatCollectiblePrice(preview.cost) : "—"}</p>
+      <p>Estimated realised profit {preview ? formatCollectiblePrice(preview.realisedProfit) : "—"}</p>
+    </div>
+  );
 }
 
 function saleDateLabel(value) {
@@ -232,6 +262,7 @@ export function ExitsScreen({
               onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
             />
           </label>
+          <SalePreview form={form} saleFor={saleFor} />
           <div className="v3WorkflowActions">
             <button type="button" className="ghostButton" onClick={() => setSaleFor(null)}>
               Cancel

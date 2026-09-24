@@ -62,7 +62,8 @@ import { V3BottomNav } from "./v3/V3BottomNav";
 import { V3Sidebar } from "./v3/V3Sidebar";
 import { V3OnboardingFlow } from "./v3/onboarding/V3OnboardingFlow";
 import { isV3OnboardingComplete } from "./v3/onboarding/onboardingStorage";
-import { isV3LegoJourneyPage } from "./v3/v3Nav";
+import { clearV3DemoDeviceState } from "./v3/demo/demoDeviceState";
+import { isV3LegoJourneyPage, v3MobileMenuItems } from "./v3/v3Nav";
 
 function lazyNamedExport(factory, exportName) {
   return lazy(() =>
@@ -1697,6 +1698,8 @@ export default function App() {
   );
 
   const handleDemoReset = useCallback(async () => {
+    clearV3DemoDeviceState();
+    setV3OnboardingVisible(true);
     clearSession();
     setDemoLaunchBusy(true);
     try {
@@ -3478,7 +3481,7 @@ export default function App() {
               </div>
 
               <div className="mobileMenuScreenList">
-                {menuPrimaryItems.map((item) => (
+                {v3MobileMenuItems(menuPrimaryItems, legoJourneyActive).map((item) => (
                   <button key={item.id} type="button" className="mobileMenuRow" onClick={item.action}>
                     <div className="mobileMenuRowGlyph">{item.glyph}</div>
                     <div className="mobileMenuRowCopy">
@@ -3490,6 +3493,7 @@ export default function App() {
                 ))}
               </div>
 
+              {legoJourneyActive ? null : (
               <div className="mobileMenuScreenSection">
                 <span>Desk shortcuts</span>
                 <div className="mobileMenuPillRow">
@@ -3506,6 +3510,7 @@ export default function App() {
                   ))}
                 </div>
               </div>
+              )}
 
               <div className="mobileMenuScreenSection">
                 <span>Workspace &amp; Support</span>

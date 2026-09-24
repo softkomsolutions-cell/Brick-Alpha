@@ -206,6 +206,45 @@ test("retired factor copy does not print a negative month count", () => {
   assert.equal(advisor.includes("Retired"), true);
 });
 
+test("a buying profile changes the book explanation and leaves the base set facts", () => {
+  const openTrades = [{
+    assetClass: "collectible",
+    status: "open",
+    legoTheme: "Star Wars",
+    currentPrice: 28295,
+    quantity: 1,
+    sku: "75252",
+  }];
+  const balanced = buildDecisionSnapshot({
+    evaluation: SET,
+    analyzedAt: AS_OF,
+    openTrades,
+    buyingProfile: { budgetPerSet: "", holdPeriod: "medium", riskTolerance: "balanced", preferredThemes: [] },
+  });
+  const tight = buildDecisionSnapshot({
+    evaluation: SET,
+    analyzedAt: AS_OF,
+    openTrades,
+    buyingProfile: { budgetPerSet: 10000, holdPeriod: "short", riskTolerance: "conservative", preferredThemes: [] },
+  });
+  assert.equal(balanced.currentValue, 26999);
+  assert.equal(tight.currentValue, balanced.currentValue);
+  assert.equal(tight.annualGrowth, balanced.annualGrowth);
+  assert.equal(tight.growth90Day, balanced.growth90Day);
+  assert.equal(tight.retirement.retirementState, balanced.retirement.retirementState);
+  assert.equal(tight.verdict.label, balanced.verdict.label);
+  assert.equal(tight.verdict.id, balanced.verdict.id);
+  const balancedBook = balanced.aiSummary.book.lines.join(" ");
+  const tightBook = tight.aiSummary.book.lines.join(" ");
+  assert.equal(balancedBook.includes("38%"), true);
+  assert.equal(balancedBook.includes("Star Wars"), true);
+  assert.notEqual(balanced.aiSummary.book.lines.join("|"), tightBook);
+  assert.equal(tightBook.includes("Budget"), true);
+  assert.equal(tight.aiSummary.bullets.join(" ").includes("26"), true);
+  assert.equal(tight.aiSummary.action.includes("1-year"), false);
+  assert.equal(JSON.stringify(tight.evaluation), JSON.stringify(balanced.evaluation));
+});
+
 test("research numbers stay finite", () => {
   const card = buildResearchCard({ ...SET, annualGrowth: null, valuationHistory: [] }, { asOf: AS_OF });
   for (const value of [card.currentMarketValue, card.annualGrowth, card.ninetyDayGrowth, card.confidence, card.retirement.monthsRemaining]) {

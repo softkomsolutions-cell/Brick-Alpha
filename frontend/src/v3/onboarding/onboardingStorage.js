@@ -27,6 +27,7 @@ export function markV3OnboardingComplete() {
 export function resetV3OnboardingForDemo() {
   try {
     window.localStorage.removeItem(ONBOARDING_COMPLETE_KEY);
+    window.localStorage.removeItem(BUYING_PROFILE_KEY);
   } catch {
     // ignore
   }

@@ -178,7 +178,59 @@ export function buildThesisChecklist(evaluation, verdict, retirement) {
   return checklist.slice(0, 5);
 }
 
-export function buildCanonicalAdvisor({ name, verdict, valuation, retirement }) {
+function holdLabel(value) {
+  if (value === "short") return "short hold";
+  if (value === "long") return "long hold";
+  if (value === "medium") return "medium hold (2–5 years)";
+  return "";
+}
+
+export function buildBookAdvisor({ theme, verdict, personalisation, profile }) {
+  if (!personalisation?.verdict) {
+    return null;
+  }
+  const share = Number.isFinite(Number(personalisation.themeShare))
+    ? Number(personalisation.themeShare)
+    : 0;
+  const cap = personalisation.themeCap;
+  const bookLabel = personalisation.verdict.label;
+  const reasons = Array.isArray(personalisation.reasons) ? personalisation.reasons.filter(Boolean) : [];
+  const lines = [
+    `${theme || "This theme"} exposure is ${share.toFixed(1)}% of owned value. Configured cap ${cap}%.`,
+    `For your book: ${bookLabel}.`,
+  ];
+  if (bookLabel === verdict.label) {
+    lines.push(`The book action matches the base set verdict ${verdict.label}.`);
+  } else {
+    lines.push(
+      `The base set verdict stays ${verdict.label}. The book action differs because ${
+        reasons.length ? reasons.join(". ") : "the buying profile changes the quantity"
+      }.`,
+    );
+  }
+  const budget = profile?.budgetPerSet;
+  if (budget != null && budget !== "" && Number(budget) > 0) {
+    lines.push(`Budget per set ${formatCanonicalValue(Number(budget))}.`);
+  }
+  const hold = holdLabel(profile?.holdPeriod);
+  if (hold) {
+    lines.push(`Hold preference: ${hold}.`);
+  }
+  if (profile?.riskTolerance) {
+    lines.push(`Risk posture: ${profile.riskTolerance}.`);
+  }
+  return { heading: "Your book", lines };
+}
+
+export function buildCanonicalAdvisor({
+  name,
+  theme,
+  verdict,
+  valuation,
+  retirement,
+  personalisation,
+  profile,
+}) {
   const annual =
     valuation.annualGrowth == null ? "Insufficient history" : formatRecordedGrowth(valuation.annualGrowth);
   const ninety =
@@ -197,6 +249,7 @@ export function buildCanonicalAdvisor({ name, verdict, valuation, retirement }) 
       `Retirement ${retirement?.status || "Unavailable"}${months}.`,
     ],
     action: `Recommended action: ${verdict.label}. Forward forecasts are not part of this verdict.`,
+    book: buildBookAdvisor({ theme, verdict, personalisation, profile }),
   };
 }
 
@@ -273,9 +326,12 @@ export function buildDecisionSnapshot({
     marketPricing,
     aiSummary: buildCanonicalAdvisor({
       name: frozen.name || profile?.name || "LEGO set",
+      theme: frozen.legoTheme || profile?.theme || "",
       verdict,
       valuation,
       retirement,
+      personalisation,
+      profile: buyingProfile || {},
     }),
     comparables: PREMIUM_COMPARABLES,
     drivers: Array.isArray(breakdown?.displayGroups) ? breakdown.displayGroups : [],

@@ -78,13 +78,37 @@ function channelFromText(text) {
 export function channelNets(gross) {
   const value = numberOrZero(gross);
   return EXIT_CHANNELS.map((channel) => {
-    const fees = Math.round(value * channel.feeRate);
+    const figures = realisedSaleFigures({ gross: value, cost: 0, channel });
     return {
       ...channel,
-      gross: value,
-      fees,
-      net: value - fees,
+      gross: figures.gross,
+      fees: figures.fees,
+      net: figures.net,
     };
+  });
+}
+
+export function realisedSaleFigures({ gross, cost, channel }) {
+  const fees = Math.round(numberOrZero(gross) * numberOrZero(channel?.feeRate));
+  const net = numberOrZero(gross) - fees;
+  return {
+    channel: channel?.label || "Local buyer groups",
+    feeRate: numberOrZero(channel?.feeRate),
+    gross: numberOrZero(gross),
+    fees,
+    net,
+    cost: numberOrZero(cost),
+    realisedProfit: net - numberOrZero(cost),
+  };
+}
+
+export function previewRealisedSale({ gross, cost, channelId, quantity = 1 }) {
+  const channel = EXIT_CHANNELS.find((item) => item.id === channelId) || EXIT_CHANNELS[0];
+  const units = Math.max(1, Math.round(numberOrZero(quantity) || 1));
+  return realisedSaleFigures({
+    gross: numberOrZero(gross) * units,
+    cost: numberOrZero(cost),
+    channel,
   });
 }
 
@@ -312,21 +336,19 @@ export function buildRealisedLedger(closedTrades = []) {
       const cost = numberOrZero(trade.entryPrice) * quantity;
       const gross = numberOrZero(trade.exitPrice ?? trade.currentPrice) * quantity;
       const channel = channelFromText(`${trade.exitReason || ""} ${trade.orderNote || ""}`);
-      const fees = Math.round(gross * channel.feeRate);
-      const net = gross - fees;
-      const realisedProfit = net - cost;
+      const figures = realisedSaleFigures({ gross, cost, channel });
       return {
         id: trade.id,
         name: trade.label || trade.name || "LEGO set",
         setNumber: setNumberOf(trade),
-        cost,
-        gross,
-        fees,
-        net,
-        realisedProfit,
+        cost: figures.cost,
+        gross: figures.gross,
+        fees: figures.fees,
+        net: figures.net,
+        realisedProfit: figures.realisedProfit,
         saleDate: trade.closedAt || trade.updatedAt || "",
         channel: channel.label,
-        recovery: net >= cost ? "Recovered — ready to recycle" : "Partial recovery",
+        recovery: figures.net >= figures.cost ? "Recovered — ready to recycle" : "Partial recovery",
       };
     })
     .sort((left, right) => String(right.saleDate).localeCompare(String(left.saleDate)));

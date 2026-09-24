@@ -146,6 +146,23 @@ export function v3WorkspaceLabel(page) {
   return "Brick Alpha";
 }
 
+const V3_HIDDEN_MOBILE_MENU_IDS = new Set([
+  "menu-news",
+  "menu-trading",
+  "menu-crypto",
+  "forex",
+  "etfs",
+  "crypto",
+  "jse",
+]);
+
+export function v3MobileMenuItems(items, legoJourney) {
+  if (!legoJourney) {
+    return items;
+  }
+  return (items || []).filter((item) => !V3_HIDDEN_MOBILE_MENU_IDS.has(item.id));
+}
+
 export function isV3LegoJourneyPage(page) {
   const id = canonicalPage(page);
   return (
