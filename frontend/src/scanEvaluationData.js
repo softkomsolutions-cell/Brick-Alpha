@@ -3,6 +3,8 @@
  * Keeps demo content out of UI components — swap for API calls when backend is ready.
  */
 
+import { canonicalMarketValue, formatCanonicalValue, formatRecordedGrowth, recordedGrowth } from "./v3/valuation/valuationAuthority";
+
 export const PROCESSING_STEPS = [
   { id: "uploading", label: "Uploading..." },
   { id: "analysing", label: "AI analysing image..." },
@@ -170,7 +172,7 @@ export const PREMIUM_COMPARABLES = [
 
 export const COPILOT_DEMO_RESPONSES = {
   "should i buy three of these?":
-    "Three sealed copies would diversify your exit strategy — one for long-term hold, one for retirement pop, and one for liquidity. At current pricing with a Strong Buy rating, accumulating 2–3 units before retirement is aligned with Brick Alpha's model for high-conviction UCS sets.",
+    "The verdict is Buy ×2 flywheel, Buy ×1, Only below a price, or Skip. It uses the BrickEconomy value and recorded growth. A 1-year, 5-year, or 10-year forecast is not a reason to buy three.",
   default:
     "Based on the Brick Alpha score and retirement window, this set fits a core accumulation strategy. Monitor discount periods and consider staged entries rather than a single lump-sum purchase.",
 };
@@ -328,21 +330,34 @@ export function buildMarketPricing(evaluation, demoProfile) {
   };
 }
 
+function holdingPeriodMonths(evaluation) {
+  const direct = Number(evaluation?.holdingPeriodMonths);
+  if (Number.isFinite(direct) && direct > 0) {
+    return direct;
+  }
+  const parsed = Number(String(evaluation?.holdingPeriod || "").replace(/[^0-9]/g, ""));
+  if (Number.isFinite(parsed) && parsed > 0) {
+    return parsed;
+  }
+  return 36;
+}
+
 export function buildForecastCards(evaluation) {
   const current = Number(evaluation?.currentMarketValue || evaluation?.price) || 0;
   const projected = Number(evaluation?.projectedFutureValue) || current * 1.32;
   const horizons = [1, 5, 10];
+  const years = Math.max(holdingPeriodMonths(evaluation) / 12, 0.5);
 
-  return horizons.map((years) => {
+  return horizons.map((mapYears) => {
     const growth =
-      current > 0 && projected > current
-        ? Math.pow(projected / current, 1 / Math.max(evaluation?.holdingPeriod || 3, 1))
+      current > 0 && projected > current && Number.isFinite(projected / current)
+        ? Math.pow(projected / current, 1 / years)
         : 1.08;
-    const value = Math.round(current * Math.pow(growth, years));
+    const value = Math.round(current * Math.pow(growth, mapYears));
     const roi = current > 0 ? ((value - current) / current) * 100 : 0;
     return {
-      years,
-      label: years === 1 ? "1 Year Forecast" : `${years} Year Forecast`,
+      years: mapYears,
+      label: mapYears === 1 ? "1 Year Forecast" : `${mapYears} Year Forecast`,
       value,
       roi,
     };
@@ -386,7 +401,10 @@ export function buildAiInvestmentSummary(evaluation, demoProfile) {
 }
 
 export function buildRetirementSnapshot(evaluation) {
-  const months = evaluation?.monthsUntilRetirement ?? evaluation?.retirementMonthsRemaining ?? 14;
+  const rawMonths = Number(
+    evaluation?.monthsUntilRetirement ?? evaluation?.retirementMonthsRemaining ?? 14,
+  );
+  const months = Number.isFinite(rawMonths) ? Math.round(rawMonths) : 14;
   return {
     expectedRetirement: evaluation?.expectedRetirementDate || evaluation?.sellByTargetDate || "Q4 2026",
     retirementProbability: Math.round(Number(evaluation?.retirementProbability) || 72),
@@ -411,17 +429,85 @@ export function riskLabel(riskScore) {
   return "HIGH";
 }
 
-export function getCopilotResponse(question) {
+function copilotContext(evaluation, demoProfile) {
+  const valuation = canonicalMarketValue(evaluation);
+  const growth = recordedGrowth(evaluation);
+  const retail = Number(evaluation?.retailPrice || demoProfile?.retailPrice) || 0;
+
+  return {
+    name: evaluation?.name || demoProfile?.name || "this set",
+    score: Math.round(Number(evaluation?.brickAlphaScore)),
+    recommendation: evaluation?.recommendation || "Buy",
+    current: valuation.value,
+    valueText: formatCanonicalValue(valuation.value),
+    source: valuation.source,
+    retail,
+    annualText: growth.annualPercent == null ? "Insufficient history" : formatRecordedGrowth(growth.annualPercent),
+    ninetyText: growth.ninetyDayPercent == null ? "Insufficient history" : formatRecordedGrowth(growth.ninetyDayPercent),
+    retirementStatus: evaluation?.retirementStatus || "Available",
+    expectedRetirementDate: evaluation?.expectedRetirementDate || demoProfile?.investmentHorizon || "the recorded window",
+    riskScore: Number(evaluation?.riskScore),
+    riskLabel: riskLabel(evaluation?.riskScore),
+    discount: Number(evaluation?.discountPercentage),
+    theme: evaluation?.legoTheme || demoProfile?.theme,
+  };
+}
+
+function copilotRecommendationLine(ctx) {
+  return `The ${ctx.name} scores ${ctx.score}/100. The verdict uses Buy ×2 flywheel, Buy ×1, Only below a price, or Skip, and it does not use a forward forecast.`;
+}
+
+function copilotAnswerFor(question, ctx) {
+  const normalized = String(question || "").trim().toLowerCase();
+  const priceLine = `Current market value is ${ctx.valueText} from ${ctx.source}. Annual growth is ${ctx.annualText}. 90-day growth is ${ctx.ninetyText}.`;
+
+  if (normalized.includes("buy") || normalized.includes("three") || normalized.includes("stock")) {
+    return `${copilotRecommendationLine(ctx)} ${priceLine}`;
+  }
+
+  if (normalized.includes("roi") || normalized.includes("return") || normalized.includes("profit")) {
+    return `${priceLine} Recorded growth is the return evidence.`;
+  }
+
+  if (normalized.includes("retir")) {
+    return `The ${ctx.name} retirement status is ${ctx.retirementStatus}, expected ${ctx.expectedRetirementDate}. ${priceLine}`;
+  }
+
+  if (normalized.includes("score") || normalized.includes("grade") || normalized.includes("good")) {
+    return `The ${ctx.name} scores ${ctx.score}/100. ${ctx.theme ? `Theme exposure (${ctx.theme}) ` : ""}and retirement timing are recorded contributors. ${priceLine}`;
+  }
+
+  if (normalized.includes("risk") || normalized.includes("safe")) {
+    return `Risk for the ${ctx.name} is ${ctx.riskLabel} (${ctx.riskScore}/100). ${priceLine}`;
+  }
+
+  if (normalized.includes("price") || normalized.includes("cost") || normalized.includes("value") || normalized.includes("worth")) {
+    return priceLine;
+  }
+
+  if (normalized.includes("sell") || normalized.includes("exit") || normalized.includes("when")) {
+    return `Exit timing follows the retirement window and whether one unit covers the stack cost. ${priceLine}`;
+  }
+
+  if (normalized.includes("hold") || normalized.includes("keep")) {
+    return `Holding the ${ctx.name} is judged from the BrickEconomy value and recorded growth, not from a forward price path. ${priceLine}`;
+  }
+
+  return `${copilotRecommendationLine(ctx)} ${priceLine}`;
+}
+
+export function getCopilotResponse(question, context = {}) {
+  const ctx = copilotContext(context.evaluation, context.demoProfile);
   const normalized = String(question || "").trim().toLowerCase();
   if (!normalized) {
     return COPILOT_DEMO_RESPONSES.default;
   }
-  for (const [key, response] of Object.entries(COPILOT_DEMO_RESPONSES)) {
+  for (const key of Object.keys(COPILOT_DEMO_RESPONSES)) {
     if (key !== "default" && normalized.includes(key.replace(/\?/g, ""))) {
-      return response;
+      return COPILOT_DEMO_RESPONSES[key];
     }
   }
-  return COPILOT_DEMO_RESPONSES.default;
+  return copilotAnswerFor(normalized, ctx);
 }
 
 export function demoSeedFromFile(file) {

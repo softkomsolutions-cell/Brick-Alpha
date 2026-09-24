@@ -6,8 +6,9 @@ import {
   letterGradeFor,
 } from "../brickAlphaModel";
 import { formatCollectiblePrice } from "../appUtils";
+import { presentResearchFields, buildCanonicalAdvisor } from "../v3/decision/decisionModel";
+import { formatCanonicalValue } from "../v3/valuation/valuationAuthority";
 import {
-  buildAiInvestmentSummary,
   buildForecastCards,
   buildMarketPricing,
   buildRetirementSnapshot,
@@ -25,6 +26,10 @@ import { monthsUntilRetirement, portfolioStatusFor } from "../retirementIntellig
 import { ScoreBar, ScoreRing } from "./brickAlphaScoreDisplay";
 import { ScoreExplanationPanel } from "./scoreExplanationPanel";
 import { AlphaSignalBadges } from "./workspaceCards";
+import { buildDecisionSnapshot } from "../v3/decision/decisionModel";
+import { saveDecisionSnapshot } from "../v3/decision/decisionSession";
+import { readBuyingProfile } from "../v3/onboarding/onboardingStorage";
+import { CANONICAL_AS_OF } from "../v3/retirement/retirementModel";
 
 const ACQUISITION_METHODS = [
   { id: "camera", icon: "📷", label: "Take Photo", detail: "Use your device camera" },
@@ -193,7 +198,7 @@ function ManualSearchPanel({ collectibles, onSelect, onCancel }) {
     <article className="seGlassCard seManualPanel">
       <div className="seSectionHeader">
         <span className="executiveDashboardEyebrow">Manual identification</span>
-        <h2>AI could not identify automatically</h2>
+        <h2>Search the catalog</h2>
         <p>Search by set number, name, or theme — autocomplete against the Brick Alpha catalog.</p>
       </div>
       <label className="seField">
@@ -229,13 +234,15 @@ function ManualSearchPanel({ collectibles, onSelect, onCancel }) {
   );
 }
 
-function CopilotCard({ evaluation }) {
+function CopilotCard({ evaluation, demoProfile }) {
   const [question, setQuestion] = useState("Should I buy three of these?");
-  const [response, setResponse] = useState(() => getCopilotResponse("Should I buy three of these?"));
+  const [response, setResponse] = useState(() =>
+    getCopilotResponse("Should I buy three of these?", { evaluation, demoProfile }),
+  );
 
   const handleAsk = useCallback(() => {
-    setResponse(getCopilotResponse(question));
-  }, [question]);
+    setResponse(getCopilotResponse(question, { evaluation, demoProfile }));
+  }, [demoProfile, evaluation, question]);
 
   return (
     <article className="seGlassCard seCopilotCard">
@@ -276,10 +283,12 @@ function CopilotCard({ evaluation }) {
 export function ScanEvaluateWorkspace({
   collectibles = [],
   openTrades = [],
+  closedTrades = [],
   handleCollectibleSelect,
   jumpToPageSection,
   onAddToWatchlist,
   openCollectibleTicket,
+  navigateToPage,
 }) {
   const fileInputRef = useRef(null);
   const hasWebcam = typeof navigator !== "undefined" && Boolean(navigator.mediaDevices?.getUserMedia);
@@ -287,6 +296,7 @@ export function ScanEvaluateWorkspace({
   const [phase, setPhase] = useState("landing");
   const [imagePreview, setImagePreview] = useState(null);
   const [imageName, setImageName] = useState("");
+  const [imageFailed, setImageFailed] = useState(false);
   const [processingIndex, setProcessingIndex] = useState(0);
   const [showCamera, setShowCamera] = useState(false);
   const [manualQuery, setManualQuery] = useState("");
@@ -310,10 +320,21 @@ export function ScanEvaluateWorkspace({
   );
 
   const forecasts = useMemo(() => (evaluation ? buildForecastCards(evaluation) : []), [evaluation]);
-  const aiSummary = useMemo(
-    () => (evaluation ? buildAiInvestmentSummary(evaluation, demoProfile) : null),
-    [demoProfile, evaluation],
-  );
+  const aiSummary = useMemo(() => {
+    if (!evaluation) {
+      return null;
+    }
+    const presented = presentResearchFields(evaluation);
+    return buildCanonicalAdvisor({
+      name: evaluation.name,
+      verdict: { label: presented.verdictLabel },
+      valuation: presented,
+      retirement: {
+        status: presented.retirementStatus,
+        monthsRemaining: presented.monthsRemaining,
+      },
+    });
+  }, [evaluation]);
   const retirementSnapshot = useMemo(
     () => (evaluation ? buildRetirementSnapshot(evaluation) : null),
     [evaluation],
@@ -326,6 +347,7 @@ export function ScanEvaluateWorkspace({
 
   const confidence = evaluation ? confidenceFor(evaluation) : 0;
   const displayImage = imagePreview || demoProfile?.imageUrl || null;
+  const showImage = Boolean(displayImage) && !imageFailed;
 
   const runAnalysis = useCallback(
     async (setNumber, file, previewUrl, fileName) => {
@@ -384,7 +406,25 @@ export function ScanEvaluateWorkspace({
       });
 
       setIdentifiedSetNumber(normalized);
+      const snapshot = buildDecisionSnapshot({
+        evaluation: enriched,
+        imageUrl: previewUrl || profile?.imageUrl || "",
+        profile,
+        buyingProfile: readBuyingProfile(),
+        openTrades,
+        closedTrades,
+        analyzedAt: CANONICAL_AS_OF,
+      });
+      saveDecisionSnapshot(snapshot);
+      handleCollectibleSelect(enriched);
+      setPhase("landing");
+      setActionStatus("");
+      if (navigateToPage) {
+        navigateToPage("verdict");
+        return;
+      }
       setEvaluation(enriched);
+      setImageFailed(false);
       if (previewUrl) {
         setImagePreview(previewUrl);
       }
@@ -392,9 +432,8 @@ export function ScanEvaluateWorkspace({
         setImageName(fileName);
       }
       setPhase("results");
-      handleCollectibleSelect(enriched);
     },
-    [collectibles, handleCollectibleSelect],
+    [closedTrades, collectibles, handleCollectibleSelect, navigateToPage, openTrades],
   );
 
   const handleImageFile = useCallback(
@@ -526,8 +565,7 @@ export function ScanEvaluateWorkspace({
               <span className="executiveDashboardEyebrow">Hero Feature</span>
               <h2>Scan a LEGO set. Get an instant investment verdict.</h2>
               <p>
-                Photograph, upload, or enter a set number — Brick Alpha identifies the set, pulls market
-                data, and delivers a complete investment analysis in seconds.
+                Photograph, upload, or enter a set number. Brick Alpha identifies the set and opens the verdict.
               </p>
             </div>
             <div className="seHeroStats">
@@ -652,8 +690,13 @@ export function ScanEvaluateWorkspace({
           <article className="seGlassCard seIdentificationCard">
             <div className="seIdentificationLayout">
               <div className="seIdentificationVisual">
-                {displayImage ? (
-                  <img src={displayImage} alt={evaluation.name} className="seIdentificationImage" />
+                {showImage ? (
+                  <img
+                    src={displayImage}
+                    alt={evaluation.name}
+                    className="seIdentificationImage"
+                    onError={() => setImageFailed(true)}
+                  />
                 ) : (
                   <div className="seIdentificationPlaceholder">
                     <span>{extractSetNumber(evaluation)}</span>
@@ -669,7 +712,7 @@ export function ScanEvaluateWorkspace({
                   <div><span>Pieces</span><strong>{demoProfile?.pieces || evaluation.numberOfPieces || "—"}</strong></div>
                   <div><span>Minifigures</span><strong>{demoProfile?.minifigures || evaluation.numberOfMinifigures || "—"}</strong></div>
                   <div><span>Retail price</span><strong>{formatCollectiblePrice(evaluation.retailPrice)}</strong></div>
-                  <div><span>Current market value</span><strong>{formatCollectiblePrice(evaluation.currentMarketValue)}</strong></div>
+                  <div><span>Current market value</span><strong>{formatCanonicalValue(presentResearchFields(evaluation).currentMarketValue)}</strong></div>
                   <div><span>Retirement status</span><strong>{evaluation.retirementStatus}</strong></div>
                   <div><span>Expected retirement</span><strong>{retirementSnapshot?.expectedRetirement}</strong></div>
                   <div><span>BrickEconomy status</span><strong>{demoProfile?.brickEconomyStatus || "Tracked"}</strong></div>
@@ -751,25 +794,28 @@ export function ScanEvaluateWorkspace({
                 <div className="seMetric"><span>Current value</span><strong>{formatCollectiblePrice(marketPricing?.currentValue)}</strong></div>
                 <div className="seMetric"><span>Lowest price</span><strong>{formatCollectiblePrice(marketPricing?.lowestPrice)}</strong></div>
                 <div className="seMetric"><span>Highest price</span><strong>{formatCollectiblePrice(marketPricing?.highestPrice)}</strong></div>
-                <div className="seMetric"><span>Average market price</span><strong>{formatCollectiblePrice(marketPricing?.averageMarketPrice)}</strong></div>
+                <div className="seMetric"><span>Illustrative blend</span><strong>{formatCollectiblePrice(marketPricing?.averageMarketPrice)}</strong><small>Not BrickEconomy</small></div>
                 <div className="seMetric"><span>Expected retirement pop</span><strong>{formatCollectiblePrice(marketPricing?.expectedRetirementPop)}</strong></div>
               </div>
             </article>
 
             <article className="seGlassCard">
               <div className="seSectionHeader">
-                <span className="executiveDashboardEyebrow">Forecasts</span>
-                <h2>Price outlook</h2>
+                <span className="executiveDashboardEyebrow">Non-canonical</span>
+                <h2>Illustrative outlook</h2>
               </div>
-              <div className="seForecastGrid">
-                {forecasts.map((forecast) => (
-                  <div key={forecast.years} className="seForecastCard">
-                    <span>{forecast.label}</span>
-                    <strong>{formatCollectiblePrice(forecast.value)}</strong>
-                    <em className="seMetric-positive">+{forecast.roi.toFixed(1)}%</em>
-                  </div>
-                ))}
-              </div>
+              <p>These 1-year, 5-year, and 10-year figures are illustrative. They do not set the verdict or the BrickEconomy value.</p>
+              <details>
+                <summary>Show illustrative figures</summary>
+                <div className="seForecastGrid">
+                  {forecasts.map((forecast) => (
+                    <div key={forecast.years} className="seForecastCard">
+                      <span>{forecast.label}</span>
+                      <strong>{formatCollectiblePrice(forecast.value)}</strong>
+                    </div>
+                  ))}
+                </div>
+              </details>
             </article>
           </div>
 
@@ -827,12 +873,12 @@ export function ScanEvaluateWorkspace({
               <div className="seMetric"><span>Expected retirement</span><strong>{retirementSnapshot?.expectedRetirement}</strong></div>
               <div className="seMetric"><span>Retirement probability</span><strong>{retirementSnapshot?.retirementProbability}%</strong></div>
               <div className="seMetric"><span>Retirement confidence</span><strong>{retirementSnapshot?.retirementConfidence}%</strong></div>
-              <div className="seMetric"><span>Months remaining</span><strong>{monthsUntilRetirement(evaluation) ?? retirementSnapshot?.monthsRemaining}</strong></div>
+              <div className="seMetric"><span>Months remaining</span><strong>{retirementSnapshot?.monthsRemaining ?? monthsUntilRetirement(evaluation)}</strong></div>
               <div className="seMetric"><span>Expected retirement pop</span><strong>{formatCollectiblePrice(retirementSnapshot?.expectedRetirementPop)}</strong></div>
             </div>
           </article>
 
-          <CopilotCard evaluation={evaluation} />
+          <CopilotCard evaluation={evaluation} demoProfile={demoProfile} />
 
           <article className="seGlassCard seActionsCard">
             <div className="seSectionHeader">

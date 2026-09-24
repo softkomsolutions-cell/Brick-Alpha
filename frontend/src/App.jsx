@@ -1,6 +1,8 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
 import "./App.css";
 import "./saasTheme.css";
+import "./specV3.css";
+import "./v3/v3Layout.css";
 import {
   API_BASE_URL,
   APP_NAME,
@@ -54,8 +56,14 @@ import { BrandLogo } from "./components/brandLogo";
 import {
   enrichBrickAlphaCollectible,
   enrichBrickAlphaTrade,
-  summarizeBrickAlphaPortfolio,
 } from "./brickAlphaModel";
+import { summarizeOpenCollection } from "./v3/collection/ownershipModel";
+import { V3BottomNav } from "./v3/V3BottomNav";
+import { V3Sidebar } from "./v3/V3Sidebar";
+import { V3OnboardingFlow } from "./v3/onboarding/V3OnboardingFlow";
+import { isV3OnboardingComplete } from "./v3/onboarding/onboardingStorage";
+import { clearV3DemoDeviceState } from "./v3/demo/demoDeviceState";
+import { isV3LegoJourneyPage, v3MobileMenuItems } from "./v3/v3Nav";
 
 function lazyNamedExport(factory, exportName) {
   return lazy(() =>
@@ -66,20 +74,20 @@ function lazyNamedExport(factory, exportName) {
 }
 
 const TradeScreen = lazy(() => import("./components/tradeScreen"));
-const HomeScreen = lazyNamedExport(() => import("./components/workspaceScreens"), "HomeScreen");
+const HomeScreen = lazy(() =>
+  import("./v3/screens/HomeScreen").then((module) => ({ default: module.HomeScreen })),
+);
 const NewsScreen = lazyNamedExport(() => import("./components/workspaceScreens"), "NewsScreen");
 const ToolsScreen = lazyNamedExport(() => import("./components/workspaceScreens"), "ToolsScreen");
-const CollectiblesScreen = lazyNamedExport(
-  () => import("./components/workspaceScreens"),
-  "CollectiblesScreen",
+const ResearchScreen = lazy(() =>
+  import("./v3/screens/ResearchScreen").then((module) => ({ default: module.ResearchScreen })),
 );
 const ScanEvaluateScreen = lazyNamedExport(
   () => import("./components/workspaceScreens"),
   "ScanEvaluateScreen",
 );
-const PortfolioScreen = lazyNamedExport(
-  () => import("./components/workspaceScreens"),
-  "PortfolioScreen",
+const CollectionScreen = lazy(() =>
+  import("./v3/screens/CollectionScreen").then((module) => ({ default: module.CollectionScreen })),
 );
 const ReportsScreen = lazyNamedExport(
   () => import("./components/workspaceScreens"),
@@ -101,9 +109,15 @@ const OrderTicketModal = lazyNamedExport(
   () => import("./components/workspaceCards"),
   "OrderTicketModal",
 );
-const CloseTradeModal = lazyNamedExport(
-  () => import("./components/workspaceCards"),
-  "CloseTradeModal",
+const ExitsScreen = lazy(() => import("./v3/screens/ExitsScreen").then((m) => ({ default: m.ExitsScreen })));
+const VerdictScreen = lazy(() =>
+  import("./v3/screens/VerdictScreen").then((m) => ({ default: m.VerdictScreen })),
+);
+const SetAnalysisScreen = lazy(() =>
+  import("./v3/screens/SetAnalysisScreen").then((m) => ({ default: m.SetAnalysisScreen })),
+);
+const LogPurchaseScreen = lazy(() =>
+  import("./v3/screens/LogPurchaseScreen").then((m) => ({ default: m.LogPurchaseScreen })),
 );
 
 const EMPTY_SIGNALS_RESPONSE = {
@@ -854,7 +868,8 @@ export default function App() {
   const [resetForm, setResetForm] = useState(INITIAL_RESET_FORM);
   const [resetStatus, setResetStatus] = useState("");
   const [resetHintCode, setResetHintCode] = useState("");
-  const [splashVisible, setSplashVisible] = useState(true);
+  const [splashVisible, setSplashVisible] = useState(false);
+  const [v3OnboardingVisible, setV3OnboardingVisible] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [notificationCenterVisible, setNotificationCenterVisible] = useState(false);
   const [searchVisible, setSearchVisible] = useState(false);
@@ -878,16 +893,16 @@ export default function App() {
   const [targetInput, setTargetInput] = useState("");
   const [connectors, setConnectors] = useState([]);
   const [feedbackResponse, setFeedbackResponse] = useState(EMPTY_FEEDBACK_RESPONSE);
-  const [watchlistResponse, setWatchlistResponse] = useState(EMPTY_WATCHLIST_RESPONSE);
+  const [_watchlistResponse, setWatchlistResponse] = useState(EMPTY_WATCHLIST_RESPONSE);
   const [alertsResponse, setAlertsResponse] = useState(EMPTY_ALERTS_RESPONSE);
   const [notificationsResponse, setNotificationsResponse] = useState(EMPTY_NOTIFICATIONS_RESPONSE);
-  const [routineResponse, setRoutineResponse] = useState(EMPTY_ROUTINE_RESPONSE);
+  const [_routineResponse, setRoutineResponse] = useState(EMPTY_ROUTINE_RESPONSE);
   const [shareStatus, setShareStatus] = useState(EMPTY_SHARE_STATUS);
   const [appSettings, setAppSettings] = useState(DEFAULT_SETTINGS);
   const [settingsStatus, setSettingsStatus] = useState("");
   const [feedbackStatus, setFeedbackStatus] = useState("");
   const [watchlistStatus, setWatchlistStatus] = useState("");
-  const [routineStatus, setRoutineStatus] = useState("");
+  const [_routineStatus, setRoutineStatus] = useState("");
   const [feedbackForm, setFeedbackForm] = useState(INITIAL_FEEDBACK_FORM);
   const [feedbackBusyKey, setFeedbackBusyKey] = useState("");
   const [watchlistBusyKey, setWatchlistBusyKey] = useState("");
@@ -906,13 +921,11 @@ export default function App() {
   );
 
   const [selectedSignalTicker, setSelectedSignalTicker] = useState(null);
-  const [selectedCollectibleId, setSelectedCollectibleId] = useState(null);
-  const [selectedTradeId, setSelectedTradeId] = useState(null);
+  const [_selectedCollectibleId, setSelectedCollectibleId] = useState(null);
   const [orderTicket, setOrderTicket] = useState(null);
-  const [closeTicket, setCloseTicket] = useState(null);
-  const [collectibleQuery, setCollectibleQuery] = useState("");
-  const [collectibleBrand, setCollectibleBrand] = useState("all");
-  const [collectibleCategory, setCollectibleCategory] = useState("all");
+  const [_collectibleQuery, _setCollectibleQuery] = useState("");
+  const [_collectibleBrand, _setCollectibleBrand] = useState("all");
+  const [_collectibleCategory, _setCollectibleCategory] = useState("all");
 
   const clearSession = useCallback(() => {
     window.localStorage.removeItem(TOKEN_KEY);
@@ -1276,6 +1289,8 @@ export default function App() {
       .then((data) => {
         setCurrentUser(data.user);
         setAppSettings(normalizeAppSettings(data.settings));
+        setSplashVisible(false);
+        setV3OnboardingVisible(!isV3OnboardingComplete());
       })
       .catch(() => {
         clearSession();
@@ -1406,43 +1421,7 @@ export default function App() {
     [collectiblesResponse],
   );
 
-  const filteredCollectibles = useMemo(() => {
-    const query = collectibleQuery.trim().toLowerCase();
-    return (enrichedCollectiblesResponse.items || []).filter((item) => {
-      const matchesQuery =
-        !query ||
-        [
-          item.name,
-          item.brand,
-          item.category,
-          item.description,
-          item.thesis,
-          item.sku,
-          item.recommendation,
-          item.investmentGrade,
-          item.retirementStatus,
-          item.legoTheme,
-          ...(item.alphaSignals || []),
-          item.storeSource,
-        ]
-          .filter(Boolean)
-          .some((value) => String(value).toLowerCase().includes(query));
-      const matchesBrand = collectibleBrand === "all" || item.brand === collectibleBrand;
-      const matchesCategory =
-        collectibleCategory === "all" || item.category === collectibleCategory;
-      return matchesQuery && matchesBrand && matchesCategory;
-    });
-  }, [collectibleBrand, collectibleCategory, collectibleQuery, enrichedCollectiblesResponse.items]);
   const collectibles = enrichedCollectiblesResponse.items || [];
-  const resolvedSelectedCollectibleId =
-    filteredCollectibles.some((item) => item.id === selectedCollectibleId)
-      ? selectedCollectibleId
-      : filteredCollectibles[0]?.id || null;
-
-  const activeCollectible =
-    filteredCollectibles.find((item) => item.id === resolvedSelectedCollectibleId) ||
-    filteredCollectibles[0] ||
-    null;
 
   const enrichedPortfolio = useMemo(
     () => portfolio.map((trade) => enrichBrickAlphaTrade(trade, collectibles, portfolio)),
@@ -1456,16 +1435,6 @@ export default function App() {
     () => enrichedPortfolio.filter((trade) => trade.status !== "open"),
     [enrichedPortfolio],
   );
-
-  const resolvedSelectedTradeId = enrichedPortfolio.some((trade) => trade.id === selectedTradeId)
-    ? selectedTradeId
-    : enrichedPortfolio[0]?.id || null;
-
-  const activePortfolioTrade =
-    enrichedPortfolio.find((trade) => trade.id === resolvedSelectedTradeId) ||
-    openTrades[0] ||
-    closedTrades[0] ||
-    null;
 
   const totalOpenPnl = useMemo(
     () => openTrades.reduce((sum, trade) => sum + Number(trade.pnl || 0), 0),
@@ -1550,7 +1519,8 @@ export default function App() {
       setAuthMode("login");
       setAuthView("auth");
       setAuthStage("auth");
-      setSplashVisible(true);
+      setSplashVisible(false);
+      setV3OnboardingVisible(!isV3OnboardingComplete());
       setNavigationStack([]);
       const launch = launchSelection || preAuthLaunch;
       const nextPage = "home";
@@ -1727,6 +1697,32 @@ export default function App() {
     [handleAuthenticatedRoute],
   );
 
+  const handleDemoReset = useCallback(async () => {
+    clearV3DemoDeviceState();
+    setV3OnboardingVisible(true);
+    clearSession();
+    setDemoLaunchBusy(true);
+    try {
+      const data = await requestJson("/api/auth/demo", {
+        method: "POST",
+        body: {
+          name: "Partner Demo",
+        },
+      });
+      await handleAuthenticatedRoute(data.token, data.user, data.settings, {
+        page: "home",
+        desk: "collectibles",
+        introId: null,
+        sectionId: null,
+        landingId: null,
+      });
+    } catch (error) {
+      setAuthStatus(String(error.message || "Could not reset demo mode."));
+    } finally {
+      setDemoLaunchBusy(false);
+    }
+  }, [clearSession, handleAuthenticatedRoute]);
+
   const handleSplashLaunch = useCallback(
     (selection) => {
       rememberLaunch(selection);
@@ -1735,6 +1731,19 @@ export default function App() {
     },
     [jumpToPageSection, rememberLaunch],
   );
+
+  const completeV3Onboarding = useCallback(() => {
+    setV3OnboardingVisible(false);
+    applyWorkspaceRoute("home", activeDesk, {
+      pushHistory: false,
+      sectionId: "home-dashboard",
+      persistLaunch: true,
+    });
+  }, [activeDesk, applyWorkspaceRoute]);
+
+  const handleNavigateHome = useCallback(() => {
+    navigateToPage("home", false, activeDesk);
+  }, [activeDesk, navigateToPage]);
 
   const handleDeskRoute = useCallback(
     (targetPage, desk) => {
@@ -1780,7 +1789,7 @@ export default function App() {
   const handleMenuSplash = useCallback(() => {
     setMenuVisible(false);
     setNotificationCenterVisible(false);
-    setSplashVisible(true);
+    setV3OnboardingVisible(true);
   }, []);
 
   const handleMenuLogout = useCallback(() => {
@@ -1865,6 +1874,46 @@ export default function App() {
     });
   }, []);
 
+  const submitLoggedPurchase = useCallback(
+    async (form) => {
+      if (!authToken) {
+        throw new Error("Sign in to save a purchase.");
+      }
+      setTradeActionBusy(true);
+      try {
+        const note = [
+          form.date ? `Date: ${form.date}` : "",
+          form.retailer ? `Source: ${form.retailer}` : "",
+          form.condition ? `Condition: ${form.condition}` : "",
+          form.shipping ? `Shipping: ${form.shipping}` : "",
+          form.vatReclaim ? `VAT reclaim: ${form.vatReclaim}` : "",
+          form.rewards ? `Rewards: ${form.rewards}` : "",
+          form.cashback ? `Cashback: ${form.cashback}` : "",
+          form.vouchers ? `Vouchers: ${form.vouchers}` : "",
+          form.notes || "",
+        ]
+          .filter(Boolean)
+          .join(". ");
+        const data = await requestJson("/api/collectibles/trades", {
+          method: "POST",
+          token: authToken,
+          body: {
+            collectibleId: form.collectibleId,
+            side: "BUY",
+            quantity: form.quantity,
+            acquisitionPrice: form.unitCost,
+            orderNote: note,
+          },
+        });
+        setPortfolio(data.portfolio || []);
+        await refreshContext();
+      } finally {
+        setTradeActionBusy(false);
+      }
+    },
+    [authToken, refreshContext],
+  );
+
   const submitOrderTicket = useCallback(async () => {
     if (!orderTicket || !authToken) {
       return;
@@ -1882,6 +1931,7 @@ export default function App() {
               collectibleId: orderTicket.collectibleId,
               side: orderTicket.side,
               quantity: orderTicket.quantity,
+              acquisitionPrice: orderTicket.side === "BUY" ? orderTicket.price : undefined,
               orderNote: orderTicket.orderNote,
               stopPrice: orderTicket.stopPrice,
               targetPrice: orderTicket.targetPrice,
@@ -1917,56 +1967,28 @@ export default function App() {
     }
   }, [authToken, orderTicket, refreshContext]);
 
-  const handleCloseTrade = useCallback((trade) => {
-    setCloseTicket({
-      ...trade,
-      orderNote: "",
-    });
-  }, []);
-
-  const submitCloseTrade = useCallback(async () => {
-    if (!closeTicket || !authToken) {
-      return;
-    }
-
-    setTradeActionBusy(true);
-    setTradeStatus("");
-
-    try {
-      const data = await requestJson(`/api/trades/${closeTicket.id}/close`, {
-        method: "POST",
-        token: authToken,
-        body: { orderNote: closeTicket.orderNote },
-      });
-      setPortfolio(data.portfolio || []);
-      setTradeStatus(`Closed ${closeTicket.ticker}.`);
-      setCloseTicket(null);
-      await refreshContext();
-    } catch (error) {
-      setTradeStatus(String(error.message || "Close request failed."));
-    } finally {
-      setTradeActionBusy(false);
-    }
-  }, [authToken, closeTicket, refreshContext]);
-
-  const handlePortfolioTradeSelect = useCallback((trade) => {
-    setSelectedTradeId(trade.id);
-  }, []);
-
-  const handlePortfolioTradeNavigate = useCallback(
-    (trade) => {
-      if (trade.assetClass === "collectible") {
-        setSelectedCollectibleId(trade.collectibleId || trade.id);
-        jumpToPageSection("collectibles", "collectibles-grid");
-        return;
+  const submitExitSale = useCallback(
+    async (form) => {
+      if (!authToken) {
+        throw new Error("Sign in to record a sale.");
       }
-
-      if (trade.marketTicker) {
-        setSelectedSignalTicker(trade.marketTicker);
+      setTradeActionBusy(true);
+      try {
+        const data = await requestJson(`/api/trades/${form.tradeId}/close`, {
+          method: "POST",
+          token: authToken,
+          body: {
+            orderNote: form.orderNote,
+            salePrice: form.salePrice,
+          },
+        });
+        setPortfolio(data.portfolio || []);
+        await refreshContext();
+      } finally {
+        setTradeActionBusy(false);
       }
-      jumpToPageSection("signals", "chart-panel", trade.desk || activeDesk);
     },
-    [activeDesk, jumpToPageSection],
+    [authToken, refreshContext],
   );
 
   const handleChartUpload = useCallback((event) => {
@@ -2242,15 +2264,28 @@ export default function App() {
     [authToken],
   );
 
-  const openWatchlistSignal = useCallback(
+    const _openWatchlistSignal = useCallback(
     (item) => {
       if (!item?.ticker) {
         return;
       }
+      if (item.kind === "collectible" || item.collectibleId || item.assetClass === "collectible") {
+        const collectible = (collectiblesResponse.items || []).find(
+          (candidate) =>
+            candidate.id === item.collectibleId ||
+            candidate.sku === item.ticker ||
+            candidate.id === item.ticker,
+        );
+        if (collectible) {
+          handleCollectibleSelect(collectible);
+          jumpToPageSection("research", "investment-analysis");
+          return;
+        }
+      }
       setSelectedSignalTicker(item.ticker);
       jumpToPageSection("signals", "chart-panel", item.desk || activeDesk);
     },
-    [activeDesk, jumpToPageSection],
+    [activeDesk, collectiblesResponse.items, handleCollectibleSelect, jumpToPageSection],
   );
 
   const addSignalToWatchlist = useCallback(
@@ -2284,7 +2319,7 @@ export default function App() {
     [authToken],
   );
 
-  const removeWatchlistItem = useCallback(
+    const _removeWatchlistItem = useCallback(
     async (watchId) => {
       if (!authToken || !watchId) {
         return;
@@ -2310,7 +2345,7 @@ export default function App() {
     [authToken],
   );
 
-  const updateRoutineStep = useCallback(
+  const _updateRoutineStep = useCallback(
     async (stepId, completed) => {
       if (!authToken || !stepId) {
         return;
@@ -2339,7 +2374,7 @@ export default function App() {
     [authToken],
   );
 
-  const updateRoutineSessionMode = useCallback(
+  const _updateRoutineSessionMode = useCallback(
     async (sessionMode) => {
       if (!authToken || !sessionMode) {
         return;
@@ -2368,7 +2403,7 @@ export default function App() {
     [authToken],
   );
 
-  const resetRoutineForToday = useCallback(async () => {
+  const _resetRoutineForToday = useCallback(async () => {
     if (!authToken) {
       return;
     }
@@ -2394,7 +2429,7 @@ export default function App() {
     }
   }, [authToken]);
 
-  const dismissRoutineReminder = useCallback(async () => {
+  const _dismissRoutineReminder = useCallback(async () => {
     if (!authToken) {
       return;
     }
@@ -2420,7 +2455,7 @@ export default function App() {
     }
   }, [authToken]);
 
-  const acknowledgeRoutineCompletion = useCallback(async () => {
+  const _acknowledgeRoutineCompletion = useCallback(async () => {
     if (!authToken) {
       return;
     }
@@ -2483,7 +2518,7 @@ export default function App() {
       [alertsResponse.plan?.maxAlerts, appSettings.subscriptionTier, authToken],
     );
 
-  const toggleAlertRule = useCallback(
+  const _toggleAlertRule = useCallback(
     async (alertId, enabled) => {
       if (!authToken || !alertId) {
         return;
@@ -2507,7 +2542,7 @@ export default function App() {
     [authToken],
   );
 
-  const removeAlertRule = useCallback(
+  const _removeAlertRule = useCallback(
     async (alertId) => {
       if (!authToken || !alertId) {
         return;
@@ -2668,7 +2703,9 @@ export default function App() {
     label: workspaceLabel(page, activeDesk),
     hint: SCREEN_PREVIEWS[page] || "Current workspace",
   };
-  const canGoBack = navigationStack.length > 0 || page !== "home";
+  const canGoBack =
+    navigationStack.length > 0 ||
+    !["home", "research", "scan", "collection", "exits"].includes(page);
   const notificationSummary = notificationsResponse.summary || EMPTY_NOTIFICATIONS_RESPONSE.summary;
   const notificationUnreadCount = notificationSummary.unread || 0;
   const alertSummary = alertsResponse.summary || EMPTY_ALERTS_RESPONSE.summary;
@@ -2688,15 +2725,15 @@ export default function App() {
   );
 
   const brickAlphaSummary = useMemo(
-    () => summarizeBrickAlphaPortfolio(enrichedPortfolio),
+    () => summarizeOpenCollection(enrichedPortfolio),
     [enrichedPortfolio],
   );
   const topMetrics = [
     {
       id: "nav",
-      label: "Net Asset Value",
+      label: "Open collection value",
       value: formatCollectiblePrice(brickAlphaSummary.netAssetValue),
-      detail: brickAlphaSummary.collectionGrade || "No positions yet",
+      detail: `${brickAlphaSummary.collectionGrade || "No positions yet"} · owned sets only`,
       action: () => jumpToPageSection("home", "home-dashboard", activeDesk),
     },
     {
@@ -2704,9 +2741,9 @@ export default function App() {
       label: "Unrealised Gain",
       value: formatCollectiblePrice(brickAlphaSummary.unrealizedGain),
       detail: brickAlphaSummary.costBasis
-        ? `${((brickAlphaSummary.unrealizedGain / brickAlphaSummary.costBasis) * 100).toFixed(1)}% vs cost`
-        : "Awaiting cost basis",
-      action: () => jumpToPageSection("portfolio", "portfolio-dashboard"),
+        ? `${((brickAlphaSummary.unrealizedGain / brickAlphaSummary.costBasis) * 100).toFixed(1)}% vs cost · realised ${formatCollectiblePrice(brickAlphaSummary.realizedGain)} net of fees`
+        : `Realised ${formatCollectiblePrice(brickAlphaSummary.realizedGain)} net of fees`,
+      action: () => jumpToPageSection("collection", "portfolio-dashboard"),
     },
     {
       id: "score",
@@ -2722,7 +2759,7 @@ export default function App() {
       label: "Collection Grade",
       value: brickAlphaSummary.collectionGrade || "--",
       detail: "Investment quality tier",
-      action: () => jumpToPageSection("portfolio", "portfolio-dashboard"),
+      action: () => jumpToPageSection("collection", "portfolio-dashboard"),
     },
     {
       id: "diversification",
@@ -2731,7 +2768,7 @@ export default function App() {
         ? `${Math.round(brickAlphaSummary.diversificationScore)}/100`
         : "--",
       detail: "Theme and category spread",
-      action: () => jumpToPageSection("portfolio", "portfolio-dashboard"),
+      action: () => jumpToPageSection("collection", "portfolio-dashboard"),
     },
   ];
   const globalSearchIndex = useMemo(
@@ -2807,12 +2844,10 @@ export default function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [closeGlobalSearch, currentUser, openGlobalSearch, searchVisible, splashVisible]);
 
-  const primaryNavItems = NAV_ITEMS.filter((item) =>
-    ["home", "scan-evaluate", "collectibles", "portfolio", "news", "signals"].includes(item.id),
-  );
   const utilityNavItems = NAV_ITEMS.filter((item) =>
     ["subscriptions", "tools", "reports", "connections", "settings"].includes(item.id),
   );
+  const legoJourneyActive = isV3LegoJourneyPage(page);
   const defaultTradingDesk = ["forex", "etfs", "jse"].includes(activeDesk) ? activeDesk : "forex";
   const menuPrimaryItems = [
     {
@@ -2837,18 +2872,18 @@ export default function App() {
       action: () => handleMenuNavigate("signals", "crypto"),
     },
     {
-      id: "menu-collectibles",
-      glyph: "CL",
-      label: "LEGO Investments",
-      detail: "collectibles",
-      action: () => handleMenuNavigate("collectibles", activeDesk),
+      id: "menu-research",
+      glyph: "RS",
+      label: "Research",
+      detail: "Browse and analyze sets",
+      action: () => handleMenuNavigate("research", activeDesk),
     },
     {
-      id: "menu-portfolio",
-      glyph: "PF",
-      label: "Portfolio",
-      detail: "Open positions and history",
-      action: () => handleMenuNavigate("portfolio", activeDesk),
+      id: "menu-collection",
+      glyph: "CL",
+      label: "Collection",
+      detail: "Holdings and performance",
+      action: () => handleMenuNavigate("collection", activeDesk),
     },
   ];
   const menuDeskItems = MARKET_DESKS.map((desk) => ({
@@ -2932,40 +2967,11 @@ export default function App() {
     <>
       {page === "home" ? (
         <HomeScreen
-          activeDesk={effectiveDeskKey}
-          activePageSections={activePageSections}
-          alertsResponse={alertsResponse}
           appSettings={appSettings}
           closedTrades={closedTrades}
-          collectiblesResponse={collectiblesResponse}
-          connectedProviderCount={connectedProviderCount}
-          feedbackResponse={feedbackResponse}
-          health={health}
-          jumpToPageSection={jumpToPageSection}
-          liveReadyDeskCount={liveReadyDeskCount}
-          markAllNotificationsRead={markAllNotificationsRead}
-          markNotificationRead={markNotificationRead}
+          collectibles={collectibles}
           navigateToPage={navigateToPage}
-          newsResponse={newsResponse}
-          notificationsResponse={notificationsResponse}
-          onOpenWatchlistSignal={openWatchlistSignal}
-          onRemoveAlertRule={removeAlertRule}
-          onRemoveWatchlistItem={removeWatchlistItem}
-          onToggleAlertRule={toggleAlertRule}
           openTrades={openTrades}
-          routineResponse={routineResponse}
-          routineStatus={routineStatus}
-          dismissRoutineReminder={dismissRoutineReminder}
-          acknowledgeRoutineCompletion={acknowledgeRoutineCompletion}
-          setRoutineMode={updateRoutineSessionMode}
-          resetRoutine={resetRoutineForToday}
-          setRoutineStep={updateRoutineStep}
-          shareStatus={shareStatus}
-          signalsResponse={signalsResponse}
-          totalOpenPnl={totalOpenPnl}
-          watchlistBusyKey={watchlistBusyKey}
-          watchlistResponse={watchlistResponse}
-          watchlistStatus={watchlistStatus}
         />
       ) : null}
 
@@ -3042,29 +3048,17 @@ export default function App() {
         />
       ) : null}
 
-      {page === "collectibles" ? (
-        <CollectiblesScreen
-          activeCollectible={activeCollectible}
-          activePageSections={activePageSections}
-          appSettings={appSettings}
-          brickAlphaPortfolio={brickAlphaSummary}
-          collectibleBrand={collectibleBrand}
-          collectibleCategory={collectibleCategory}
-          collectibleQuery={collectibleQuery}
+      {page === "research" ? (
+        <ResearchScreen
           collectibles={collectibles}
-          collectiblesResponse={enrichedCollectiblesResponse}
-          filteredCollectibles={filteredCollectibles}
-          handleCollectibleSelect={handleCollectibleSelect}
-          jumpToPageSection={jumpToPageSection}
-          openCollectibleTicket={openCollectibleTicket}
           openTrades={openTrades}
-          setCollectibleBrand={setCollectibleBrand}
-          setCollectibleCategory={setCollectibleCategory}
-          setCollectibleQuery={setCollectibleQuery}
+          closedTrades={closedTrades}
+          navigateToPage={navigateToPage}
+          onWatch={addSignalToWatchlist}
         />
       ) : null}
 
-      {page === "scan-evaluate" ? (
+      {page === "scan" ? (
         <ScanEvaluateScreen
           activePageSections={activePageSections}
           appSettings={appSettings}
@@ -3075,26 +3069,46 @@ export default function App() {
           onAddToWatchlist={addSignalToWatchlist}
           openCollectibleTicket={openCollectibleTicket}
           openTrades={openTrades}
+          closedTrades={closedTrades}
+          navigateToPage={navigateToPage}
         />
       ) : null}
 
-      {page === "portfolio" ? (
-        <PortfolioScreen
-          activeDesk={activeDesk}
-          activePageSections={activePageSections}
-          activePortfolioTrade={activePortfolioTrade}
-          appSettings={appSettings}
+      {page === "collection" ? (
+        <CollectionScreen
+          openTrades={openTrades}
+          collectibles={collectibles}
+          navigateToPage={navigateToPage}
+        />
+      ) : null}
+
+      {page === "exits" ? (
+        <ExitsScreen
+          openTrades={openTrades}
           closedTrades={closedTrades}
           collectibles={collectibles}
-          handleCloseTrade={handleCloseTrade}
-          handlePortfolioTradeNavigate={handlePortfolioTradeNavigate}
-          handlePortfolioTradeSelect={handlePortfolioTradeSelect}
-          health={health}
-          jumpToPageSection={jumpToPageSection}
-          onAddToWatchlist={addSignalToWatchlist}
-          openTrades={openTrades}
-          totalOpenPnl={totalOpenPnl}
-          watchlistItems={watchlistResponse.items || []}
+          navigateToPage={navigateToPage}
+          onRecordSale={submitExitSale}
+          busy={tradeActionBusy}
+        />
+      ) : null}
+
+      {page === "verdict" ? (
+        <VerdictScreen
+          appSettings={appSettings}
+          navigateToPage={navigateToPage}
+          onWatch={addSignalToWatchlist}
+          onAddToCollection={() => navigateToPage("log-purchase")}
+        />
+      ) : null}
+
+      {page === "set-analysis" ? <SetAnalysisScreen appSettings={appSettings} navigateToPage={navigateToPage} /> : null}
+
+      {page === "log-purchase" ? (
+        <LogPurchaseScreen
+          navigateToPage={navigateToPage}
+          busy={tradeActionBusy}
+          onSubmitPurchase={submitLoggedPurchase}
         />
       ) : null}
 
@@ -3185,6 +3199,8 @@ export default function App() {
           targets={targets}
           updateFeedbackStatus={updateFeedbackStatus}
           updateSettings={updateSettings}
+          onDemoReset={handleDemoReset}
+          legoJourney
         />
       ) : null}
     </>
@@ -3238,61 +3254,32 @@ export default function App() {
     );
   }
 
+  if (v3OnboardingVisible) {
+    return (
+      <V3OnboardingFlow
+        onComplete={completeV3Onboarding}
+        onNavigateToScan={() => {
+          setV3OnboardingVisible(false);
+          jumpToPageSection("scan", "scan-evaluate", activeDesk);
+        }}
+        onNavigateToCollection={() => {
+          setV3OnboardingVisible(false);
+          jumpToPageSection("log-purchase", "log-purchase", activeDesk);
+        }}
+      />
+    );
+  }
+
   return (
-    <div className="appShell saasAppShell">
-      <aside className="sidebar premiumSidebar">
-        <div className="brandLockup">
-          <button type="button" className="brandButton" onClick={() => setSplashVisible(true)}>
-            <BrandLogo size="md" />
-          </button>
-          <div>
-            <button type="button" className="brandButton" onClick={() => setSplashVisible(true)}>
-              <div className="brandWordmark">{APP_WORDMARK}</div>
-              <div className="brandSub">{APP_TAGLINE}</div>
-            </button>
-          </div>
-        </div>
-
-        <section className="sidebarCard sidebarWorkspaceCard">
-          <span>Current workspace</span>
-          <strong>{currentWorkspaceCard.label}</strong>
-          <small>{currentWorkspaceCard.hint}</small>
-        </section>
-
-        <nav className="sideNav">
-          {NAV_GROUPS.map((group) => (
-            <div className="navGroup" key={group.id}>
-              <div className="navGroupLabel">{group.label}</div>
-              {NAV_ITEMS.filter((item) => item.section.toLowerCase() === group.id).map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={page === item.id ? "active" : ""}
-                  onClick={() => navigateToPage(item.id, false, activeDesk)}
-                >
-                  <div className="navButtonMain">
-                    <div className={`navGlyph${item.icon === "camera" ? " navGlyph-camera" : ""}`}>{item.glyph}</div>
-                    <div className="navButtonCopy">
-                      <span>{item.label}</span>
-                      <small>{item.hint}</small>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          ))}
-        </nav>
-
-        <div className="sidebarUserCard">
-          <div className="sidebarUserAvatar">
-            {(currentUser.name || currentUser.email || "U").slice(0, 1).toUpperCase()}
-          </div>
-          <div className="sidebarUserMeta">
-            <strong>{currentUser.name || currentUser.email}</strong>
-            <small>{labelDesk(activeDesk)} desk</small>
-          </div>
-        </div>
-      </aside>
+    <div className="appShell saasAppShell v3AppShell">
+      <V3Sidebar
+        activePage={page}
+        workspaceHint={SCREEN_PREVIEWS[page]}
+        userLabel={currentUser.name || currentUser.email}
+        userInitial={(currentUser.name || currentUser.email || "U").slice(0, 1).toUpperCase()}
+        onNavigate={(nextPage) => navigateToPage(nextPage, false, activeDesk)}
+        onBrandClick={handleNavigateHome}
+      />
 
       <div className="workspaceShell">
         <div className="mobileStatusBar">
@@ -3316,7 +3303,7 @@ export default function App() {
                 <span>&lt;</span>
               </button>
             ) : null}
-            <button type="button" className="mobileBrandButton" onClick={() => setSplashVisible(true)}>
+            <button type="button" className="mobileBrandButton" onClick={handleNavigateHome}>
               <BrandLogo size="sm" />
               <div className="mobileBrandCopy">
                 <strong>{APP_NAME}</strong>
@@ -3326,10 +3313,12 @@ export default function App() {
           </div>
 
           <div className="mobileTitleActions">
-            <div className="mobileTitleMeta">
-              <span>{labelDesk(activeDesk)}</span>
-              <strong>{marketModeLabel(signalsResponse.marketData?.mode)}</strong>
-            </div>
+            {!legoJourneyActive ? (
+              <div className="mobileTitleMeta">
+                <span>{labelDesk(activeDesk)}</span>
+                <strong>{marketModeLabel(signalsResponse.marketData?.mode)}</strong>
+              </div>
+            ) : null}
             {!isAppInstalled ? (
               <button
                 type="button"
@@ -3371,11 +3360,14 @@ export default function App() {
           onOpenNotifications={openNotificationCenter}
           onOpenFeedback={() => jumpToPageSection("settings", "feedback-board")}
           onLogout={clearSession}
+          hideMarketStatus={legoJourneyActive}
+          searchLabel={legoJourneyActive ? "Search sets and pages" : "Search workspaces..."}
           userInitial={(currentUser.name || currentUser.email || "U").slice(0, 1).toUpperCase()}
         />
 
-        {page !== "home" ? <ExecutiveSummaryStrip metrics={topMetrics} /> : null}
+        {!legoJourneyActive && page !== "home" ? <ExecutiveSummaryStrip metrics={topMetrics} /> : null}
 
+        {!legoJourneyActive ? (
         <header className={`topbar ${page === "home" ? "topbar-compactHome" : ""}`}>
           {page !== "home" ? (
           <div className="metricStrip">
@@ -3430,6 +3422,7 @@ export default function App() {
             </div>
           </div>
         </header>
+        ) : null}
 
         <div className="mobileUtilityRail">
           {utilityNavItems.map((item) => (
@@ -3453,19 +3446,7 @@ export default function App() {
           </Suspense>
         </main>
 
-        <nav className="mobileBottomNav" aria-label="Primary navigation">
-          {primaryNavItems.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={`mobileBottomNavItem ${page === item.id ? "active" : ""}`}
-              onClick={() => navigateToPage(item.id, false, activeDesk)}
-            >
-              <span>{item.glyph}</span>
-              <strong>{item.label}</strong>
-            </button>
-          ))}
-        </nav>
+        <V3BottomNav activePage={page} onNavigate={(nextPage) => navigateToPage(nextPage, false, activeDesk)} />
 
         {notificationCenterVisible ? (
           <NotificationCenter
@@ -3500,7 +3481,7 @@ export default function App() {
               </div>
 
               <div className="mobileMenuScreenList">
-                {menuPrimaryItems.map((item) => (
+                {v3MobileMenuItems(menuPrimaryItems, legoJourneyActive).map((item) => (
                   <button key={item.id} type="button" className="mobileMenuRow" onClick={item.action}>
                     <div className="mobileMenuRowGlyph">{item.glyph}</div>
                     <div className="mobileMenuRowCopy">
@@ -3512,6 +3493,7 @@ export default function App() {
                 ))}
               </div>
 
+              {legoJourneyActive ? null : (
               <div className="mobileMenuScreenSection">
                 <span>Desk shortcuts</span>
                 <div className="mobileMenuPillRow">
@@ -3528,6 +3510,7 @@ export default function App() {
                   ))}
                 </div>
               </div>
+              )}
 
               <div className="mobileMenuScreenSection">
                 <span>Workspace &amp; Support</span>
@@ -3593,16 +3576,6 @@ export default function App() {
           onFieldChange={handleOrderFieldChange}
           onPlanAction={handleOrderPlanAction}
           onSubmit={submitOrderTicket}
-        />
-
-        <CloseTradeModal
-          trade={closeTicket}
-          busy={tradeActionBusy}
-          onClose={() => setCloseTicket(null)}
-          onFieldChange={(value) =>
-            setCloseTicket((current) => (current ? { ...current, orderNote: value } : current))
-          }
-          onSubmit={submitCloseTrade}
         />
       </Suspense>
     </div>

@@ -29,6 +29,7 @@ import {
   subscriptionTierLabel,
   venueDetailLabel,
 } from "../appUtils";
+import { resolveExchangeRate } from "../v3/valuation/exchangeRate";
 import {
   EmptyState,
   WorkspaceCommandBar,
@@ -46,6 +47,7 @@ import {
   AlphaSignalBadges,
 } from "./workspaceCards";
 import { summarizeBrickAlphaPortfolio } from "../brickAlphaModel";
+import { summarizeOpenCollection } from "../v3/collection/ownershipModel";
 import { HomeExecutiveDashboard } from "./homeExecutiveDashboard";
 import { InvestmentAnalysisWorkspace } from "./investmentAnalysisWorkspace";
 import { RetirementIntelligenceWorkspace } from "./retirementIntelligenceWorkspace";
@@ -995,7 +997,7 @@ export function HomeScreen({
     };
 
   const brickAlphaPortfolio = useMemo(
-    () => summarizeBrickAlphaPortfolio([...openTrades, ...(closedTrades || [])]),
+    () => summarizeOpenCollection([...openTrades, ...(closedTrades || [])]),
     [closedTrades, openTrades],
   );
   const portfolioHoldings = useMemo(
@@ -2988,6 +2990,7 @@ export function CollectiblesScreen({
   filteredCollectibles,
   handleCollectibleSelect,
   jumpToPageSection,
+  onAddToWatchlist,
   openCollectibleTicket,
   openTrades,
   setCollectibleBrand,
@@ -3115,6 +3118,7 @@ export function CollectiblesScreen({
         collectibles={collectibles}
         handleCollectibleSelect={handleCollectibleSelect}
         jumpToPageSection={jumpToPageSection}
+        onAddToWatchlist={onAddToWatchlist}
         openCollectibleTicket={openCollectibleTicket}
         openTrades={openTrades}
       />
@@ -3258,7 +3262,7 @@ export function CollectiblesScreen({
                 <h2>{group.brand}</h2>
                 <p>
                   {group.brand === "LEGO"
-                    ? "Display-led sets, minifigures, and collector holdings with the market intelligence shelf available beside the trade flow."
+                    ? `BrickEconomy current value, recorded growth, and the verdict vocabulary. ${resolveExchangeRate(appSettings).label}.`
                     : group.brand === "Pokemon"
                       ? "Sealed and graded trading-card holdings with faster collector demand read-through."
                       : "collectibles tracked inside the same ticket and portfolio workflow."}
@@ -3295,71 +3299,29 @@ export function CollectiblesScreen({
 }
 
 export function ScanEvaluateScreen({
-  activePageSections,
-  appSettings,
+  activePageSections: _activePageSections,
+  appSettings: _appSettings,
   collectibles,
-  collectiblesResponse,
+  collectiblesResponse: _collectiblesResponse,
   handleCollectibleSelect,
   jumpToPageSection,
   onAddToWatchlist,
   openCollectibleTicket,
   openTrades,
+  closedTrades = [],
+  navigateToPage,
 }) {
-  const legoCount = collectibles.filter((item) => item.brand === "LEGO").length;
-
   return (
-    <>
-      <WorkspaceHero
-        tone="collectibles"
-        eyebrow="Scan & Evaluate"
-        title="AI Investment Advisor for LEGO"
-        description="Photograph a set, upload an image, or enter a set number — Brick Alpha delivers a complete investment analysis with score, forecast, and portfolio actions in seconds."
-        statusLabel="Engine"
-        statusValue="Brick Alpha AI"
-        metrics={[
-          {
-            label: "Recognition",
-            value: "AI Vision",
-            detail: "Intelligent set identification",
-          },
-          {
-            label: "Analysis",
-            value: "Full verdict",
-            detail: "Score · grade · ROI · retirement",
-          },
-          {
-            label: "Catalog",
-            value: `${legoCount} sets`,
-            detail: "Live LEGO investment desk",
-          },
-          {
-            label: "Pipeline",
-            value: "~5 seconds",
-            detail: "Photo → score → recommendation",
-          },
-        ]}
-        primaryAction={{
-          label: "Investment Analysis",
-          onClick: () => jumpToPageSection("collectibles", "investment-analysis"),
-        }}
-        secondaryAction={{
-          label: "Portfolio Intelligence",
-          onClick: () => jumpToPageSection("portfolio", "portfolio-intelligence"),
-        }}
-      />
-      <WorkspaceSectionBar
-        sections={activePageSections}
-        onSelect={(sectionId) => jumpToPageSection("scan-evaluate", sectionId)}
-      />
-      <ScanEvaluateWorkspace
-        collectibles={collectibles}
-        openTrades={openTrades}
-        handleCollectibleSelect={handleCollectibleSelect}
-        jumpToPageSection={jumpToPageSection}
-        onAddToWatchlist={onAddToWatchlist}
-        openCollectibleTicket={openCollectibleTicket}
-      />
-    </>
+    <ScanEvaluateWorkspace
+      collectibles={collectibles}
+      openTrades={openTrades}
+      closedTrades={closedTrades}
+      handleCollectibleSelect={handleCollectibleSelect}
+      jumpToPageSection={jumpToPageSection}
+      onAddToWatchlist={onAddToWatchlist}
+      openCollectibleTicket={openCollectibleTicket}
+      navigateToPage={navigateToPage}
+    />
   );
 }
 
@@ -3564,7 +3526,7 @@ export function PortfolioScreen({
                   <div className="tableCellStack">
                     <strong>{trade.ticker}</strong>
                     <small>
-                      {trade.assetClass === "collectible" ? trade.category : trade.setup} Â·{" "}
+                      {trade.assetClass === "collectible" ? trade.category : trade.setup} ·{" "}
                       {trade.executionMode === "live"
                         ? venueDetailLabel(providerLabel(trade.executionProvider), trade.executionPair)
                         : "Paper"}
@@ -3636,7 +3598,7 @@ export function PortfolioScreen({
                 <div className="tableCellStack">
                   <strong>{trade.ticker}</strong>
                   <small>
-                    {trade.exitReason || trade.setup} Â·{" "}
+                    {trade.exitReason || trade.setup} ·{" "}
                     {trade.executionMode === "live"
                       ? venueDetailLabel(providerLabel(trade.executionProvider), trade.executionPair)
                       : "Paper"}
@@ -4774,6 +4736,8 @@ export function SettingsScreen({
   targets,
   updateFeedbackStatus,
   updateSettings,
+  onDemoReset,
+  legoJourney = false,
 }) {
   const feedbackItems = useMemo(() => feedbackResponse.items || [], [feedbackResponse.items]);
   const feedbackSummary = feedbackResponse.summary || {};
@@ -4891,7 +4855,11 @@ export function SettingsScreen({
         tone="settings"
         eyebrow="Workspace Setup"
         title="Settings"
-        description="Account details, regional preferences, and saved desk targets for your daily workflow."
+        description={
+          legoJourney
+            ? "Account, exchange rate, and demo controls. Valuations use this one USD/ZAR rate."
+            : "Account details, regional preferences, and saved desk targets for your daily workflow."
+        }
         statusLabel="Signed in"
         statusValue={currentUser.email}
         metrics={[
@@ -4911,14 +4879,22 @@ export function SettingsScreen({
             detail: canManageFeedback ? "Owner triage enabled" : "Shared testing lane",
           },
         ]}
-        primaryAction={{
-          label: "Open Connections",
-          onClick: () => navigateToPage("connections", false, activeDesk),
-        }}
-        secondaryAction={{
-          label: "Open News",
-          onClick: () => jumpToPageSection("news", "macro-feed", activeDesk),
-        }}
+        primaryAction={
+          legoJourney
+            ? undefined
+            : {
+                label: "Open Connections",
+                onClick: () => navigateToPage("connections", false, activeDesk),
+              }
+        }
+        secondaryAction={
+          legoJourney
+            ? undefined
+            : {
+                label: "Open News",
+                onClick: () => jumpToPageSection("news", "macro-feed", activeDesk),
+              }
+        }
       />
       <WorkspaceSectionBar
         sections={activePageSections}
@@ -4928,7 +4904,7 @@ export function SettingsScreen({
         tone="settings"
         title="Workspace Shortcuts"
         hint="Keep account setup, partner feedback, and targets close at hand."
-        actions={settingsActions}
+        actions={legoJourney ? settingsActions.filter((action) => action.id !== "connections") : settingsActions}
       />
 
       {settingsStatus ? <div className="statusBanner">{settingsStatus}</div> : null}
@@ -4960,6 +4936,22 @@ export function SettingsScreen({
               <strong>{canManageFeedback ? "Owner" : "Partner tester"}</strong>
             </div>
           </div>
+
+          {currentUser.isDemo ? (
+            <div className="subPanel">
+              <div className="panelHeader">
+                <div>
+                  <h3>Demo reset</h3>
+                  <p>Restart with a fresh demo account, seeded portfolio, and watchlist.</p>
+                </div>
+              </div>
+              <div className="panelActions">
+                <button type="button" className="primaryButton" onClick={onDemoReset}>
+                  Reset Demo
+                </button>
+              </div>
+            </div>
+          ) : null}
         </section>
 
         <section className="panel" id="install-app">
@@ -5025,6 +5017,36 @@ export function SettingsScreen({
               </button>
             ))}
           </div>
+        </section>
+
+        <section className="panel" id="exchange-rate">
+          <div className="panelHeader">
+            <div>
+              <h2>Exchange rate</h2>
+              <p>One USD/ZAR rate for every converted valuation. Default R18.50 / USD.</p>
+            </div>
+          </div>
+          <form
+            className="v3ExchangeForm"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const formRate = Number(new FormData(event.currentTarget).get("usdZarRate"));
+              updateSettings({ usdZarRate: formRate });
+            }}
+          >
+            <label>
+              Rand per US dollar
+              <input
+                name="usdZarRate"
+                type="number"
+                min="0.01"
+                step="0.01"
+                defaultValue={appSettings.usdZarRate}
+                key={appSettings.usdZarRate}
+              />
+            </label>
+            <button type="submit" className="primaryButton">Save rate</button>
+          </form>
         </section>
       </div>
 
@@ -5440,14 +5462,16 @@ export function SettingsScreen({
             <span>Saved targets</span>
             <strong>{targets.length}</strong>
           </div>
-          <button
-            type="button"
-            className="summaryCard summaryCardButton"
-            onClick={() => navigateToPage("connections", false, activeDesk)}
-          >
-            <span>Connections</span>
-            <strong>{connectedProviderCount} configured</strong>
-          </button>
+          {legoJourney ? null : (
+            <button
+              type="button"
+              className="summaryCard summaryCardButton"
+              onClick={() => navigateToPage("connections", false, activeDesk)}
+            >
+              <span>Connections</span>
+              <strong>{connectedProviderCount} configured</strong>
+            </button>
+          )}
         </div>
       </section>
 
@@ -5472,14 +5496,16 @@ export function SettingsScreen({
             <span>High priority</span>
             <strong>{feedbackSummary.highSeverity || 0}</strong>
           </div>
-          <button
-            type="button"
-            className="summaryCard summaryCardButton"
-            onClick={() => navigateToPage("connections", false, activeDesk)}
-          >
-            <span>Live-ready desks</span>
-            <strong>{liveReadyDeskCount}</strong>
-          </button>
+          {legoJourney ? null : (
+            <button
+              type="button"
+              className="summaryCard summaryCardButton"
+              onClick={() => navigateToPage("connections", false, activeDesk)}
+            >
+              <span>Live-ready desks</span>
+              <strong>{liveReadyDeskCount}</strong>
+            </button>
+          )}
         </div>
 
         <div className="partnerTestingGrid">
@@ -5515,13 +5541,15 @@ export function SettingsScreen({
                 </>
               ) : (
                 <>
-                  <button
-                    type="button"
-                    className="ghostButton"
-                    onClick={() => navigateToPage("connections", false, activeDesk)}
-                  >
-                    Review Readiness
-                  </button>
+                  {legoJourney ? null : (
+                    <button
+                      type="button"
+                      className="ghostButton"
+                      onClick={() => navigateToPage("connections", false, activeDesk)}
+                    >
+                      Review Readiness
+                    </button>
+                  )}
                   <button type="button" className="ghostButton" onClick={copyPartnerInvite}>
                     Copy Test Brief
                   </button>
@@ -5531,10 +5559,15 @@ export function SettingsScreen({
           </div>
           <div className="partnerTestingCard">
             <span>Suggested partner pass</span>
-            <strong>Landing - News - Trade - LEGO Investments - Feedback</strong>
+            <strong>
+              {legoJourney
+                ? "Welcome - Home - Research or Scan - Verdict - Collection - Exits"
+                : "Landing - News - Trade - LEGO Investments - Feedback"}
+            </strong>
             <small>
-              That route covers the front door, tape, execution flow, alternative-assets lane, and the
-              final feedback handoff.
+              {legoJourney
+                ? "That route covers onboarding, the verdict, the collection, and the exit."
+                : "That route covers the front door, tape, execution flow, alternative-assets lane, and the final feedback handoff."}
             </small>
           </div>
           <div className="partnerTestingCard">

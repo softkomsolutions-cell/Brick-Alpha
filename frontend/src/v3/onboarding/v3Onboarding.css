@@ -1,0 +1,129 @@
+.v3OnboardingShell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background: var(--ba-paper, #f6f5f1);
+}
+
+.v3OnboardingPanel {
+  width: min(520px, 100%);
+  background: var(--ba-surface, #fff);
+  border: 1px solid var(--ba-line, #e4e2dc);
+  border-radius: var(--ba-radius, 16px);
+  box-shadow: var(--ba-shadow, 0 8px 28px rgba(21, 23, 28, 0.07));
+  padding: 20px;
+  display: grid;
+  gap: 16px;
+}
+
+.v3OnboardingTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.v3OnboardingStepLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ba-ink-secondary, #4a4f5a);
+}
+
+.v3OnboardingPanel h1 {
+  margin: 0;
+  font-size: clamp(24px, 6vw, 32px);
+  line-height: 1.08;
+}
+
+.v3OnboardingPanel p {
+  margin: 0;
+  color: var(--ba-ink-secondary, #4a4f5a);
+  line-height: 1.45;
+}
+
+.v3OnboardingForm {
+  display: grid;
+  gap: 12px;
+}
+
+.v3OnboardingForm label {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.v3OnboardingForm input,
+.v3OnboardingForm select {
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--ba-line, #e4e2dc);
+  padding: 0 12px;
+}
+
+.v3ThemeChipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.v3ThemeChip {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--ba-line, #e4e2dc);
+  background: #fbfaf7;
+  cursor: pointer;
+}
+
+.v3ThemeChip.active {
+  background: var(--ba-primary-tint, #e8edfb);
+  border-color: #bfcbf3;
+  color: var(--ba-primary, #2344a3);
+}
+
+.v3OnboardingImportRow {
+  display: grid;
+  gap: 8px;
+}
+
+.v3OnboardingImportCard {
+  text-align: left;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid var(--ba-line, #e4e2dc);
+  background: #fbfaf7;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.v3OnboardingImportCard strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.v3OnboardingFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.v3OnboardingDots {
+  display: flex;
+  gap: 6px;
+}
+
+.v3OnboardingDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #dcd9d2;
+}
+
+.v3OnboardingDot.active {
+  background: var(--ba-primary, #2344a3);
+}

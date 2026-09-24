@@ -4,27 +4,58 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const Parser = require("rss-parser");
+const { getDatabaseHealth } = require("./config/database");
+const { readFinancialConfig } = require("./config/financial");
+const { createLegacyStoreRepository } = require("./repositories/legacyStoreRepository");
+const { readAuthConfig, corsOptions } = require('./config/auth');
+const { createLegacyAuthRepository } = require('./repositories/legacyAuthRepository');
+const { createPostgresAuthRepository } = require('./repositories/postgresAuthRepository');
+const { createDualAuthRepository } = require('./repositories/dualAuthRepository');
+const { createAuthService, AuthError } = require('./services/auth-service');
+const { createAuthRateLimiter } = require('./services/auth-rate-limit');
+const { createPostgresFinancialRepository } = require('./repositories/postgresFinancialRepository');
+const { createFinancialService, tradeViewFromTransaction } = require('./services/financial-service');
+const { readValuationConfig } = require('./config/valuation');
+const { createPostgresValuationRepository } = require('./repositories/postgresValuationRepository');
+const { createValuationService } = require('./services/valuation-service');
+const { createMemoryValuationRepository } = require('./test-support/valuation-memory');
+const { createProviderRegistry } = require('./services/valuation/providers');
+const { getPrismaClient } = require('./db/prisma-client');
+const { readConnectorConfig } = require('./config/connector');
+const { createConnectorService } = require('./services/connector-service');
+const { createPostgresConnectorRepository } = require('./repositories/postgresConnectorRepository');
+const { createConnectorProviderRegistry } = require('./services/connectors/providers');
+const { connectorFreshness } = require('./services/connectors/freshness');
+const { createJobRunner } = require('./services/job-runner');
+const authConfig = readAuthConfig();
+const authRateLimiter = createAuthRateLimiter();
+const financialConfig = readFinancialConfig();
+const valuationConfig = readValuationConfig();
 
 const app = express();
 const parser = new Parser();
 
-app.use(cors());
+app.use(cors(corsOptions(authConfig)));
+// Default: do not trust forwarding headers. Configure exact proxy CIDRs when deploying.
+if (process.env.TRUSTED_PROXY_CIDRS) app.set('trust proxy', process.env.TRUSTED_PROXY_CIDRS.split(',').map(value => value.trim()));
 app.use(express.json());
 
 const PORT = Number(process.env.PORT || 5000);
-const AUTH_SECRET =
-  process.env.AUTH_SECRET || "collecttrade-local-development-secret";
+const AUTH_SECRET = authConfig.secret;
 const CONNECTOR_SECRET = process.env.CONNECTOR_SECRET || AUTH_SECRET;
 const ENGINE_TICK_MS = 5000;
 const MARKET_REFRESH_MS = 60 * 1000;
 const NEWS_REFRESH_MS = 10 * 60 * 1000;
 const HISTORY_LIMIT = 240;
-const DATA_DIR = path.join(__dirname, "data");
-const STORE_FILE = path.join(DATA_DIR, "app-store.json");
+const DATA_DIR = process.env.COLLECTTRADE_DATA_DIR || path.join(__dirname, "data");
+const STORE_FILE =
+  process.env.COLLECTTRADE_STORE_FILE || path.join(DATA_DIR, "app-store.json");
 const PRODUCT_CATALOG_FILE = path.join(DATA_DIR, "product-catalog.json");
-const SHARE_STATUS_FILE = path.join(DATA_DIR, "share-status.json");
+const SHARE_STATUS_FILE =
+  process.env.COLLECTTRADE_SHARE_STATUS_FILE || path.join(DATA_DIR, "share-status.json");
 const FRONTEND_DIST_DIR = path.join(__dirname, "..", "frontend", "dist");
 const FRONTEND_INDEX_FILE = path.join(FRONTEND_DIST_DIR, "index.html");
+const DISABLE_RUNTIME = process.env.COLLECTTRADE_DISABLE_RUNTIME === "1";
 const TWELVE_DATA_API_KEY = process.env.TWELVE_DATA_API_KEY || "";
 const TWELVE_DATA_BASE_URL = "https://api.twelvedata.com";
 const TWELVE_DATA_INTERVAL = process.env.TWELVE_DATA_INTERVAL || "1h";
@@ -57,7 +88,7 @@ const DEFAULT_SETTINGS = {
     nudgeWindow: "active",
     celebrationEnabled: true,
   },
-  executionProfiles: {
+    executionProfiles: {
     forex: {
       mode: "paper",
       providerId: "saxo",
@@ -76,6 +107,7 @@ const DEFAULT_SETTINGS = {
       providerId: "easyequities",
     },
   },
+  usdZarRate: 18.5,
 };
 
 const ALERT_SUBSCRIPTION_TIERS = {
@@ -236,6 +268,8 @@ const PRODUCT_CATALOG_DATA = loadProductCatalog();
 const PRODUCT_CATALOG = PRODUCT_CATALOG_DATA.items;
 const PRODUCT_CATALOG_BRANDS = uniqueStrings(PRODUCT_CATALOG.map((item) => item.brand)).sort();
 const PRODUCT_CATALOG_FAMILIES = uniqueStrings(PRODUCT_CATALOG.map((item) => item.family)).sort();
+const DEMO_MODE = String(process.env.DEMO_MODE || "").toLowerCase() === "true";
+
 const TRADEABLE_COLLECTIBLES = [
   {
     id: "lego-star-wars-75252",
@@ -322,6 +356,219 @@ const TRADEABLE_COLLECTIBLES = [
     liquidity: "Medium",
   },
 ];
+
+const DEMO_LEGO_SETS = [
+  {
+    id: "lego-star-wars-75367",
+    brand: "LEGO",
+    name: "UCS Venator-Class Republic Attack Cruiser",
+    category: "LEGO Star Wars (UCS)",
+    market: "South Africa / Global",
+    sku: "75367",
+    description: "Large UCS flagship with a deep collector moat and a strong sealed-box resale tape.",
+    thesis: "UCS flagships tend to reprice in steps as clean stock dries up around retirement.",
+    venue: "Private market / eBay",
+    price: 26999,
+    changePercent: 3.2,
+    liquidity: "Medium",
+    retailPrice: 27999,
+    buyPrice: 23300,
+    currentMarketValue: 26999,
+    valuationDate: "2026-09-23",
+    valuationHistory: [
+      { date: "2025-09-23", value: 24000 },
+      { date: "2026-06-25", value: 26100 },
+      { date: "2026-09-23", value: 26999 },
+    ],
+    projectedFutureValue: 34500,
+    minifigureQuality: 88,
+    exclusiveMinifigures: 2,
+    numberOfMinifigures: 5,
+    themeStrength: 94,
+    retirementTimeline: 92,
+    demandForSet: 92,
+    supplyScarcity: 84,
+    displayAppeal: 92,
+    partOutValue: 74,
+    liquidityScore: 74,
+    historicalPerformance: 84,
+    portfolioFit: 80,
+    riskScore: 42,
+    expectedRetirementDate: "2027-06-30",
+    sellByTargetDate: "2030-06-30",
+  },
+  {
+    id: "lego-icons-10316",
+    brand: "LEGO",
+    name: "The Lord of the Rings: Rivendell",
+    category: "LEGO Icons",
+    market: "South Africa / Global",
+    sku: "10316",
+    description: "Display-heavy Icons set with strong AFOL and LOTR crossover demand.",
+    thesis: "Premium display sets tend to hold price better when local stock gets patchy.",
+    venue: "Retail / collector resale",
+    price: 18300,
+    changePercent: 2.1,
+    liquidity: "Medium",
+    retailPrice: 19999,
+    buyPrice: 17500,
+    currentMarketValue: 18300,
+    projectedFutureValue: 23000,
+    minifigureQuality: 86,
+    exclusiveMinifigures: 4,
+    numberOfMinifigures: 15,
+    themeStrength: 90,
+    retirementTimeline: 90,
+    demandForSet: 86,
+    supplyScarcity: 78,
+    displayAppeal: 93,
+    partOutValue: 76,
+    liquidityScore: 80,
+    historicalPerformance: 82,
+    portfolioFit: 72,
+    riskScore: 50,
+    expectedRetirementDate: "2028-12-31",
+    sellByTargetDate: "2030-12-31",
+  },
+  {
+    id: "lego-harry-potter-71043",
+    brand: "LEGO",
+    name: "Harry Potter: Hogwarts Castle",
+    category: "LEGO Harry Potter (Retired)",
+    market: "South Africa / Global",
+    sku: "71043",
+    description: "Retired flagship with a massive piece count and steady sealed-box demand.",
+    thesis: "Retired LEGO flagships usually tighten in supply before the next repricing leg.",
+    venue: "Private market / eBay",
+    price: 18000,
+    changePercent: -1.4,
+    liquidity: "Medium",
+    retailPrice: 16999,
+    buyPrice: 14900,
+    currentMarketValue: 18000,
+    projectedFutureValue: 22500,
+    minifigureQuality: 80,
+    exclusiveMinifigures: 4,
+    numberOfMinifigures: 27,
+    themeStrength: 92,
+    retirementTimeline: 88,
+    demandForSet: 74,
+    supplyScarcity: 76,
+    displayAppeal: 95,
+    partOutValue: 70,
+    liquidityScore: 72,
+    historicalPerformance: 80,
+    portfolioFit: 76,
+    riskScore: 52,
+    actualRetirementDate: "2022-12-31",
+    expectedRetirementDate: "2022-12-31",
+    sellByTargetDate: "2028-12-31",
+  },
+  {
+    id: "lego-marvel-76218",
+    brand: "LEGO",
+    name: "Marvel Sanctum Sanctorum",
+    category: "LEGO Marvel",
+    market: "South Africa / Global",
+    sku: "76218",
+    description: "Shared franchise set with strong display appeal and a deep minifigure cast.",
+    thesis: "Widely available sets track retail closely until clean stock starts to thin out.",
+    venue: "Retail / collector resale",
+    price: 8690,
+    changePercent: 1.2,
+    liquidity: "High",
+    retailPrice: 8999,
+    buyPrice: 8500,
+    currentMarketValue: 8690,
+    projectedFutureValue: 9800,
+    minifigureQuality: 74,
+    exclusiveMinifigures: 4,
+    numberOfMinifigures: 8,
+    themeStrength: 78,
+    retirementTimeline: 80,
+    demandForSet: 72,
+    supplyScarcity: 62,
+    displayAppeal: 84,
+    partOutValue: 66,
+    liquidityScore: 64,
+    historicalPerformance: 70,
+    portfolioFit: 68,
+    riskScore: 58,
+    expectedRetirementDate: "2026-12-31",
+    sellByTargetDate: "2029-12-31",
+  },
+  {
+    id: "lego-spider-man-76261",
+    brand: "LEGO",
+    name: "Spider-Man Final Battle",
+    category: "LEGO Spider-Man",
+    market: "South Africa / Global",
+    sku: "76261",
+    description: "Mainline playset with reliable retail availability and moderate collectibility.",
+    thesis: "Current shelf sets rarely repriced yet; patience is the edge while retail holds supply.",
+    venue: "Retail",
+    price: 3799,
+    changePercent: 0.4,
+    liquidity: "High",
+    retailPrice: 3799,
+    buyPrice: 3799,
+    currentMarketValue: 3799,
+    projectedFutureValue: 4200,
+    minifigureQuality: 66,
+    exclusiveMinifigures: 0,
+    numberOfMinifigures: 8,
+    themeStrength: 60,
+    retirementTimeline: 58,
+    demandForSet: 60,
+    supplyScarcity: 46,
+    displayAppeal: 64,
+    partOutValue: 58,
+    liquidityScore: 56,
+    historicalPerformance: 55,
+    portfolioFit: 60,
+    riskScore: 60,
+    expectedRetirementDate: "2028-06-30",
+    sellByTargetDate: "2029-12-31",
+  },
+  {
+    id: "lego-city-76208",
+    brand: "LEGO",
+    name: "Pirate Ship Adventure",
+    category: "LEGO City (4+)",
+    market: "South Africa / Global",
+    sku: "76208",
+    description: "Small entry set trading above retail with thin collector scarcity.",
+    thesis: "Entry sets above retail rarely compensate for the opportunity cost of a flagship.",
+    venue: "Retail / supermarkets",
+    price: 2499,
+    changePercent: -2.8,
+    liquidity: "High",
+    retailPrice: 2249,
+    buyPrice: 2399,
+    currentMarketValue: 2499,
+    projectedFutureValue: 2550,
+    minifigureQuality: 54,
+    exclusiveMinifigures: 0,
+    numberOfMinifigures: 5,
+    themeStrength: 55,
+    retirementTimeline: 50,
+    demandForSet: 52,
+    supplyScarcity: 38,
+    displayAppeal: 58,
+    partOutValue: 62,
+    liquidityScore: 45,
+    historicalPerformance: 48,
+    portfolioFit: 55,
+    riskScore: 68,
+    expectedRetirementDate: "2027-12-31",
+    sellByTargetDate: "2028-12-31",
+  },
+];
+
+const TRADEABLE_COLLECTIBLES_ACTIVE = DEMO_MODE
+  ? TRADEABLE_COLLECTIBLES.concat(DEMO_LEGO_SETS)
+  : TRADEABLE_COLLECTIBLES;
+
 const OFFICIAL_COLLECTIBLE_REFERENCE_SHELVES = [
   {
     id: "lego-za-minifigures",
@@ -408,10 +655,10 @@ const OFFICIAL_COLLECTIBLE_REFERENCE_SHELVES = [
   },
 ];
 const TRADEABLE_COLLECTIBLE_CATEGORIES = uniqueStrings(
-  TRADEABLE_COLLECTIBLES.map((item) => item.category),
+  TRADEABLE_COLLECTIBLES_ACTIVE.map((item) => item.category),
 ).sort();
 const TRADEABLE_COLLECTIBLE_BRANDS = uniqueStrings(
-  TRADEABLE_COLLECTIBLES.map((item) => item.brand),
+  TRADEABLE_COLLECTIBLES_ACTIVE.map((item) => item.brand),
 ).sort();
 
 const NEWS_SOURCES = [
@@ -788,6 +1035,9 @@ function sanitizeFeedbackStatus(value) {
 }
 
 function sanitizeWatchlistDesk(value) {
+  if (value === "collectible") {
+    return "collectibles";
+  }
   return ["forex", "etfs", "crypto", "jse", "collectibles"].includes(value) ? value : "forex";
 }
 
@@ -1196,7 +1446,16 @@ function sanitizeSettings(input) {
     alertPreferences: sanitizeAlertPreferences(input?.alertPreferences, subscriptionTier),
     routinePreferences,
     executionProfiles: sanitizeExecutionProfiles(input?.executionProfiles),
+    usdZarRate: sanitizeUsdZarRate(input?.usdZarRate),
   };
+}
+
+function sanitizeUsdZarRate(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return 18.5;
+  }
+  return Math.round(numeric * 100) / 100;
 }
 
 function sanitizeRoutineStepId(value) {
@@ -1535,6 +1794,7 @@ function loadStore() {
 
     return {
       users: rawUsers.map((user, index) => sanitizeUserRecord(user, index, preferredOwnerId)),
+      auth: parsed.auth,
       userStates,
       settings: sanitizeSettings(parsed.settings),
       trades: Array.isArray(parsed.trades) ? parsed.trades : [],
@@ -1560,6 +1820,7 @@ function loadStore() {
 
 let store = loadStore();
 let users = store.users;
+let authState = store.auth || { sessions: [], events: [], legacyTokenCutoffs: {} };
 let userStates = store.userStates;
 let guestTrades = store.trades;
 let guestTargets = store.newsTargets;
@@ -1590,6 +1851,7 @@ function persistStore() {
     JSON.stringify(
       {
         users,
+        auth: authState,
         userStates,
         settings: appSettings,
         trades: guestTrades,
@@ -1599,6 +1861,43 @@ function persistStore() {
       null,
       2,
     ),
+  );
+}
+
+function resetStoreForTests() {
+  authState = { sessions: [], events: [], legacyTokenCutoffs: {} };
+  authRateLimiter.clear();
+  store = {
+    users: [],
+    userStates: {},
+    settings: sanitizeSettings(DEFAULT_SETTINGS),
+    trades: [],
+    newsTargets: [...DEFAULT_TARGETS],
+    feedbackItems: [],
+  };
+  users = store.users;
+  userStates = store.userStates;
+  guestTrades = store.trades;
+  guestTargets = store.newsTargets;
+  appSettings = store.settings;
+  feedbackItems = store.feedbackItems;
+  tradeId = 1;
+  requestId = 1;
+  persistStore();
+  if (legacyValuationRepository) legacyValuationRepository.reset();
+  return store;
+}
+
+function getStoreSnapshot() {
+  return JSON.parse(
+    JSON.stringify({
+      users,
+      userStates,
+      settings: appSettings,
+      trades: guestTrades,
+      newsTargets: guestTargets,
+      feedbackItems,
+    }),
   );
 }
 
@@ -1637,7 +1936,255 @@ function getUserState(userId) {
   return userStates[userId];
 }
 
+const GAVIN_V3_BASELINE_AS_OF = "2026-09-23T12:00:00.000Z";
+
+function seedDemoUserState(state, userId, options = {}) {
+  if (!state || (!DEMO_MODE && !options.force) || state.trades.length || state.watchlistItems.length) {
+    return;
+  }
+
+  const catalog = TRADEABLE_COLLECTIBLES.concat(DEMO_LEGO_SETS);
+  const findBySku = (sku) => catalog.find((item) => item.sku === sku);
+
+  const holdings = [
+    {
+      sku: "10305",
+      quantity: 1,
+      acquisitionPrice: 6999,
+      salePrice: 8540,
+      note: "Demo realised sale: Lion Knights' Castle. Channel: Local buyer groups.",
+    },
+    {
+      sku: "10316",
+      quantity: 1,
+      acquisitionPrice: 14900,
+      salePrice: 18684,
+      note: "Demo realised sale: Rivendell. Channel: Local buyer groups.",
+    },
+    {
+      sku: "75252",
+      quantity: 1,
+      acquisitionPrice: 22999,
+      currentPrice: 28295,
+      note: "Demo open holding: Imperial Star Destroyer at the BrickEconomy mark.",
+    },
+  ];
+
+  const seededTrades = [];
+  for (const holding of holdings) {
+    const item = findBySku(holding.sku);
+    if (!item) {
+      continue;
+    }
+    const trade = createCollectibleTrade(item, "BUY", userId, {
+      quantity: holding.quantity,
+      entryPrice: holding.acquisitionPrice,
+      currentPrice: holding.currentPrice || holding.acquisitionPrice,
+      orderNote: holding.note,
+      executionMode: "paper",
+      executionProvider: "collecttrade",
+      executionLabel: "Brick Alpha Paper",
+    });
+    if (holding.salePrice != null) {
+      closeTrade(trade, "Local buyer groups", { price: holding.salePrice });
+      trade.closedAt = GAVIN_V3_BASELINE_AS_OF;
+      trade.updatedAt = GAVIN_V3_BASELINE_AS_OF;
+    }
+    seededTrades.push(trade);
+  }
+
+  if (seededTrades.length) {
+    state.trades = seededTrades.concat(state.trades);
+  }
+
+  const watchlistSkus = ["75367", "71043", "76218"];
+  for (const sku of watchlistSkus) {
+    const item = findBySku(sku);
+    if (!item) {
+      continue;
+    }
+    state.watchlistItems.push(
+      sanitizeWatchlistItem({
+        id: crypto.randomUUID(),
+        ticker: item.sku,
+        label: item.name,
+        desk: "collectibles",
+        createdAt: nowIso(),
+        updatedAt: nowIso(),
+      }),
+    );
+  }
+  state.watchlistItems = sortWatchlistItems(state.watchlistItems).slice(0, 24);
+
+  appendNotification(state, {
+    ticker: "DEMO",
+    label: "Demo",
+    desk: "collectibles",
+    title: "Demo portfolio seeded",
+    message:
+      "Imperial Star Destroyer is the open holding. Castle and Rivendell are already on the realised ledger.",
+    type: "portfolio",
+  });
+
+  appendNotification(state, {
+    ticker: "DEMO",
+    label: "Demo",
+    desk: "collectibles",
+    title: "Watchlist preloaded",
+    message: "Save more sets from Scan & Evaluate or Investment Analysis to grow the watchlist.",
+    type: "portfolio",
+  });
+}
+
+const legacyStoreRepository = createLegacyStoreRepository({
+  getFeedback: () => feedbackItems,
+  getStoreSnapshot,
+  getUserState,
+  getUsers: () => users,
+  persist: persistStore,
+});
+
+const legacyAuthRepository = createLegacyAuthRepository({ getUsers: () => users, getUserState, getAuthState: () => authState, persist: persistStore, removeUserState: id => { delete userStates[id]; } });
+const postgresAuthRepository = createPostgresAuthRepository(() => require('./db/prisma-client').getPrismaClient());
+const authRepository = authConfig.mode === 'legacy' ? legacyAuthRepository
+  : authConfig.mode === 'postgres' ? postgresAuthRepository
+    : createDualAuthRepository(legacyAuthRepository, postgresAuthRepository);
+const authService = createAuthService({ repository: authRepository, config: authConfig, defaultSettings: sanitizeSettings(DEFAULT_SETTINGS) });
+
+let postgresFinancialService = null;
+
+function getPostgresFinancialService() {
+  if (!postgresFinancialService) {
+    postgresFinancialService = createFinancialService({
+      repository: createPostgresFinancialRepository(() => getPrismaClient()),
+      defaultCurrency: financialConfig.defaultCurrency,
+    });
+  }
+  return postgresFinancialService;
+}
+
+function isFinancialPostgresMode() {
+  return financialConfig.mode === "postgres";
+}
+
+function isFinancialDualMode() {
+  return financialConfig.mode === "dual";
+}
+
+let valuationProviderRegistry = null;
+let legacyValuationService = null;
+let legacyValuationRepository = null;
+let postgresValuationService = null;
+
+function getValuationProviderRegistry() {
+  if (!valuationProviderRegistry) valuationProviderRegistry = createProviderRegistry({ config: valuationConfig });
+  return valuationProviderRegistry;
+}
+function getLegacyValuationService() {
+  if (!legacyValuationService) {
+    legacyValuationRepository = createMemoryValuationRepository();
+    legacyValuationService = createValuationService({
+      repository: legacyValuationRepository,
+      config: valuationConfig,
+      providers: getValuationProviderRegistry(),
+    });
+  }
+  return legacyValuationService;
+}
+function getPostgresValuationService() {
+  if (!postgresValuationService) {
+    postgresValuationService = createValuationService({
+      repository: createPostgresValuationRepository(() => getPrismaClient()),
+      config: valuationConfig,
+      providers: getValuationProviderRegistry(),
+    });
+  }
+  return postgresValuationService;
+}
+function getValuationService() {
+  return valuationConfig.mode === "postgres" ? getPostgresValuationService() : getLegacyValuationService();
+}
+
+let connectorConfigInstance = null;
+let connectorServiceInstance = null;
+let connectorJobRunnerInstance = null;
+let connectorProviderRegistryInstance = null;
+
+function getConnectorConfig() {
+  if (!connectorConfigInstance) connectorConfigInstance = readConnectorConfig(process.env);
+  return connectorConfigInstance;
+}
+
+function getConnectorProviderRegistry() {
+  if (!connectorProviderRegistryInstance) {
+    connectorProviderRegistryInstance = createConnectorProviderRegistry({ config: getConnectorConfig() });
+  }
+  return connectorProviderRegistryInstance;
+}
+
+function getConnectorService() {
+  const config = getConnectorConfig();
+  if (config.mode === "legacy") return null;
+  if (!connectorServiceInstance) {
+    connectorServiceInstance = createConnectorService({
+      repository: createPostgresConnectorRepository(() => getPrismaClient()),
+      providers: getConnectorProviderRegistry(),
+      config,
+      valuation: getValuationService(),
+    });
+  }
+  return connectorServiceInstance;
+}
+
+function getConnectorJobRunner() {
+  const config = getConnectorConfig();
+  if (config.mode === "legacy") return null;
+  if (!connectorJobRunnerInstance) {
+    connectorJobRunnerInstance = createJobRunner({
+      repository: createPostgresConnectorRepository(() => getPrismaClient()),
+      config,
+      handlers: {},
+    });
+  }
+  return connectorJobRunnerInstance;
+}
+
+function legacyConnectorHealthView() {
+  return connectorFleetSummary().providers.map((stat) => ({
+    ...stat,
+    availability: CONNECTOR_PROVIDER_MAP[stat.id]?.availability || "manual_setup",
+    supportsOrders: false,
+    health:
+      stat.online > 0
+        ? "healthy"
+        : stat.errors > 0
+          ? "degraded"
+          : stat.configured > 0
+            ? "unknown"
+            : "not_configured",
+  }));
+}
+
+function connectorFreshnessForRecord(record) {
+  return connectorFreshness({
+    observedAt: record.lastSyncAt,
+    now: Date.now(),
+    refreshAfterMs: getConnectorConfig().refreshAfterMs,
+    reviewMs: getConnectorConfig().reviewMs,
+    sourceAvailable: true,
+  });
+}
+
+function financialErrorStatus(error) {
+  const code = error?.code || "";
+  const message = String(error?.message || "");
+  if (code === "unknown_trade") return 404;
+  if (message.includes("financial_user_not_found")) return 404;
+  return 400;
+}
+
 function publicUser(user) {
+  const isDemo = /@collecttrade\.local$/.test(String(user.email || ""));
   return {
     id: user.id,
     name: user.name,
@@ -1645,60 +2192,22 @@ function publicUser(user) {
     role: sanitizeUserRole(user.role),
     createdAt: user.createdAt,
     lastLoginAt: user.lastLoginAt,
+    ...(isDemo ? { isDemo: true } : {}),
   };
 }
 
-const CONNECTOR_CIPHER_KEY = crypto.createHash("sha256").update(CONNECTOR_SECRET).digest();
+const connectorCipher = require('./services/connectors/cipher');
 
 function encryptConnectorPayload(payload) {
-  const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv("aes-256-gcm", CONNECTOR_CIPHER_KEY, iv);
-  const encrypted = Buffer.concat([
-    cipher.update(JSON.stringify(payload), "utf8"),
-    cipher.final(),
-  ]);
-  const tag = cipher.getAuthTag();
-  return `${iv.toString("base64url")}.${tag.toString("base64url")}.${encrypted.toString("base64url")}`;
+  return connectorCipher.encryptConnectorPayload(payload, CONNECTOR_SECRET);
 }
 
 function decryptConnectorPayload(blob) {
-  if (!blob || typeof blob !== "string") {
-    return null;
-  }
-
-  const [ivRaw, tagRaw, dataRaw] = blob.split(".");
-  if (!ivRaw || !tagRaw || !dataRaw) {
-    return null;
-  }
-
-  try {
-    const decipher = crypto.createDecipheriv(
-      "aes-256-gcm",
-      CONNECTOR_CIPHER_KEY,
-      Buffer.from(ivRaw, "base64url"),
-    );
-    decipher.setAuthTag(Buffer.from(tagRaw, "base64url"));
-    const decrypted = Buffer.concat([
-      decipher.update(Buffer.from(dataRaw, "base64url")),
-      decipher.final(),
-    ]);
-    return JSON.parse(decrypted.toString("utf8"));
-  } catch {
-    return null;
-  }
+  return connectorCipher.decryptConnectorPayload(blob, CONNECTOR_SECRET);
 }
 
 function maskValue(value, head = 6, tail = 4) {
-  const stringValue = String(value || "").trim();
-  if (!stringValue) {
-    return "";
-  }
-
-  if (stringValue.length <= head + tail) {
-    return `${stringValue.slice(0, Math.max(2, head - 2))}...`;
-  }
-
-  return `${stringValue.slice(0, head)}...${stringValue.slice(-tail)}`;
+  return connectorCipher.maskValue(value, head, tail);
 }
 
 function connectorCredentials(record) {
@@ -1766,81 +2275,6 @@ function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase();
 }
 
-function hashPassword(password, salt) {
-  return crypto.pbkdf2Sync(password, salt, 120000, 64, "sha512").toString("hex");
-}
-
-function verifyPassword(password, user) {
-  return hashPassword(password, user.passwordSalt) === user.passwordHash;
-}
-
-function verifySecret(value, salt, hash) {
-  if (!value || !salt || !hash) {
-    return false;
-  }
-
-  return hashPassword(value, salt) === hash;
-}
-
-function clearPasswordReset(user) {
-  user.passwordResetSalt = "";
-  user.passwordResetHash = "";
-  user.passwordResetRequestedAt = null;
-  user.passwordResetExpiresAt = null;
-}
-
-function issuePasswordResetCode(user) {
-  const resetCode = String(Math.floor(100000 + Math.random() * 900000));
-  const resetSalt = crypto.randomBytes(16).toString("hex");
-  user.passwordResetSalt = resetSalt;
-  user.passwordResetHash = hashPassword(resetCode, resetSalt);
-  user.passwordResetRequestedAt = nowIso();
-  user.passwordResetExpiresAt = new Date(Date.now() + 1000 * 60 * 15).toISOString();
-  return resetCode;
-}
-
-function encodeToken(payload) {
-  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
-  const signature = crypto
-    .createHmac("sha256", AUTH_SECRET)
-    .update(body)
-    .digest("base64url");
-
-  return `${body}.${signature}`;
-}
-
-function decodeToken(token) {
-  if (!token || !token.includes(".")) {
-    return null;
-  }
-
-  const [body, signature] = token.split(".");
-  const expected = crypto.createHmac("sha256", AUTH_SECRET).update(body).digest("base64url");
-
-  if (signature !== expected) {
-    return null;
-  }
-
-  try {
-    const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8"));
-    if (payload.exp && Date.now() > payload.exp) {
-      return null;
-    }
-
-    return payload;
-  } catch (error) {
-    return null;
-  }
-}
-
-function issueToken(user) {
-  return encodeToken({
-    sub: user.id,
-    email: user.email,
-    exp: Date.now() + 1000 * 60 * 60 * 24 * 7,
-  });
-}
-
 function readBearerToken(req) {
   const authHeader = req.headers.authorization || "";
   if (!authHeader.startsWith("Bearer ")) {
@@ -1850,42 +2284,21 @@ function readBearerToken(req) {
   return authHeader.slice(7).trim();
 }
 
-function optionalAuth(req, _res, next) {
-  const token = readBearerToken(req);
-
-  if (!token) {
-    req.user = null;
-    req.userState = null;
+async function optionalAuth(req, res, next) {
+  try {
+    req.user = await authService.authenticate(readBearerToken(req));
+    req.userState = req.user ? getUserState(req.user.id) : null;
+    if (req.user) req.userState.settings = await authService.getSettings(req.user.id);
     next();
-    return;
-  }
-
-  const payload = decodeToken(token);
-  const user = users.find((candidate) => candidate.id === payload?.sub);
-
-  if (!user) {
-    req.user = null;
-    req.userState = null;
-    next();
-    return;
-  }
-
-  req.user = user;
-  req.userState = getUserState(user.id);
-  next();
+  } catch { res.status(503).json({ ok: false, error: 'auth_unavailable' }); }
 }
 
 function requireAuth(req, res, next) {
-  optionalAuth(req, res, () => {
-    if (!req.user) {
-      res.status(401).json({ ok: false, error: "unauthorized" });
-      return;
-    }
-
+  return optionalAuth(req, res, () => {
+    if (!req.user) return res.status(401).json({ ok: false, error: 'unauthorized' });
     next();
   });
 }
-
 function ema(values, period) {
   if (!values.length) {
     return [];
@@ -2615,6 +3028,15 @@ function sanitizeTradePlanValue(value) {
   return numeric;
 }
 
+function sanitizeAcquisitionPrice(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return null;
+  }
+
+  return Number(numeric.toFixed(2));
+}
+
 function applyTradePlan(trade) {
   const stopPrice = normalizeTradePrice(trade, sanitizeTradePlanValue(trade.stopPrice));
   const targetPrice = normalizeTradePrice(trade, sanitizeTradePlanValue(trade.targetPrice));
@@ -2645,7 +3067,9 @@ function updateTradeValuation(trade, price) {
   const quantity = normalizeStoredQuantity(trade.quantity);
   const direction = trade.side === "SELL" ? -1 : 1;
   const pnlPercent =
-    ((normalizedPrice - trade.entryPrice) / trade.entryPrice) * 100 * direction;
+    trade.entryPrice > 0
+      ? ((normalizedPrice - trade.entryPrice) / trade.entryPrice) * 100 * direction
+      : 0;
   const pnlAmount =
     (normalizedPrice - trade.entryPrice) * quantity * direction;
   const entryValue = trade.entryPrice * quantity;
@@ -3142,6 +3566,56 @@ function buildFallbackNews() {
   ];
 }
 
+function buildDemoNews() {
+  const seenAt = nowIso();
+  return [
+    {
+      id: "demo-lego-venue",
+      title: "SEALED-BOX TAPE: Venator UCS keeps repricing as clean stock dries up ahead of retirement",
+      link: "",
+      sourceId: "demo",
+      sourceName: "Brick Alpha Demo Feed",
+      region: "global",
+      marketTicker: "COLLECTIBLE:lego-star-wars-75367",
+      publishedAt: null,
+      seenAt,
+      summary: "Demonstration headlines run locally under DEMO_MODE so the dashboard stays populated offline.",
+    },
+    {
+      id: "demo-za-retail",
+      title: "Local ZA retail shelves still turning for Icons and Marvel sets while resale holds a premium",
+      link: "",
+      sourceId: "demo",
+      sourceName: "Brick Alpha Demo Feed",
+      region: "south-africa",
+      marketTicker: "COLLECTIBLE:lego-icons-10316",
+      publishedAt: null,
+      seenAt,
+      summary: "Demonstration headlines run locally under DEMO_MODE so the dashboard stays populated offline.",
+    },
+    {
+      id: "demo-forex",
+      title: "USD/ZAR consolidates near the 21 EMA while the macro desk keeps its selective stance",
+      link: "",
+      sourceId: "demo",
+      sourceName: "Brick Alpha Demo Feed",
+      region: "south-africa",
+      marketTicker: "USDZAR",
+      publishedAt: null,
+      seenAt,
+      summary: "Demonstration headlines run locally under DEMO_MODE so the dashboard stays populated offline.",
+    },
+  ];
+}
+
+function seedDemoNews() {
+  const fresh = buildDemoNews().concat(buildFallbackNews());
+  newsItems = [...new Map(fresh.map((item) => [item.id, item])).values()].sort(
+    (left, right) => Date.parse(right.createdAt || right.publishedAt || right.seenAt || 0) -
+      Date.parse(left.createdAt || left.publishedAt || left.seenAt || 0),
+  );
+}
+
 function detectMarketTicker(title) {
   const headline = String(title || "").toLowerCase();
   if (/rand|zar|jse|south africa|sa\b/.test(headline)) {
@@ -3279,7 +3753,15 @@ function findCatalogItemById(collectibleId) {
 }
 
 function findTradeableCollectibleById(collectibleId) {
-  return TRADEABLE_COLLECTIBLES.find((item) => item.id === collectibleId);
+  return TRADEABLE_COLLECTIBLES_ACTIVE.find((item) => item.id === collectibleId);
+}
+
+function findTradeableCollectibleBySkuOrId(value) {
+  const key = String(value || "").toUpperCase();
+  return TRADEABLE_COLLECTIBLES_ACTIVE.find(
+    (item) =>
+      String(item.id).toUpperCase() === key || String(item.sku).toUpperCase() === key,
+  );
 }
 
 function collectionForRequest(req) {
@@ -3355,6 +3837,25 @@ function buildWatchlistView(items) {
   const signalMap = latestSignalMap();
   return items.map((item) => {
     const signal = signalMap.get(item.ticker);
+    const collectible = findTradeableCollectibleBySkuOrId(item.ticker);
+    if (!signal && collectible) {
+      return {
+        ...item,
+        kind: "collectible",
+        assetClass: "collectible",
+        collectibleId: collectible.id,
+        category: collectible.category || collectible.brand,
+        brand: collectible.brand,
+        currentPrice: Number(collectible.price || 0),
+        currentRsi: null,
+        changePercent: Number(collectible.changePercent || 0),
+        action: "WATCH",
+        confidence: 72,
+        headline: collectible.thesis || collectible.description || null,
+        thesis: collectible.description || null,
+        feedMode: "catalogue",
+      };
+    }
     return {
       ...item,
       currentPrice: signal ? signal.price : null,
@@ -3962,7 +4463,8 @@ function closeTrade(trade, exitReason, signal) {
   return true;
 }
 
-function buildHealth() {
+async function buildHealth() {
+  const databaseHealth = await getDatabaseHealth();
   const openTrades = Object.values(userStates)
     .flatMap((state) => state.trades)
     .filter((trade) => trade.status === "open").length;
@@ -3995,6 +4497,7 @@ function buildHealth() {
       news: newsMeta.lastError ? "degraded" : "online",
       connectors: connectorServiceStatus,
       persistence: "online",
+      database: databaseHealth.status,
     },
     metrics: {
       userCount: users.length,
@@ -4013,6 +4516,8 @@ function buildHealth() {
       marketDataProvider: marketDataMeta.provider,
       marketDataMode: marketDataMeta.mode,
       marketDataInterval: marketDataMeta.interval,
+      databaseConfigured: databaseHealth.configured,
+      databaseEnvironment: databaseHealth.environment,
       lastEngineTickAt,
       lastMarketRefreshAt: marketDataMeta.lastSuccessAt || marketDataMeta.lastAttemptAt,
       lastNewsAttemptAt: newsMeta.lastAttemptAt,
@@ -4134,192 +4639,39 @@ app.get("/", (_req, res) => {
 </html>`);
 });
 
-app.get("/api/health", (_req, res) => {
-  res.json(buildHealth());
+app.get("/api/health", async (_req, res) => {
+  res.json(await buildHealth());
 });
 
-app.post("/api/auth/register", (req, res) => {
-  const name = String(req.body?.name || "").trim();
-  const email = normalizeEmail(req.body?.email);
-  const password = String(req.body?.password || "");
-
-  if (name.length < 2) {
-    res.status(400).json({ ok: false, error: "name_too_short" });
-    return;
-  }
-
-  if (!email.includes("@")) {
-    res.status(400).json({ ok: false, error: "invalid_email" });
-    return;
-  }
-
-  if (password.length < 8) {
-    res.status(400).json({ ok: false, error: "password_too_short" });
-    return;
-  }
-
-  if (users.some((user) => user.email === email)) {
-    res.status(409).json({ ok: false, error: "email_in_use" });
-    return;
-  }
-
-  const passwordSalt = crypto.randomBytes(16).toString("hex");
-  const user = {
-    id: crypto.randomUUID(),
-    name,
-    email,
-    passwordSalt,
-    passwordHash: hashPassword(password, passwordSalt),
-    role: users.length === 0 || users.every((candidate) => isSystemAccountEmail(candidate.email))
-      ? "owner"
-      : "partner",
-    createdAt: nowIso(),
-    lastLoginAt: nowIso(),
+function authHandler(work, status = 200) {
+  return async (req, res) => {
+    try { res.status(status).json(await work(req)); }
+    catch (error) {
+      if (error instanceof AuthError) return res.status(error.status).json({ ok: false, error: error.message });
+      res.status(503).json({ ok: false, error: 'auth_unavailable' });
+    }
   };
-
-  users.push(user);
-  getUserState(user.id);
-  persistStore();
-
-  res.status(201).json({
-    ok: true,
-    token: issueToken(user),
-    user: publicUser(user),
-    settings: getUserState(user.id).settings,
-  });
-});
-
-app.post("/api/auth/login", (req, res) => {
-  const email = normalizeEmail(req.body?.email);
-  const password = String(req.body?.password || "");
-  const user = users.find((candidate) => candidate.email === email);
-
-  if (!user || !verifyPassword(password, user)) {
-    res.status(401).json({ ok: false, error: "invalid_credentials" });
-    return;
-  }
-
-  user.lastLoginAt = nowIso();
-  persistStore();
-
-  res.json({
-    ok: true,
-    token: issueToken(user),
-    user: publicUser(user),
-    settings: getUserState(user.id).settings,
-  });
-});
-
-app.post("/api/auth/forgot-password/request", (req, res) => {
-  const email = normalizeEmail(req.body?.email);
-
-  if (!email.includes("@")) {
-    res.status(400).json({ ok: false, error: "invalid_email" });
-    return;
-  }
-
-  const user = users.find((candidate) => candidate.email === email);
-  let demoCode = null;
-  let expiresAt = null;
-
-  if (user && user.passwordHash) {
-    demoCode = issuePasswordResetCode(user);
-    expiresAt = user.passwordResetExpiresAt;
+}
+app.post('/api/auth/register', authRateLimiter.middleware('register'), authHandler(req => authService.register(req.body), 201));
+app.post('/api/auth/login', authRateLimiter.middleware('login'), authHandler(req => authService.login(req.body)));
+app.post('/api/auth/forgot-password/request', authRateLimiter.middleware('forgot-password/request'), authHandler(req => authService.requestReset(req.body)));
+app.post('/api/auth/forgot-password/confirm', authRateLimiter.middleware('forgot-password/confirm'), authHandler(req => authService.confirmReset(req.body)));
+app.post('/api/auth/demo', authRateLimiter.middleware('demo'), authHandler(async req => {
+  const result = await authService.register(req.body, true);
+  if (DEMO_MODE && result?.user && !isFinancialPostgresMode()) {
+    const state = getUserState(result.user.id);
+    seedDemoUserState(state, result.user.id);
     persistStore();
+    if (state.settings) {
+      result.settings = state.settings;
+    }
   }
-
-  res.json({
-    ok: true,
-    message: "If that account exists, a reset code has been prepared for this build.",
-    demoCode,
-    expiresAt,
-  });
+  return result;
+}, 201));
+app.post('/api/auth/logout', requireAuth, authHandler(req => authService.revoke(readBearerToken(req))));
+app.get('/api/auth/me', requireAuth, (req, res) => {
+  res.json({ ok: true, user: publicUser(req.user), settings: req.userState.settings });
 });
-
-app.post("/api/auth/forgot-password/confirm", (req, res) => {
-  const email = normalizeEmail(req.body?.email);
-  const resetCode = String(req.body?.code || "").trim();
-  const password = String(req.body?.password || "");
-  const user = users.find((candidate) => candidate.email === email);
-
-  if (!email.includes("@")) {
-    res.status(400).json({ ok: false, error: "invalid_email" });
-    return;
-  }
-
-  if (!resetCode) {
-    res.status(400).json({ ok: false, error: "reset_code_required" });
-    return;
-  }
-
-  if (password.length < 8) {
-    res.status(400).json({ ok: false, error: "password_too_short" });
-    return;
-  }
-
-  if (!user || !user.passwordResetHash || !user.passwordResetSalt) {
-    res.status(400).json({ ok: false, error: "invalid_reset_code" });
-    return;
-  }
-
-  const expiresAt = Date.parse(user.passwordResetExpiresAt || "");
-  if (!expiresAt || Date.now() > expiresAt) {
-    clearPasswordReset(user);
-    persistStore();
-    res.status(400).json({ ok: false, error: "reset_code_expired" });
-    return;
-  }
-
-  if (!verifySecret(resetCode, user.passwordResetSalt, user.passwordResetHash)) {
-    res.status(400).json({ ok: false, error: "invalid_reset_code" });
-    return;
-  }
-
-  const passwordSalt = crypto.randomBytes(16).toString("hex");
-  user.passwordSalt = passwordSalt;
-  user.passwordHash = hashPassword(password, passwordSalt);
-  clearPasswordReset(user);
-  persistStore();
-
-  res.json({
-    ok: true,
-    message: "Password updated. Sign in with your new password.",
-  });
-});
-
-app.post("/api/auth/demo", (req, res) => {
-  const demoName = sanitizeOptionalText(req.body?.name, 120) || "Partner Demo";
-  const demoUser = {
-    id: crypto.randomUUID(),
-    name: demoName,
-    email: `demo-${Date.now()}-${Math.floor(Math.random() * 100000)}@collecttrade.local`,
-    passwordSalt: "",
-    passwordHash: "",
-    role: "partner",
-    createdAt: nowIso(),
-    lastLoginAt: nowIso(),
-  };
-
-  users.push(demoUser);
-  getUserState(demoUser.id);
-  persistStore();
-
-  res.status(201).json({
-    ok: true,
-    token: issueToken(demoUser),
-    user: publicUser(demoUser),
-    settings: getUserState(demoUser.id).settings,
-  });
-});
-
-app.get("/api/auth/me", requireAuth, (req, res) => {
-  res.json({
-    ok: true,
-    user: publicUser(req.user),
-    settings: req.userState.settings,
-  });
-});
-
 app.get("/api/signals", (_req, res) => {
   res.json({
     generatedAt: lastEngineTickAt,
@@ -4396,16 +4748,31 @@ app.get("/api/collectibles", (_req, res) => {
     updatedAt: nowIso(),
     categories: TRADEABLE_COLLECTIBLE_CATEGORIES,
     brands: TRADEABLE_COLLECTIBLE_BRANDS,
-    items: TRADEABLE_COLLECTIBLES,
+    items: TRADEABLE_COLLECTIBLES_ACTIVE,
     referenceShelves: OFFICIAL_COLLECTIBLE_REFERENCE_SHELVES,
+    demoMode: DEMO_MODE,
   });
 });
 
+function isDemoAccount(user) {
+  return /@collecttrade\.local$/.test(String(user?.email || ""));
+}
+
+// Demo accounts see only notes they authored, so Reset Demo starts from an empty board.
+// Feedback from non-demo accounts stays in the store and is still returned to those accounts.
+function feedbackForRequester(user) {
+  if (!user || !isDemoAccount(user)) {
+    return feedbackItems;
+  }
+  return feedbackItems.filter((item) => item.authorUserId === user.id);
+}
+
 app.get("/api/feedback", requireAuth, (req, res) => {
+  const items = feedbackForRequester(req.user);
   res.json({
     ok: true,
-    items: feedbackItems,
-    summary: buildFeedbackSummary(feedbackItems),
+    items,
+    summary: buildFeedbackSummary(items),
     permissions: {
       canManage: req.user.role === "owner",
     },
@@ -4423,8 +4790,9 @@ app.get("/api/watchlist", requireAuth, (req, res) => {
 app.post("/api/watchlist", requireAuth, (req, res) => {
   const ticker = sanitizeOptionalText(req.body?.ticker, 40).toUpperCase();
   const signal = latestSignals.find((candidate) => candidate.ticker === ticker);
+  const collectible = findTradeableCollectibleBySkuOrId(ticker);
 
-  if (!signal) {
+  if (!signal && !collectible) {
     res.status(400).json({ ok: false, error: "unknown_market" });
     return;
   }
@@ -4445,8 +4813,8 @@ app.post("/api/watchlist", requireAuth, (req, res) => {
   const item = sanitizeWatchlistItem({
     id: crypto.randomUUID(),
     ticker,
-    label: req.body?.label || signal.label,
-    desk: req.body?.desk || signal.desk,
+    label: req.body?.label || signal?.label || collectible?.name || ticker,
+    desk: req.body?.desk || signal?.desk || "collectibles",
     createdAt: nowIso(),
     updatedAt: nowIso(),
   });
@@ -4720,11 +5088,12 @@ app.post("/api/feedback", requireAuth, (req, res) => {
   feedbackItems = sortFeedbackItems([item, ...feedbackItems]);
   persistStore();
 
+  const visibleItems = feedbackForRequester(req.user);
   res.status(201).json({
     ok: true,
     item,
-    items: feedbackItems,
-    summary: buildFeedbackSummary(feedbackItems),
+    items: visibleItems,
+    summary: buildFeedbackSummary(visibleItems),
     permissions: {
       canManage: req.user.role === "owner",
     },
@@ -4846,7 +5215,15 @@ app.patch("/api/intake/:requestId", requireAuth, (req, res) => {
   });
 });
 
-app.get("/api/portfolio", requireAuth, (req, res) => {
+app.get("/api/portfolio", requireAuth, async (req, res) => {
+  if (isFinancialPostgresMode()) {
+    try {
+      res.json(await getPostgresFinancialService().getPortfolioView(req.user.id));
+    } catch (error) {
+      res.status(financialErrorStatus(error)).json({ ok: false, error: error.code || error.message || "portfolio_failed" });
+    }
+    return;
+  }
   res.json(req.userState.trades);
 });
 
@@ -4881,6 +5258,43 @@ app.post("/api/trades", requireAuth, async (req, res) => {
 
   if (!quantity) {
     res.status(400).json({ ok: false, error: "invalid_quantity" });
+    return;
+  }
+
+  if (isFinancialPostgresMode()) {
+    try {
+      const result = await getPostgresFinancialService().createMarketTrade(req.user.id, signal, {
+        side,
+        quantity,
+        acquisitionPrice: req.body?.acquisitionPrice,
+        salePrice: req.body?.salePrice ?? req.body?.unitPrice ?? req.body?.price,
+        unitPrice: req.body?.unitPrice,
+        price: req.body?.price,
+        currentPrice: req.body?.currentPrice,
+        currency: req.body?.currency,
+        fees: req.body?.fees,
+        feeAmount: req.body?.feeAmount,
+        feeType: req.body?.feeType,
+        orderNote,
+        idempotencyKey: req.body?.idempotencyKey || null,
+        executionMode: executionProfile.mode || "paper",
+        executionProvider: executionProfile.providerId || null,
+      });
+
+      res.status(201).json({
+        ok: true,
+        trade: tradeViewFromTransaction(result.trade),
+        portfolio: await getPostgresFinancialService().getPortfolioView(req.user.id),
+        execution: {
+          mode: result.trade?.execution?.mode ? String(result.trade.execution.mode).toLowerCase() : executionProfile.mode || "paper",
+          providerId: result.trade?.execution?.providerId || null,
+          pair: result.trade?.asset?.marketInstrument?.ticker || signal.ticker || null,
+          remoteStatus: result.trade?.execution?.status ? String(result.trade.execution.status).toLowerCase() : null,
+        },
+      });
+    } catch (error) {
+      res.status(financialErrorStatus(error)).json({ ok: false, error: error.code || error.message || "trade_execution_failed" });
+    }
     return;
   }
 
@@ -4943,6 +5357,25 @@ app.post("/api/trades", requireAuth, async (req, res) => {
     }
 
     req.userState.trades.unshift(trade);
+
+    if (isFinancialDualMode()) {
+      await getPostgresFinancialService().createMarketTrade(req.user.id, signal, {
+        side,
+        quantity,
+        acquisitionPrice: trade.entryPrice,
+        salePrice: trade.entryPrice,
+        currentPrice: trade.currentPrice,
+        currency: req.body?.currency,
+        fees: req.body?.fees,
+        feeAmount: req.body?.feeAmount,
+        feeType: req.body?.feeType,
+        orderNote,
+        idempotencyKey: `legacy-trade:${trade.id}`,
+        executionMode: trade.executionMode || "paper",
+        executionProvider: trade.executionProvider || null,
+      });
+    }
+
     persistStore();
 
     res.status(201).json({
@@ -4972,13 +5405,15 @@ app.post("/api/trades", requireAuth, async (req, res) => {
   }
 });
 
-app.post("/api/collectibles/trades", requireAuth, (req, res) => {
+app.post("/api/collectibles/trades", requireAuth, async (req, res) => {
   const collectibleId = String(req.body?.collectibleId || "").trim();
   const side = String(req.body?.side || "").toUpperCase();
   const orderNote = sanitizeOrderNote(req.body?.orderNote);
   const stopPrice = sanitizeTradePlanValue(req.body?.stopPrice);
   const targetPrice = sanitizeTradePlanValue(req.body?.targetPrice);
   const riskBudget = sanitizeTradePlanValue(req.body?.riskBudget);
+  const acquisitionProvided = req.body?.acquisitionPrice != null && req.body?.acquisitionPrice !== "";
+  const acquisitionPrice = acquisitionProvided ? sanitizeAcquisitionPrice(req.body?.acquisitionPrice) : null;
   const item = findTradeableCollectibleById(collectibleId);
 
   if (!item) {
@@ -5001,16 +5436,86 @@ app.post("/api/collectibles/trades", requireAuth, (req, res) => {
     return;
   }
 
+  if (side === "BUY" && acquisitionProvided && acquisitionPrice == null) {
+    res.status(400).json({ ok: false, error: "invalid_acquisition_price" });
+    return;
+  }
+
+  if (isFinancialPostgresMode()) {
+    try {
+      const result = await getPostgresFinancialService().createCollectibleTrade(req.user.id, item, {
+        side,
+        quantity,
+        acquisitionPrice: req.body?.acquisitionPrice,
+        salePrice: req.body?.salePrice ?? req.body?.unitPrice,
+        unitPrice: req.body?.unitPrice,
+        price: req.body?.price,
+        currentPrice: req.body?.currentPrice,
+        currency: req.body?.currency,
+        fees: req.body?.fees,
+        feeAmount: req.body?.feeAmount,
+        feeType: req.body?.feeType,
+        orderNote,
+        idempotencyKey: req.body?.idempotencyKey || null,
+        executionMode: "paper",
+        executionProvider: "collecttrade",
+      });
+
+      res.status(201).json({
+        ok: true,
+        trade: tradeViewFromTransaction(result.trade),
+        portfolio: await getPostgresFinancialService().getPortfolioView(req.user.id),
+        execution: {
+          mode: result.trade?.execution?.mode ? String(result.trade.execution.mode).toLowerCase() : "paper",
+          providerId: result.trade?.execution?.providerId || "collecttrade",
+          pair: null,
+          remoteStatus: result.trade?.execution?.status ? String(result.trade.execution.status).toLowerCase() : null,
+        },
+      });
+    } catch (error) {
+      res.status(financialErrorStatus(error)).json({ ok: false, error: error.code || error.message || "trade_execution_failed" });
+    }
+    return;
+  }
+
   const trade = createCollectibleTrade(item, side, req.user.id, {
     quantity,
     orderNote,
     stopPrice,
     targetPrice,
     riskBudget,
+    ...(side === "BUY" && acquisitionProvided && acquisitionPrice != null
+      ? {
+          entryPrice: acquisitionPrice,
+        }
+      : {}),
     executionMode: "paper",
     executionProvider: "collecttrade",
     executionLabel: "Brick Alpha Paper",
   });
+
+  if (isFinancialDualMode()) {
+    try {
+      await getPostgresFinancialService().createCollectibleTrade(req.user.id, item, {
+        side,
+        quantity,
+        acquisitionPrice: side === "BUY" ? req.body?.acquisitionPrice : undefined,
+        salePrice: side === "SELL" ? req.body?.salePrice ?? req.body?.unitPrice ?? trade.entryPrice : undefined,
+        currentPrice: trade.currentPrice,
+        currency: req.body?.currency,
+        fees: req.body?.fees,
+        feeAmount: req.body?.feeAmount,
+        feeType: req.body?.feeType,
+        orderNote,
+        idempotencyKey: `legacy-trade:${trade.id}`,
+        executionMode: "paper",
+        executionProvider: "collecttrade",
+      });
+    } catch (error) {
+      res.status(financialErrorStatus(error)).json({ ok: false, error: error.code || error.message || "trade_execution_failed" });
+      return;
+    }
+  }
 
   req.userState.trades.unshift(trade);
   persistStore();
@@ -5029,8 +5534,40 @@ app.post("/api/collectibles/trades", requireAuth, (req, res) => {
 });
 
 app.post("/api/trades/:tradeId/close", requireAuth, async (req, res) => {
-  const trade = findTradeById(req.userState.trades, req.params.tradeId);
   const orderNote = sanitizeOrderNote(req.body?.orderNote);
+
+  if (isFinancialPostgresMode()) {
+    try {
+      const result = await getPostgresFinancialService().closeTransaction(req.user.id, req.params.tradeId, {
+        quantity: req.body?.quantity,
+        salePrice: req.body?.salePrice,
+        unitPrice: req.body?.unitPrice,
+        currentPrice: req.body?.currentPrice,
+        fees: req.body?.fees,
+        feeAmount: req.body?.feeAmount,
+        feeType: req.body?.feeType,
+        orderNote,
+        idempotencyKey: req.body?.idempotencyKey || null,
+      });
+
+      res.json({
+        ok: true,
+        trade: tradeViewFromTransaction(result.trade),
+        portfolio: await getPostgresFinancialService().getPortfolioView(req.user.id),
+        execution: {
+          mode: result.trade?.execution?.mode ? String(result.trade.execution.mode).toLowerCase() : "paper",
+          providerId: result.trade?.execution?.providerId || null,
+          pair: result.trade?.asset?.marketInstrument?.ticker || null,
+          remoteStatus: result.trade?.execution?.status ? String(result.trade.execution.status).toLowerCase() : null,
+        },
+      });
+    } catch (error) {
+      res.status(financialErrorStatus(error)).json({ ok: false, error: error.code || error.message || "trade_close_failed" });
+    }
+    return;
+  }
+
+  const trade = findTradeById(req.userState.trades, req.params.tradeId);
 
   if (!trade) {
     res.status(404).json({ ok: false, error: "unknown_trade" });
@@ -5040,6 +5577,11 @@ app.post("/api/trades/:tradeId/close", requireAuth, async (req, res) => {
   if (trade.status !== "open") {
     res.status(400).json({ ok: false, error: "trade_already_closed" });
     return;
+  }
+
+  const requestedSale = Number(req.body?.salePrice);
+  if (trade.assetClass === "collectible" && Number.isFinite(requestedSale) && requestedSale > 0) {
+    trade.currentPrice = Number(requestedSale.toFixed(2));
   }
 
   const signal =
@@ -5091,6 +5633,43 @@ app.post("/api/trades/:tradeId/close", requireAuth, async (req, res) => {
 
     persistStore();
 
+    if (isFinancialDualMode()) {
+      if (trade.assetClass === "collectible") {
+        const item = findTradeableCollectibleById(trade.collectibleId);
+        if (!item) {
+          res.status(400).json({ ok: false, error: "unknown_collectible" });
+          return;
+        }
+        await getPostgresFinancialService().createCollectibleTrade(req.user.id, item, {
+          side: "SELL",
+          quantity: trade.quantity,
+          salePrice: trade.exitPrice || trade.currentPrice || trade.entryPrice,
+          currentPrice: trade.exitPrice || trade.currentPrice || trade.entryPrice,
+          orderNote,
+          idempotencyKey: `legacy-close:${trade.id}`,
+          executionMode: trade.closeExecutionMode || trade.executionMode || "paper",
+          executionProvider: trade.closeExecutionProvider || trade.executionProvider || "collecttrade",
+        });
+      } else {
+        const closeSignal = signal || {
+          ticker: trade.marketTicker,
+          label: trade.ticker,
+          price: trade.exitPrice || trade.currentPrice || trade.entryPrice,
+          desk: "market",
+        };
+        await getPostgresFinancialService().createMarketTrade(req.user.id, closeSignal, {
+          side: trade.side === "BUY" ? "SELL" : "BUY",
+          quantity: trade.quantity,
+          salePrice: trade.exitPrice || trade.currentPrice || trade.entryPrice,
+          currentPrice: trade.exitPrice || trade.currentPrice || trade.entryPrice,
+          orderNote,
+          idempotencyKey: `legacy-close:${trade.id}`,
+          executionMode: trade.closeExecutionMode || trade.executionMode || "paper",
+          executionProvider: trade.closeExecutionProvider || trade.executionProvider || null,
+        });
+      }
+    }
+
     res.json({
       ok: true,
       trade,
@@ -5118,6 +5697,74 @@ app.post("/api/trades/:tradeId/close", requireAuth, async (req, res) => {
   }
 });
 
+app.get("/api/assets/:assetId/valuation", requireAuth, async (req, res) => {
+  try {
+    const valuation = await getValuationService().getValuation(req.params.assetId);
+    if (!valuation) {
+      res.status(404).json({ ok: false, error: "valuation_not_found" });
+      return;
+    }
+    res.json({ ok: true, valuation });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.code || error.message || "valuation_read_failed" });
+  }
+});
+
+app.get("/api/assets/:assetId/valuations", requireAuth, async (req, res) => {
+  try {
+    const valuations = await getValuationService().getValuationHistory(req.params.assetId);
+    res.json({ ok: true, valuations });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.code || error.message || "valuation_history_failed" });
+  }
+});
+
+app.get("/api/assets/:assetId/brick-alpha", requireAuth, async (req, res) => {
+  try {
+    const assessment = await getValuationService().getAssessment(req.params.assetId);
+    if (!assessment) {
+      res.status(404).json({ ok: false, error: "brick_alpha_assessment_not_found" });
+      return;
+    }
+    res.json({ ok: true, assessment });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.code || error.message || "brick_alpha_read_failed" });
+  }
+});
+
+app.get("/api/assets/:assetId/brick-alpha/history", requireAuth, async (req, res) => {
+  try {
+    const assessments = await getValuationService().getAssessmentHistory(req.params.assetId);
+    res.json({ ok: true, assessments });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.code || error.message || "brick_alpha_history_failed" });
+  }
+});
+
+app.post("/api/assets/:assetId/valuation/recalculate", requireAuth, async (req, res) => {
+  const assetId = String(req.params.assetId || "").trim();
+  if (!assetId || assetId.length > 128) {
+    res.status(400).json({ ok: false, error: "invalid_asset_id" });
+    return;
+  }
+  try {
+    const outcome = await getValuationService().recalculate({
+      assetId,
+      asset: (req.body && typeof req.body === "object" && req.body.asset) || {},
+      observedAt: req.body?.observedAt || null,
+      asOf: req.body?.asOf || null,
+      evidenceInputs: Array.isArray(req.body?.evidence) ? req.body.evidence : null,
+    });
+    if (!outcome.created) {
+      res.status(409).json({ ok: false, error: "valuation_unavailable", modelVersion: outcome.modelVersion, providers: outcome.providers, reason: outcome.reason });
+      return;
+    }
+    res.status(201).json({ ok: true, status: outcome.status, modelVersion: outcome.modelVersion, providers: outcome.providers, valuation: outcome.valuation, assessment: outcome.assessment });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.code || error.message || "valuation_recalculate_failed" });
+  }
+});
+
 app.get("/api/settings", requireAuth, (req, res) => {
   res.json({
     ok: true,
@@ -5125,18 +5772,18 @@ app.get("/api/settings", requireAuth, (req, res) => {
   });
 });
 
-app.put("/api/settings", requireAuth, (req, res) => {
-  req.userState.settings = sanitizeSettings({
+app.put("/api/settings", requireAuth, authHandler(async req => {
+  const settings = sanitizeSettings({
     ...req.userState.settings,
     ...req.body,
   });
-  persistStore();
-
-  res.json({
+  await authService.setSettings(req.user.id, settings);
+  req.userState.settings = settings;
+  return {
     ok: true,
     settings: req.userState.settings,
-  });
-});
+  };
+}));
 
 app.get("/api/connectors", requireAuth, (req, res) => {
   res.json({
@@ -5325,6 +5972,163 @@ app.delete("/api/connectors/:providerId", requireAuth, (req, res) => {
   });
 });
 
+app.get("/api/connectors/:providerId/status", requireAuth, async (req, res) => {
+  const providerId = String(req.params.providerId || "").trim().toLowerCase();
+  const provider = CONNECTOR_PROVIDER_MAP[providerId];
+  if (!provider) {
+    res.status(404).json({ ok: false, error: "unknown_connector" });
+    return;
+  }
+
+  const connector = connectorStateForUser(req.userState, providerId);
+  const service = getConnectorService();
+
+  try {
+    if (service) {
+      const status = await service.status({
+        userId: req.userState.id,
+        providerId,
+        now: Date.now(),
+      });
+      res.json({ ok: true, status });
+      return;
+    }
+
+    res.json({
+      ok: true,
+      status: {
+        provider: providerId,
+        name: provider.name,
+        desk: provider.desk,
+        availability: provider.availability,
+        supportsOrders: false,
+        configured: Boolean(connector.authBlob),
+        status: connector.status,
+        healthState:
+          connector.status === "online" ? "HEALTHY" : connector.lastError ? "DEGRADED" : "UNKNOWN",
+        freshness: connectorFreshnessForRecord(connector),
+        lastSyncAt: connector.lastSyncAt,
+        lastHealthCheckAt: null,
+        unavailableUntil: null,
+        lastError: connector.lastError,
+        snapshotCount: connector.accountSnapshot ? 1 : 0,
+        latestSnapshot: connector.accountSnapshot,
+      },
+    });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error?.message || "connector_status_failed" });
+  }
+});
+
+app.post("/api/connectors/:providerId/refresh", requireAuth, async (req, res) => {
+  const providerId = String(req.params.providerId || "").trim().toLowerCase();
+  const provider = CONNECTOR_PROVIDER_MAP[providerId];
+  if (!provider) {
+    res.status(404).json({ ok: false, error: "unknown_connector" });
+    return;
+  }
+  if (providerId !== "valr") {
+    res.status(400).json({ ok: false, error: "sync_not_supported" });
+    return;
+  }
+
+  const connector = connectorStateForUser(req.userState, providerId);
+  if (!Boolean(connector.authBlob)) {
+    res.status(400).json({ ok: false, error: "connector_not_configured" });
+    return;
+  }
+
+  const service = getConnectorService();
+  const jobRunner = getConnectorJobRunner();
+  const config = getConnectorConfig();
+
+  if (service && jobRunner && config.jobsEnabled) {
+    const idempotencyKey =
+      String(req.body?.idempotencyKey || "").trim() || crypto.randomUUID();
+    const job = await jobRunner.enqueue({
+      type: "connector_refresh",
+      provider: providerId,
+      idempotencyKey,
+      correlationId: req.userState.id,
+      payload: { userId: req.userState.id, providerId },
+    });
+    res.status(202).json({
+      ok: true,
+      queued: true,
+      duplicate: Boolean(job.duplicate),
+      job: {
+        id: job.id,
+        type: job.type,
+        status: job.status,
+        idempotencyKey: job.idempotencyKey,
+        runAt: job.runAt,
+      },
+      provider: buildConnectorView(providerId, connector),
+    });
+    return;
+  }
+
+  try {
+    if (service) {
+      const credentials = connectorCredentials(connector);
+      const result = await service.refreshSnapshot({
+        userId: req.userState.id,
+        providerId,
+        credentials,
+        record: connector,
+        force: Boolean(req.body?.force),
+      });
+      res.json({
+        ok: true,
+        status: result.skipped === "fresh" ? "fresh" : "refreshed",
+        freshness: result.freshness,
+        provider: buildConnectorView(providerId, connector),
+      });
+      return;
+    }
+
+    const result = await syncConnectorAccount(providerId, connector);
+    connector.status = result.status;
+    connector.lastTestAt = nowIso();
+    connector.lastSyncAt = nowIso();
+    connector.lastError = null;
+    connector.accountSnapshot = sanitizeAccountSnapshot(result.snapshot);
+    persistStore();
+
+    res.json({
+      ok: true,
+      status: "refreshed",
+      freshness: connectorFreshnessForRecord(connector),
+      provider: buildConnectorView(providerId, connector),
+    });
+  } catch (error) {
+    connector.status = connector.configured ? "error" : connectorBaselineStatus(providerId);
+    connector.lastSyncAt = nowIso();
+    connector.lastError = error.message;
+    persistStore();
+
+    res.status(400).json({
+      ok: false,
+      error: error.message || "connector_refresh_failed",
+      provider: buildConnectorView(providerId, connector),
+    });
+  }
+});
+
+app.get("/api/health/providers", requireAuth, async (req, res) => {
+  const service = getConnectorService();
+  try {
+    if (service) {
+      const providers = await service.fleetHealth({ now: Date.now() });
+      res.json({ ok: true, providers });
+      return;
+    }
+    res.json({ ok: true, providers: legacyConnectorHealthView() });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error?.message || "provider_health_failed" });
+  }
+});
+
 app.get("/api/news/targets", requireAuth, (req, res) => {
   res.json({
     ok: true,
@@ -5356,26 +6160,65 @@ if (fs.existsSync(FRONTEND_INDEX_FILE)) {
   });
 }
 
-engineTick();
-refreshMarketDataOnce().catch((error) => {
-  marketDataMeta.lastError = error.message;
-});
-refreshNewsOnce().catch((error) => {
-  newsMeta.lastError = error.message;
-});
+if (DISABLE_RUNTIME) {
+  engineTick();
+} else {
+  engineTick();
+  if (DEMO_MODE) {
+    seedDemoNews();
+  } else {
+    refreshMarketDataOnce().catch((error) => {
+      marketDataMeta.lastError = error.message;
+    });
+    refreshNewsOnce().catch((error) => {
+      newsMeta.lastError = error.message;
+    });
+  }
 
-setInterval(engineTick, ENGINE_TICK_MS);
-setInterval(() => {
-  refreshMarketDataOnce().catch((error) => {
-    marketDataMeta.lastError = error.message;
-  });
-}, MARKET_REFRESH_MS);
-setInterval(() => {
-  refreshNewsOnce().catch((error) => {
-    newsMeta.lastError = error.message;
-  });
-}, NEWS_REFRESH_MS);
+  setInterval(engineTick, ENGINE_TICK_MS);
+  if (!DEMO_MODE) {
+    setInterval(() => {
+      refreshMarketDataOnce().catch((error) => {
+        marketDataMeta.lastError = error.message;
+      });
+    }, MARKET_REFRESH_MS);
+    setInterval(() => {
+      refreshNewsOnce().catch((error) => {
+        newsMeta.lastError = error.message;
+      });
+    }, NEWS_REFRESH_MS);
+  }
 
-app.listen(PORT, () => {
-  console.log(`Brick Alpha API listening on ${PORT}`);
-});
+  app.listen(PORT, () => {
+    console.log(`Brick Alpha API listening on ${PORT}`);
+  });
+}
+
+module.exports = app;
+module.exports.app = app;
+
+if (process.env.COLLECTTRADE_TEST === "1") {
+  module.exports.__testSupport = {
+    getStoreSnapshot,
+    getUsers: () => users,
+    getUserState,
+    legacyStoreRepository,
+    authService,
+    authRepository,
+    financialConfig,
+    getPostgresFinancialService,
+    valuationConfig,
+    getValuationService,
+    getLegacyValuationService,
+    getPostgresValuationService,
+    getValuationProviderRegistry,
+    connectorConfig: getConnectorConfig,
+    getConnectorService,
+    getConnectorJobRunner,
+    loadStore,
+    persistStore,
+    resetStore: resetStoreForTests,
+    seedDemoUserState,
+    runEngineTick: engineTick,
+  };
+}

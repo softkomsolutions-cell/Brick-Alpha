@@ -8,6 +8,19 @@
     "build:client": "npm --prefix ../frontend run build",
     "start:staging": "npm run build:client && node server.js",
     "check": "node --check server.js",
+    "test": "node --test test",
+    "db:generate": "prisma generate",
+    "db:format": "prisma format",
+    "db:validate": "prisma validate",
+    "db:migrate:dev": "prisma migrate dev --name init_backend_foundation",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:legacy:inspect": "node scripts/inspect-legacy-store.js",
+    "db:financial:inspect": "node scripts/inspect-financial-store.js",
+    "db:financial:validate-staging": "node scripts/validate-staging-financial.js",
+    "db:auth:migrate": "node scripts/migrate-auth-users.js",
+    "db:auth:validate-staging": "node scripts/validate-staging-auth.js",
+    "db:connector:validate-staging": "node scripts/validate-staging-connectors-jobs.js",
+    "worker": "node worker.js",
     "catalog:import": "python import_catalog.py"
   },
   "keywords": [],
@@ -15,9 +28,16 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "^7.10.0",
     "cors": "^2.8.5",
     "express": "^5.2.1",
     "pdfkit": "^0.18.0",
+    "pg": "^8.23.0",
     "rss-parser": "^3.13.0"
+  },
+  "devDependencies": {
+    "prisma": "^7.10.0",
+    "supertest": "^7.2.2"
   }
 }

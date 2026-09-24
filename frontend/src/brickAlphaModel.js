@@ -401,6 +401,12 @@ export function enrichBrickAlphaCollectible(item, today = new Date()) {
     },
     today,
   );
+  const expectedRetirementMs = Date.parse(expectedRetirementDate);
+  const monthsUntilRetirement = actualRetirementDate
+    ? -1
+    : Number.isFinite(expectedRetirementMs)
+      ? (expectedRetirementMs - today.getTime()) / (MS_PER_DAY * 30)
+      : null;
   const demandForSet = numberOrZero(item.demandForSet ?? notes.demandForSet ?? 62);
   const supplyScarcity = numberOrZero(item.supplyScarcity ?? notes.supplyScarcity ?? 55);
   const liquidityScore = numberOrZero(
@@ -439,7 +445,9 @@ export function enrichBrickAlphaCollectible(item, today = new Date()) {
     expectedRetirementDate,
     actualRetirementDate,
     ...retirementOutlook,
+    monthsUntilRetirement,
     holdingPeriodDays,
+    holdingPeriodMonths,
     holdingPeriod: `${holdingPeriodMonths} months`,
     sellByTargetDate: item.sellByTargetDate || notes.sellByTargetDate || "2028-12-31",
     storeSource: item.storeSource || notes.storeSource || item.venue || "Tracked source",
@@ -502,6 +510,8 @@ export function enrichBrickAlphaTrade(trade, collectibleItems = [], allTrades = 
     buyPrice,
     quantityOwned,
     purchaseDate: trade.createdAt || base.purchaseDate,
+    expectedRetirementDate: trade.expectedRetirementDate || base.expectedRetirementDate,
+    actualRetirementDate: trade.actualRetirementDate || base.actualRetirementDate,
     currentMarketValue,
     estimatedRoi,
     realizedRoi: trade.status === "closed" ? numberOrZero(trade.pnl) : 0,
@@ -509,7 +519,10 @@ export function enrichBrickAlphaTrade(trade, collectibleItems = [], allTrades = 
     venue: trade.venue || base.venue || "Brick Alpha Paper",
     thesis: trade.note || base.thesis,
   });
-  const portfolioFit = portfolioFitFor(enrichedLikeItem, allTrades);
+  const decisionTrades = (allTrades || []).filter(
+    (candidate) => candidate?.collectionBook !== "full" && candidate?.curated !== false,
+  );
+  const portfolioFit = portfolioFitFor(enrichedLikeItem, decisionTrades);
   const brickAlphaScore = Math.round(
     enrichedLikeItem.brickAlphaScore -
       0.03 * numberOrZero(enrichedLikeItem.portfolioFit) +

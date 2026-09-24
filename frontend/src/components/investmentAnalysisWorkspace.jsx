@@ -10,6 +10,8 @@ import {
   summarizeBrickAlphaPortfolio,
 } from "../brickAlphaModel";
 import { formatCollectiblePrice, openExternal, positiveTone } from "../appUtils";
+import { presentResearchFields } from "../v3/decision/decisionModel";
+import { formatCanonicalValue, formatRecordedGrowth } from "../v3/valuation/valuationAuthority";
 import { EmptyState } from "./appShell";
 import { AlphaSignalBadges } from "./workspaceCards";
 import { InvestmentAnalysisChart } from "./investmentAnalysisChart";
@@ -203,11 +205,13 @@ export function InvestmentAnalysisWorkspace({
   collectibles,
   handleCollectibleSelect,
   jumpToPageSection,
+  onAddToWatchlist,
   openCollectibleTicket,
   openTrades,
 }) {
   const [chartHorizon, setChartHorizon] = useState(3);
   const [forecastHorizon, setForecastHorizon] = useState(3);
+  const [watchlistAction, setWatchlistAction] = useState("");
 
   const legoSets = useMemo(
     () => collectibles.filter((item) => item.brand === "LEGO"),
@@ -287,6 +291,19 @@ export function InvestmentAnalysisWorkspace({
   const productionStart = productionStartDate(item);
   const todayLabel = new Date().toISOString().slice(0, 10);
 
+  const handleAddToWatchlist = () => {
+    if (onAddToWatchlist) {
+      onAddToWatchlist({
+        ticker: extractSetNumber(item),
+        label: item.name,
+        desk: "collectible",
+      });
+      setWatchlistAction(`${item.name} added to watchlist.`);
+    } else {
+      setWatchlistAction("Sign in to sync watchlist items.");
+    }
+  };
+
   return (
     <section className="iaWorkspace" id="investment-analysis">
       {legoSets.length > 1 ? (
@@ -342,7 +359,7 @@ export function InvestmentAnalysisWorkspace({
             <div className="iaHeroMetric">
               <span>Recommendation</span>
               <strong className={`iaRecommendation iaRecommendation-${recommendationTone(item.recommendation)}`}>
-                {displayRecommendation(item.recommendation)}
+                {item.brand === "LEGO" ? presentResearchFields(item).verdictLabel : displayRecommendation(item.recommendation)}
               </strong>
             </div>
             <div className="iaHeroMetric">
@@ -351,7 +368,16 @@ export function InvestmentAnalysisWorkspace({
             </div>
             <div className="iaHeroMetric">
               <span>Current Value</span>
-              <strong>{formatCollectiblePrice(item.currentMarketValue)}</strong>
+              <strong>{formatCanonicalValue(presentResearchFields(item).currentMarketValue)}</strong>
+              <small>{presentResearchFields(item).source}</small>
+            </div>
+            <div className="iaHeroMetric">
+              <span>Annual growth</span>
+              <strong>{formatRecordedGrowth(presentResearchFields(item).annualGrowth)}</strong>
+            </div>
+            <div className="iaHeroMetric">
+              <span>90-day growth</span>
+              <strong>{formatRecordedGrowth(presentResearchFields(item).ninetyDayGrowth)}</strong>
             </div>
             <div className="iaHeroMetric">
               <span>Retail Price</span>
@@ -380,7 +406,7 @@ export function InvestmentAnalysisWorkspace({
             <button
               type="button"
               className="ghostButton"
-              onClick={() => jumpToPageSection("collectibles", "collectibles-grid")}
+              onClick={handleAddToWatchlist}
             >
               Add to Watchlist
             </button>
@@ -388,6 +414,7 @@ export function InvestmentAnalysisWorkspace({
               View BrickEconomy
             </button>
           </div>
+          {watchlistAction ? <p className="iaHeroActionNote">{watchlistAction}</p> : null}
         </div>
       </header>
 
@@ -520,7 +547,11 @@ export function InvestmentAnalysisWorkspace({
           </div>
           <div>
             <span>Est. Retirement Pop</span>
-            <strong>{Math.round(180000 - item.supplyScarcity * 850)}</strong>
+            <strong>
+              {formatCollectiblePrice(
+                Math.round((Number(item.currentMarketValue) || 0) * (1 + (Number(item.projectedRoi) || 28) / 100)),
+              )}
+            </strong>
           </div>
         </div>
       </article>
@@ -575,8 +606,8 @@ export function InvestmentAnalysisWorkspace({
         <article className="iaGlassCard">
           <div className="iaSectionHeader iaSectionHeader-row">
             <div>
-              <span className="executiveDashboardEyebrow">Price Forecast</span>
-              <h2>AI Forecast</h2>
+              <span className="executiveDashboardEyebrow">Non-canonical</span>
+              <h2>Illustrative outlook</h2>
             </div>
             <div className="iaHorizonToggle" role="tablist" aria-label="Forecast horizon">
               {HORIZON_OPTIONS.map((years) => (
@@ -591,6 +622,7 @@ export function InvestmentAnalysisWorkspace({
               ))}
             </div>
           </div>
+          <p>Illustrative only. These figures do not set the verdict, the BrickEconomy value, or recorded growth.</p>
           {forecast ? (
             <div className="iaForecastGrid">
               <div>

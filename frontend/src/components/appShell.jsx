@@ -163,6 +163,8 @@ export function SaasTopNav({
   onOpenFeedback,
   onLogout,
   userInitial,
+  hideMarketStatus = false,
+  searchLabel = "Search workspaces...",
 }) {
   return (
     <header className="saasTopNav">
@@ -178,12 +180,14 @@ export function SaasTopNav({
           <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.5" />
           <path d="M11 11L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
         </svg>
-        Search workspaces...
+        {searchLabel}
         <kbd>⌘K</kbd>
       </button>
 
       <div className="saasTopNavActions">
-        <div className={`saasTopNavPill live ${feedModeTone || ""}`}>{feedMode}</div>
+        {hideMarketStatus ? null : (
+          <div className={`saasTopNavPill live ${feedModeTone || ""}`}>{feedMode}</div>
+        )}
 
         <button
           type="button"
@@ -699,7 +703,7 @@ export function LandingShell({ initialLaunch, onContinue, onDemo, demoBusy = fal
                   }
                   disabled={demoBusy}
                 >
-                  {demoBusy ? "Opening Demo..." : "Explore Live Demo"}
+                  {demoBusy ? "Opening Demo..." : "Enter Demo"}
                 </button>
               ) : null}
             </div>
@@ -898,7 +902,7 @@ export function LandingShell({ initialLaunch, onContinue, onDemo, demoBusy = fal
               }
               disabled={demoBusy}
             >
-              {demoBusy ? "Opening Demo..." : "Explore Live Demo"}
+              {demoBusy ? "Opening Demo..." : "Enter Demo"}
             </button>
           ) : null}
         </div>
@@ -1138,7 +1142,7 @@ export function AuthShell({
                 </button>
                 {onDemo ? (
                   <button type="button" className="secondaryButton" onClick={onDemo} disabled={demoBusy}>
-                    {demoBusy ? "Opening demo..." : "Explore demo"}
+                    {demoBusy ? "Opening demo..." : "Enter Demo"}
                   </button>
                 ) : null}
               </form>

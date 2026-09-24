@@ -1,0 +1,31 @@
+name: Backend production upgrade validation
+
+on:
+  push:
+    branches:
+      - feature/backend-production-upgrade
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            server/package-lock.json
+            frontend/package-lock.json
+      - name: Install server dependencies
+        run: npm --prefix server ci
+      - name: Install frontend dependencies
+        run: npm --prefix frontend ci
+      - name: Generate Prisma client
+        run: npm --prefix server run db:generate
+      - name: Validate Prisma schema
+        run: npm --prefix server run db:validate
+      - name: Full regression check
+        run: npm run check:full

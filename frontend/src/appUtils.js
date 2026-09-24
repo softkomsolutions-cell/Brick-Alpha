@@ -11,10 +11,17 @@ import {
   ORDER_TICKET_PRESETS,
   VALR_PAIR_OPTIONS,
 } from "./appConfig";
+import { V3_KNOWN_PAGES, canonicalPage, v3WorkspaceLabel } from "./v3/v3Nav";
 
 export function normalizePage(page) {
-  const candidate = String(page || "").trim().toLowerCase();
-  return NAV_ITEMS.some((item) => item.id === candidate) ? candidate : DEFAULT_PAGE;
+  const candidate = canonicalPage(page);
+  if (V3_KNOWN_PAGES.includes(candidate)) {
+    return candidate;
+  }
+  if (NAV_ITEMS.some((item) => item.id === candidate)) {
+    return candidate;
+  }
+  return DEFAULT_PAGE;
 }
 
 export function normalizeDesk(desk) {
@@ -45,86 +52,64 @@ export function labelDesk(desk) {
 }
 
 export function workspaceLabel(page, _desk) {
-  if (page === "home") {
-    return "Executive Dashboard";
-  }
-
-  if (page === "collectibles") {
-    return "LEGO Investments";
-  }
-
-  if (page === "scan-evaluate") {
-    return "Scan & Evaluate";
-  }
-
-  if (page === "subscriptions") {
-    return "Subscriptions";
-  }
-
-  return NAV_ITEMS.find((item) => item.id === page)?.label || "Workspace";
+  return v3WorkspaceLabel(page);
 }
 
 export function defaultIntroIdForPage(page) {
-  if (page === "home") {
+  const id = normalizePage(page);
+  if (id === "home") {
     return "home";
   }
-
-  if (page === "scan-evaluate") {
-    return "scan-evaluate";
+  if (id === "scan") {
+    return "scan";
   }
-
-  if (page === "collectibles") {
-    return "collectibles";
+  if (id === "research") {
+    return "research";
   }
-
-  if (page === "portfolio") {
-    return "portfolio";
+  if (id === "collection") {
+    return "collection";
   }
-
-  if (page === "subscriptions") {
+  if (id === "exits") {
+    return "exits";
+  }
+  if (id === "subscriptions") {
     return "subscriptions";
   }
-
-  if (page === "settings") {
+  if (id === "settings") {
     return "settings";
   }
-
-  return "collectibles";
+  return "research";
 }
 
 export function defaultSectionIdForIntro(page, _introId) {
-  if (page === "home") {
-    return "home-overview";
+  const id = normalizePage(page);
+  if (id === "home") {
+    return "home-dashboard";
   }
-
-  if (page === "collectibles") {
+  if (id === "research") {
     return "investment-analysis";
   }
-
-  if (page === "scan-evaluate") {
+  if (id === "scan") {
     return "scan-evaluate";
   }
-
-  if (page === "portfolio") {
+  if (id === "collection") {
     return "open-positions";
   }
-
-  if (page === "subscriptions") {
+  if (id === "exits") {
+    return "exits-overview";
+  }
+  if (id === "subscriptions") {
     return "subscriptions-overview";
   }
-
-  if (page === "settings") {
+  if (id === "settings") {
     return "news-region";
   }
-
-  if (page === "tools") {
+  if (id === "tools") {
     return "tools-workbench";
   }
-
-  if (page === "connections") {
+  if (id === "connections") {
     return "connections-overview";
   }
-
   return null;
 }
 
@@ -241,7 +226,16 @@ export function normalizeAppSettings(input) {
         celebrationEnabled: input?.routinePreferences?.celebrationEnabled !== false,
       },
       executionProfiles: normalizeExecutionProfiles(input?.executionProfiles),
+      usdZarRate: sanitizeUsdZarRate(input?.usdZarRate),
     };
+}
+
+function sanitizeUsdZarRate(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return 18.5;
+  }
+  return Math.round(numeric * 100) / 100;
 }
 
 export function formatDateTime(value, timeZone) {
@@ -293,11 +287,15 @@ export function formatTickerPrice(ticker, value) {
 }
 
 export function formatCollectiblePrice(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "Unavailable";
+  }
   return new Intl.NumberFormat("en-ZA", {
     style: "currency",
     currency: "ZAR",
     maximumFractionDigits: 0,
-  }).format(value);
+  }).format(numeric);
 }
 
 export function labelRegion(region) {

@@ -14,8 +14,8 @@ const checks = [
     expectJson: false,
     validate: async (response) => {
       const text = await response.text();
-      if (!text.includes("BRICKALPHA") && !text.includes("BrickAlpha")) {
-        throw new Error("Root page did not contain BrickAlpha shell markup.");
+      if (!text.includes("<title>Brick Alpha</title>")) {
+        throw new Error("Root page did not contain the Brick Alpha document title.");
       }
       return "App shell responded";
     },

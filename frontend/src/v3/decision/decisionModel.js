@@ -1,0 +1,340 @@
+import { confidenceFor, buildBrickAlphaScoreBreakdown, letterGradeFor } from "../../brickAlphaModel";
+import {
+  PREMIUM_COMPARABLES,
+  buildMarketPricing,
+  riskLabel,
+} from "../../scanEvaluationData";
+import { formatCollectiblePrice } from "../../appUtils";
+import {
+  buildCanonicalValuation,
+  canonicalMarketValue,
+  formatCanonicalValue,
+  formatRecordedGrowth,
+  recordedGrowth,
+} from "../valuation/valuationAuthority";
+import { buildCanonicalRetirement, CANONICAL_AS_OF } from "../retirement/retirementModel";
+import { personaliseRecommendation } from "../personalisation/personalisationModel";
+
+const CHANNELS = [
+  { id: "private", label: "Private sale", feeRate: 0.05 },
+  { id: "marketplace", label: "Marketplace", feeRate: 0.12 },
+  { id: "auction", label: "Auction", feeRate: 0.15 },
+];
+
+function numberOrZero(value) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : 0;
+}
+
+function setNumberOf(evaluation) {
+  if (evaluation?.sku) {
+    return String(evaluation.sku);
+  }
+  const match = String(evaluation?.id || "").match(/(\d{4,6})/);
+  return match ? match[1] : "";
+}
+
+export function mapVerdictVocabulary(evaluation) {
+  const recommendation = String(evaluation?.recommendation || "");
+  const score = numberOrZero(evaluation?.brickAlphaScore);
+  const current = canonicalMarketValue(evaluation).value ?? 0;
+  const retail = numberOrZero(evaluation?.retailPrice);
+  const discount = numberOrZero(evaluation?.discountPercentage);
+  const ceiling = retail > 0 ? retail : current;
+  const target = Math.round(ceiling * (discount > 5 ? 1 : 0.9));
+
+  if (recommendation === "Avoid" || recommendation === "Sell" || score < 55) {
+    return { id: "skip", label: "Skip", quantity: 0, targetPrice: target };
+  }
+
+  if (recommendation === "Strong Buy" || score >= 88) {
+    return { id: "buy-2", label: "Buy ×2 flywheel", quantity: 2, targetPrice: target };
+  }
+
+  if (recommendation === "Buy" || score >= 72) {
+    return { id: "buy-1", label: "Buy ×1", quantity: 1, targetPrice: target };
+  }
+
+  return {
+    id: "below",
+    label: `Only below ${formatCollectiblePrice(target)}`,
+    quantity: 1,
+    targetPrice: target,
+  };
+}
+
+export function buildNetExitChannels(currentValue) {
+  const value = numberOrZero(currentValue);
+  const priced = currentValue != null && value > 0;
+  return CHANNELS.map((channel) => ({
+    ...channel,
+    net: priced ? Math.round(value * (1 - channel.feeRate)) : null,
+    feePercent: Math.round(channel.feeRate * 100),
+  }));
+}
+
+function factor(id, title, score, summary, detail) {
+  return {
+    id,
+    title,
+    score: Math.round(numberOrZero(score)),
+    summary,
+    detail,
+  };
+}
+
+export function buildNineFactors(evaluation, extras = {}) {
+  const verdict = extras.verdict || mapVerdictVocabulary(evaluation);
+  const retirement = extras.retirement || buildCanonicalRetirement(evaluation);
+  const minifigCount = evaluation?.numberOfMinifigures || extras.profile?.minifigures || "—";
+  const reprintRisk = Math.max(
+    0,
+    100 - numberOrZero(evaluation?.supplyScarcity || numberOrZero(evaluation?.exclusiveMinifigures) * 12),
+  );
+  const probability =
+    retirement.retirementProbability == null ? "—" : `${retirement.retirementProbability}%`;
+  const months = retirement.monthsRemaining;
+  const growth = recordedGrowth(evaluation);
+
+  return [
+    factor(
+      "time-on-market",
+      "Time on market",
+      evaluation?.historicalPerformance,
+      extras.profile?.brickEconomyStatus || "Tracked on the secondary market",
+      "How long sealed supply has been trading, and whether comps are still liquid.",
+    ),
+    factor(
+      "theme-strength",
+      "Theme strength",
+      evaluation?.themeStrength,
+      evaluation?.legoTheme || extras.profile?.theme || "Theme",
+      "Collector demand for the theme behind this set.",
+    ),
+    factor(
+      "time-to-retirement",
+      "Time to retirement",
+      evaluation?.retirementTimeline,
+      months != null && months > 0 ? `${months} months · ${retirement.status}` : retirement.status,
+      `Expected retirement ${retirement.expectedRetirement}. Probability ${probability}.`,
+    ),
+    factor(
+      "minifig-value",
+      "Minifig value to set price",
+      evaluation?.minifigureQuality,
+      `${minifigCount} minifigures`,
+      "Share of set value explained by minifigures and exclusive figures.",
+    ),
+    factor(
+      "reprint-risk",
+      "Reprint risk",
+      reprintRisk,
+      numberOrZero(evaluation?.exclusiveMinifigures) >= 2 ? "Low reprint pressure" : "Watch for a reprint",
+      "Higher exclusivity and scarcity lower the chance a reprint resets the thesis.",
+    ),
+    factor(
+      "retirement-pop",
+      "Retirement pop",
+      growth.annualPercent == null ? 50 : Math.max(0, Math.min(100, 50 + growth.annualPercent)),
+      growth.annualPercent == null ? "Insufficient history" : formatRecordedGrowth(growth.annualPercent),
+      "Recorded valuation history only. A 1-year, 5-year, or 10-year forecast is not a decision input.",
+    ),
+    factor(
+      "how-many",
+      "How many to buy",
+      verdict.quantity ? 70 + verdict.quantity * 10 : 30,
+      verdict.quantity ? `${verdict.quantity} unit${verdict.quantity === 1 ? "" : "s"}` : "None",
+      verdict.label,
+    ),
+    factor(
+      "when-to-sell",
+      "When to sell one unit",
+      evaluation?.liquidityScore,
+      months != null && months > 0 ? `After retirement, about ${months} months out` : "Supply is already tight",
+      "Sell one unit into the retirement window and keep a second only when the flywheel verdict applies.",
+    ),
+    factor(
+      "recycle-cash",
+      "Recycle the cash",
+      evaluation?.portfolioFit,
+      "Redeploy proceeds into the next Buy ×1 or Buy ×2 set",
+      "Exit proceeds should fund the next high-conviction set rather than sit idle.",
+    ),
+  ];
+}
+
+export function buildThesisChecklist(evaluation, verdict, retirement) {
+  const signals = Array.isArray(evaluation?.alphaSignals) ? evaluation.alphaSignals : [];
+  const fromSignals = signals.slice(0, 4).map((signal) => signal.label || signal.title || String(signal));
+  const retirementState = retirement?.retirementState || evaluation?.retirementStatus || "";
+  const checklist = [
+    verdict.label,
+    retirementState ? `Retirement: ${retirementState}` : null,
+    numberOrZero(evaluation?.discountPercentage) > 0
+      ? `${numberOrZero(evaluation.discountPercentage).toFixed(0)}% below retail`
+      : "Pricing is at or above retail",
+    ...fromSignals,
+  ].filter(Boolean);
+  return checklist.slice(0, 5);
+}
+
+function holdLabel(value) {
+  if (value === "short") return "short hold";
+  if (value === "long") return "long hold";
+  if (value === "medium") return "medium hold (2–5 years)";
+  return "";
+}
+
+export function buildBookAdvisor({ theme, verdict, personalisation, profile }) {
+  if (!personalisation?.verdict) {
+    return null;
+  }
+  const share = Number.isFinite(Number(personalisation.themeShare))
+    ? Number(personalisation.themeShare)
+    : 0;
+  const cap = personalisation.themeCap;
+  const bookLabel = personalisation.verdict.label;
+  const reasons = Array.isArray(personalisation.reasons) ? personalisation.reasons.filter(Boolean) : [];
+  const lines = [
+    `${theme || "This theme"} exposure is ${share.toFixed(1)}% of owned value. Configured cap ${cap}%.`,
+    `For your book: ${bookLabel}.`,
+  ];
+  if (bookLabel === verdict.label) {
+    lines.push(`The book action matches the base set verdict ${verdict.label}.`);
+  } else {
+    lines.push(
+      `The base set verdict stays ${verdict.label}. The book action differs because ${
+        reasons.length ? reasons.join(". ") : "the buying profile changes the quantity"
+      }.`,
+    );
+  }
+  const budget = profile?.budgetPerSet;
+  if (budget != null && budget !== "" && Number(budget) > 0) {
+    lines.push(`Budget per set ${formatCanonicalValue(Number(budget))}.`);
+  }
+  const hold = holdLabel(profile?.holdPeriod);
+  if (hold) {
+    lines.push(`Hold preference: ${hold}.`);
+  }
+  if (profile?.riskTolerance) {
+    lines.push(`Risk posture: ${profile.riskTolerance}.`);
+  }
+  return { heading: "Your book", lines };
+}
+
+export function buildCanonicalAdvisor({
+  name,
+  theme,
+  verdict,
+  valuation,
+  retirement,
+  personalisation,
+  profile,
+}) {
+  const annual =
+    valuation.annualGrowth == null ? "Insufficient history" : formatRecordedGrowth(valuation.annualGrowth);
+  const ninety =
+    valuation.ninetyDayGrowth == null ? "Insufficient history" : formatRecordedGrowth(valuation.ninetyDayGrowth);
+  const months =
+    retirement?.monthsRemaining != null &&
+    Number.isFinite(Number(retirement.monthsRemaining)) &&
+    Number(retirement.monthsRemaining) > 0
+      ? ` · ${retirement.monthsRemaining} months`
+      : "";
+  return {
+    lead: `${name} is ${verdict.label} from the BrickEconomy value and the recorded set evidence.`,
+    bullets: [
+      `Current market value ${formatCanonicalValue(valuation.currentMarketValue)}. Source ${valuation.source}.`,
+      `Annual growth ${annual}. 90-day growth ${ninety}.`,
+      `Retirement ${retirement?.status || "Unavailable"}${months}.`,
+    ],
+    action: `Recommended action: ${verdict.label}. Forward forecasts are not part of this verdict.`,
+    book: buildBookAdvisor({ theme, verdict, personalisation, profile }),
+  };
+}
+
+export function presentResearchFields(item, asOf) {
+  const valuation = buildCanonicalValuation(item);
+  const verdict = mapVerdictVocabulary(item);
+  const retirement = buildCanonicalRetirement(item, asOf);
+  return {
+    ...valuation,
+    verdictLabel: verdict.label,
+    retirementStatus: retirement.retirementState,
+    monthsRemaining: retirement.monthsRemaining,
+  };
+}
+
+export function buildDecisionSnapshot({
+  evaluation,
+  imageUrl = "",
+  profile = null,
+  buyingProfile = null,
+  openTrades = [],
+  closedTrades = [],
+  analyzedAt = CANONICAL_AS_OF,
+}) {
+  const frozen = JSON.parse(JSON.stringify(evaluation || {}));
+  const retirement = buildCanonicalRetirement(frozen, analyzedAt);
+  const verdict = mapVerdictVocabulary(frozen);
+  const valuation = buildCanonicalValuation(frozen);
+  const confidence = confidenceFor(frozen);
+  const breakdown = buildBrickAlphaScoreBreakdown(frozen);
+  const marketPricing = buildMarketPricing(frozen, profile);
+  const personalisation = personaliseRecommendation({
+    baseVerdict: verdict,
+    profile: buyingProfile || {},
+    theme: frozen.legoTheme || profile?.theme || "",
+    setNumber: setNumberOf(frozen),
+    currentValue: valuation.currentMarketValue,
+    riskScore: frozen.riskScore,
+    retirement,
+    openTrades,
+    closedTrades,
+  });
+
+  return {
+    analyzedAt,
+    setNumber: setNumberOf(frozen),
+    imageUrl: imageUrl || profile?.imageUrl || "",
+    name: frozen.name || profile?.name || "LEGO set",
+    theme: frozen.legoTheme || profile?.theme || "",
+    collectibleId: frozen.id,
+    currentValue: valuation.currentMarketValue,
+    valuationSource: valuation.source,
+    valuationAuthoritative: valuation.authoritative,
+    valuationDate: valuation.valuationDate,
+    annualGrowth: valuation.annualGrowth,
+    growth90Day: valuation.ninetyDayGrowth,
+    annualGrowthLabel: valuation.annualGrowthLabel,
+    ninetyDayGrowthLabel: valuation.ninetyDayGrowthLabel,
+    provenance: valuation.provenance,
+    retailPrice: numberOrZero(frozen.retailPrice),
+    score: Math.round(numberOrZero(frozen.brickAlphaScore)),
+    grade: letterGradeFor(frozen.brickAlphaScore),
+    investmentGrade: frozen.investmentGrade || "",
+    verdict,
+    personalisation,
+    confidence,
+    risk: riskLabel(frozen.riskScore),
+    riskScore: Math.round(numberOrZero(frozen.riskScore)),
+    thesis: buildThesisChecklist(frozen, verdict, retirement),
+    retirement,
+    netExits: buildNetExitChannels(valuation.currentMarketValue),
+    factors: buildNineFactors(frozen, { verdict, retirement, profile }),
+    breakdown,
+    marketPricing,
+    aiSummary: buildCanonicalAdvisor({
+      name: frozen.name || profile?.name || "LEGO set",
+      theme: frozen.legoTheme || profile?.theme || "",
+      verdict,
+      valuation,
+      retirement,
+      personalisation,
+      profile: buyingProfile || {},
+    }),
+    comparables: PREMIUM_COMPARABLES,
+    drivers: Array.isArray(breakdown?.displayGroups) ? breakdown.displayGroups : [],
+    evaluation: frozen,
+  };
+}
