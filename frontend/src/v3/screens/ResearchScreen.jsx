@@ -31,7 +31,17 @@ function Card({ card, watching, onOpen, onWatch }) {
     <article className="v3ResearchCard">
       <button type="button" className="v3ResearchOpen" onClick={() => onOpen(card)}>
         {card.imageUrl ? (
-          <img src={card.imageUrl} alt="" className="v3DecisionImage" />
+          <img
+            src={card.imageUrl}
+            alt={`${card.name} LEGO set`}
+            className="v3DecisionImage"
+            loading="lazy"
+            onError={(event) => {
+              event.currentTarget.style.display = "none";
+              event.currentTarget.nextElementSibling?.removeAttribute("hidden");
+            }}
+          />
+          <div hidden className="v3DecisionImage v3DecisionImageFallback">#{card.setNumber}</div>
         ) : (
           <div className="v3DecisionImage v3DecisionImageFallback">#{card.setNumber}</div>
         )}
@@ -42,9 +52,9 @@ function Card({ card, watching, onOpen, onWatch }) {
         </div>
       </button>
       <dl className="v3ResearchFacts">
-        <div><dt>Value</dt><dd>{card.currentMarketValue == null ? "No recorded value" : formatCollectiblePrice(card.currentMarketValue)}</dd></div>
-        <div><dt>Annual</dt><dd>{card.annualLabel}</dd></div>
-        <div><dt>90-day</dt><dd>{card.ninetyLabel}</dd></div>
+        <div><dt>Value</dt><dd>{card.currentMarketValue == null ? "Unavailable" : formatCollectiblePrice(card.currentMarketValue)}</dd></div>
+        <div><dt>Annual</dt><dd className={card.annualGrowth == null ? "isUnavailable" : ""}>{card.annualGrowth == null ? "Not recorded" : card.annualLabel}</dd></div>
+        <div><dt>90-day</dt><dd className={card.ninetyDayGrowth == null ? "isUnavailable" : ""}>{card.ninetyDayGrowth == null ? "Not recorded" : card.ninetyLabel}</dd></div>
         <div><dt>Retirement</dt><dd>{card.retirement.retirementState}</dd></div>
         <div><dt>Verdict</dt><dd>{card.verdict.label}</dd></div>
         <div><dt>Confidence</dt><dd>{card.confidence == null ? "—" : `${card.confidence}%`}</dd></div>
