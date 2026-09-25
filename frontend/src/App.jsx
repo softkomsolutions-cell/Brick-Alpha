@@ -3105,7 +3105,15 @@ export default function App() {
         />
       ) : null}
 
-      {page === "exits" ? (
+      {page === "data-sources" ? (
+  <DataSourcesScreen
+    authToken={authToken}
+    requestJson={requestJson}
+    onImported={refreshContext}
+  />
+) : null}
+
+{page === "exits" ? (
         <ExitsScreen
           openTrades={openTrades}
           closedTrades={closedTrades}
