@@ -1252,3 +1252,24 @@
  .v3AppShell .v3PortfolioKpis { grid-template-columns:1fr 1fr; }
  .v3AppShell .v3Home .v3AttentionList { grid-template-columns:1fr; }
 }
+
+/* Data Sources — owner data in, market valuation separate. */
+.v3AppShell .v3DataSources{width:min(100%,1120px);margin-inline:auto;display:grid;gap:18px}
+.v3AppShell .v3DataSourceGrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.v3AppShell .v3SourceStatus{padding:6px 10px;border-radius:999px;background:#f1efe9;color:var(--ba-ink-secondary,#4a4f5a);font-size:12px;font-weight:700}
+.v3AppShell .v3SourceStatus.isConnected{background:#e8f5ed;color:var(--ba-gain,#16794a)}
+.v3AppShell .v3SourceConnect,.v3AppShell .v3SourceMeta{display:grid;gap:10px;margin-top:16px}
+.v3AppShell .v3SourceConnect label{display:grid;gap:7px;font-size:12px;font-weight:700}
+.v3AppShell .v3SourceConnect input{min-height:44px;border:1px solid var(--ba-line,#e4e2dc);border-radius:10px;padding:0 12px;background:#fff;color:var(--ba-ink,#15171c)}
+.v3AppShell .v3SourceMeta{grid-template-columns:auto 1fr;align-items:center;padding:12px;border-radius:12px;background:#fbfaf7;font-size:12px}
+.v3AppShell .v3ImportFields{display:grid;gap:5px;margin:14px 0;padding:12px;border-radius:12px;background:#fbfaf7;font-size:12px}
+.v3AppShell .v3FileDrop{display:flex;align-items:center;justify-content:center;min-height:92px;margin:12px 0;border:1.5px dashed #b8b5ad;border-radius:14px;background:#fff;font-weight:700;cursor:pointer}
+.v3AppShell .v3FileDrop input{position:absolute;opacity:0;pointer-events:none}
+.v3AppShell .v3ImportTable{overflow:auto;border:1px solid var(--ba-line,#e4e2dc);border-radius:12px}
+.v3AppShell .v3ImportTable>div{display:grid;grid-template-columns:1fr .45fr 1fr .8fr 2fr;gap:12px;align-items:center;min-width:720px;padding:11px 14px;border-top:1px solid #efede7;font-size:12px}
+.v3AppShell .v3ImportTable .v3ImportHead{border-top:0;background:#fbfaf7;color:var(--ba-ink-secondary,#4a4f5a);font-weight:700}
+.v3AppShell .v3ImportTable .isInvalid{background:#fff5f3;color:var(--ba-loss,#b42318)}
+.v3AppShell .v3ImportActions{display:flex;align-items:center;gap:14px;margin-top:14px}
+.v3AppShell .v3ImportActions span,.v3AppShell .v3SourceNotice{font-size:12px;color:var(--ba-ink-secondary,#4a4f5a)}
+.v3AppShell .v3SourceNotice{padding:12px 14px;border:1px solid var(--ba-line,#e4e2dc);border-radius:12px;background:#fff}
+@media(max-width:760px){.v3AppShell .v3DataSourceGrid{grid-template-columns:1fr}.v3AppShell .v3ImportActions{align-items:stretch;flex-direction:column}.v3AppShell .v3ImportActions button{width:100%}}
