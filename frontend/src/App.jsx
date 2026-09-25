@@ -89,6 +89,9 @@ const ScanEvaluateScreen = lazyNamedExport(
 const CollectionScreen = lazy(() =>
   import("./v3/screens/CollectionScreen").then((module) => ({ default: module.CollectionScreen })),
 );
+const PortfolioScreen = lazy(() =>
+  import("./v3/screens/PortfolioScreen").then((module) => ({ default: module.PortfolioScreen })),
+);
 const ReportsScreen = lazyNamedExport(
   () => import("./components/workspaceScreens"),
   "ReportsScreen",
@@ -3090,6 +3093,15 @@ export default function App() {
           openTrades={openTrades}
           collectibles={collectibles}
           navigateToPage={navigateToPage}
+        />
+      ) : null}
+
+      {page === "portfolio" ? (
+        <PortfolioScreen
+          appSettings={appSettings}
+          openTrades={openTrades}
+          closedTrades={closedTrades}
+          collectibles={collectibles}
         />
       ) : null}
 
