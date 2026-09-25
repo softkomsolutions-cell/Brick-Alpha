@@ -566,9 +566,23 @@ const DEMO_LEGO_SETS = [
   },
 ];
 
-const TRADEABLE_COLLECTIBLES_ACTIVE = DEMO_MODE
+const TRADEABLE_COLLECTIBLES_ACTIVE = (DEMO_MODE
   ? TRADEABLE_COLLECTIBLES.concat(DEMO_LEGO_SETS)
-  : TRADEABLE_COLLECTIBLES;
+  : TRADEABLE_COLLECTIBLES
+).map((item) => {
+  if (item.brand !== "LEGO") {
+    return item;
+  }
+  return {
+    ...item,
+    imageUrl:
+      item.imageUrl ||
+      (item.sku ? `https://images.brickset.com/sets/images/${item.sku}-1.jpg` : ""),
+    valuationDate:
+      item.valuationDate ||
+      (DEMO_MODE && item.currentMarketValue != null ? "2026-09-23" : undefined),
+  };
+});
 
 const OFFICIAL_COLLECTIBLE_REFERENCE_SHELVES = [
   {
