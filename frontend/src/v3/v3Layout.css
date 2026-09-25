@@ -1286,3 +1286,10 @@
 .v3AppShell .v3ResearchFacts dd.isUnavailable{color:#8a877f;font-size:11px;font-weight:600}
 .v3AppShell .v3ResearchCard>.ghostButton{margin-top:auto}
 @media(max-width:560px){.v3AppShell .v3ResearchOpen{grid-template-columns:92px minmax(0,1fr);min-height:92px}.v3AppShell .v3ResearchOpen .v3DecisionImage{width:92px;height:92px}}
+
+.v3AppShell .v3ResearchImageWrap{position:relative;display:block;width:118px;height:118px}
+.v3AppShell .v3ResearchImageWrap>.v3DecisionImage{position:relative;z-index:2}
+.v3AppShell .v3ResearchImageWrap>.v3DecisionImageFallback{display:none;width:118px;height:118px;align-items:center;justify-content:center;border:1px solid #ebe8e1;border-radius:12px;background:#f2f0ea;font-weight:800}
+.v3AppShell .v3ResearchImageWrap.imageFailed>img{display:none!important}
+.v3AppShell .v3ResearchImageWrap.imageFailed>.v3DecisionImageFallback{display:flex}
+@media(max-width:560px){.v3AppShell .v3ResearchImageWrap,.v3AppShell .v3ResearchImageWrap>.v3DecisionImageFallback{width:92px;height:92px}}
