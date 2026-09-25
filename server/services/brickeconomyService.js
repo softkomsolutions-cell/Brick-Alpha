@@ -5,11 +5,15 @@ const BRICKECONOMY_BASE_URL =
 const CACHE_TTL_MS = Number(process.env.BRICKECONOMY_CACHE_TTL_MS || 12 * 60 * 60 * 1000);
 const cache = new Map();
 
-function configured() {
-  return Boolean(process.env.BRICKECONOMY_API_KEY);
+function resolveApiKey(apiKey) {
+  return String(apiKey || process.env.BRICKECONOMY_API_KEY || "").trim();
 }
 
-async function getSet(setNum) {
+function configured(apiKey) {
+  return Boolean(resolveApiKey(apiKey));
+}
+
+async function getSet(setNum, apiKey = null) {
   const normalized = String(setNum || "").trim().split("-")[0];
   const cacheKey = `set:${normalized}`;
   const cached = cache.get(cacheKey);
@@ -18,7 +22,7 @@ async function getSet(setNum) {
   }
 
   const quota = rateLimits.canRequest("brickeconomy");
-  if (!configured()) {
+  const resolvedApiKey = resolveApiKey(apiKey);\n  if (!configured(resolvedApiKey)) {
     return { ok: false, reason: "credentials_not_configured", quota };
   }
   if (!quota.allowed) {
@@ -36,7 +40,7 @@ async function getSet(setNum) {
         headers: {
           Accept: "application/json",
           "User-Agent": "BrickAlpha-Beta/1.0",
-          "x-apikey": process.env.BRICKECONOMY_API_KEY,
+          "x-apikey": resolvedApiKey,
         },
         signal: AbortSignal.timeout(8000),
       },
@@ -78,9 +82,9 @@ async function getSet(setNum) {
   }
 }
 
-function status() {
+function status(apiKey = null) {
   return {
-    configured: configured(),
+    configured: configured(apiKey),
     source: "BrickEconomy",
     quota: rateLimits.canRequest("brickeconomy"),
   };
