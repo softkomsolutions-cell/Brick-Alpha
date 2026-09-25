@@ -5,6 +5,7 @@ export const V3_PAGE = {
   RESEARCH: "research",
   SCAN: "scan",
   COLLECTION: "collection",
+  PORTFOLIO: "portfolio",
   EXITS: "exits",
   VERDICT: "verdict",
   SET_ANALYSIS: "set-analysis",
@@ -65,6 +66,13 @@ export const V3_PRIMARY_NAV = [
     label: "Collection",
     glyph: "CL",
     hint: "Cost, value and performance",
+    section: "Primary",
+  },
+  {
+    id: V3_PAGE.PORTFOLIO,
+    label: "Portfolio",
+    glyph: "PF",
+    hint: "Performance, allocation and capital flow",
     section: "Primary",
   },
   {
