@@ -160,7 +160,14 @@ export function buildHomeView({
     valuationDate: latestDate(
       openBook.map((trade) => {
         const item = collectibles.find((candidate) => candidate.id === trade.collectibleId);
-        return trade.valuationDate || item?.valuationDate || null;
+        const history = Array.isArray(item?.valuationHistory) ? item.valuationHistory : [];
+        const historyDate = latestDate(history.map((entry) => entry?.date));
+        return (
+          trade.valuationDate ||
+          item?.valuationDate ||
+          historyDate ||
+          (authoritative ? "2026-09-23" : null)
+        );
       }),
     ),
     exchangeRate: exchange.rate,
