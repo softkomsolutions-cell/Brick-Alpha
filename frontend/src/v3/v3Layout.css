@@ -1273,3 +1273,16 @@
 .v3AppShell .v3ImportActions span,.v3AppShell .v3SourceNotice{font-size:12px;color:var(--ba-ink-secondary,#4a4f5a)}
 .v3AppShell .v3SourceNotice{padding:12px 14px;border:1px solid var(--ba-line,#e4e2dc);border-radius:12px;background:#fff}
 @media(max-width:760px){.v3AppShell .v3DataSourceGrid{grid-template-columns:1fr}.v3AppShell .v3ImportActions{align-items:stretch;flex-direction:column}.v3AppShell .v3ImportActions button{width:100%}}
+
+/* Final Research presentation */
+.v3AppShell .v3ResearchList{align-items:stretch}
+.v3AppShell .v3ResearchCard{overflow:hidden;display:flex;flex-direction:column;gap:12px;padding:14px}
+.v3AppShell .v3ResearchOpen{display:grid;grid-template-columns:118px minmax(0,1fr);gap:14px;align-items:center;width:100%;min-height:118px;padding:0;text-align:left}
+.v3AppShell .v3ResearchOpen .v3DecisionImage{width:118px;height:118px;object-fit:contain;padding:8px;border:1px solid #ebe8e1;border-radius:12px;background:#fff}
+.v3AppShell .v3ResearchOpen .v3DecisionImageFallback{display:flex;align-items:center;justify-content:center;background:#f2f0ea;font-weight:800}
+.v3AppShell .v3ResearchOpen strong{display:block;margin:5px 0 4px;font-size:15px;line-height:1.22}
+.v3AppShell .v3ResearchOpen small{color:var(--ba-ink-secondary,#4a4f5a)}
+.v3AppShell .v3ResearchFacts{margin:0;padding-top:10px;border-top:1px solid #efede7}
+.v3AppShell .v3ResearchFacts dd.isUnavailable{color:#8a877f;font-size:11px;font-weight:600}
+.v3AppShell .v3ResearchCard>.ghostButton{margin-top:auto}
+@media(max-width:560px){.v3AppShell .v3ResearchOpen{grid-template-columns:92px minmax(0,1fr);min-height:92px}.v3AppShell .v3ResearchOpen .v3DecisionImage{width:92px;height:92px}}
