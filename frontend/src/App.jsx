@@ -92,6 +92,9 @@ const CollectionScreen = lazy(() =>
 const PortfolioScreen = lazy(() =>
   import("./v3/screens/PortfolioScreen").then((module) => ({ default: module.PortfolioScreen })),
 );
+const DataSourcesScreen = lazy(() =>
+  import("./v3/screens/DataSourcesScreen").then((module) => ({ default: module.DataSourcesScreen })),
+);
 const ReportsScreen = lazyNamedExport(
   () => import("./components/workspaceScreens"),
   "ReportsScreen",
