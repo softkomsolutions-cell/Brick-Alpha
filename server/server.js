@@ -27,6 +27,7 @@ const { createPostgresConnectorRepository } = require('./repositories/postgresCo
 const { createConnectorProviderRegistry } = require('./services/connectors/providers');
 const { connectorFreshness } = require('./services/connectors/freshness');
 const { createJobRunner } = require('./services/job-runner');
+const brickeconomyService = require('./services/brickeconomyService');
 const authConfig = readAuthConfig();
 const authRateLimiter = createAuthRateLimiter();
 const financialConfig = readFinancialConfig();
@@ -1718,6 +1719,7 @@ function defaultUserState() {
     settings: sanitizeSettings(DEFAULT_SETTINGS),
     newsTargets: [...DEFAULT_TARGETS],
     connectors: defaultConnectorsState(),
+    dataSources: { brickeconomyAuthBlob: null, lastBrickeconomySyncAt: null },
   };
 }
 
@@ -1788,6 +1790,10 @@ function loadStore() {
               sanitizeConnectorRecord(provider.id, state?.connectors?.[provider.id]),
             ]),
           ),
+          dataSources: {
+            brickeconomyAuthBlob: state?.dataSources?.brickeconomyAuthBlob || null,
+            lastBrickeconomySyncAt: state?.dataSources?.lastBrickeconomySyncAt || null,
+          },
         },
       ]),
     );
@@ -5784,6 +5790,151 @@ app.put("/api/settings", requireAuth, authHandler(async req => {
     settings: req.userState.settings,
   };
 }));
+
+app.get("/api/data-sources", requireAuth, (req, res) => {
+  const source = req.userState.dataSources || {};
+  const credentials = decryptConnectorPayload(source.brickeconomyAuthBlob) || {};
+  res.json({
+    ok: true,
+    brickeconomy: {
+      configured: Boolean(credentials.apiKey),
+      apiKeyMasked: credentials.apiKey ? maskValue(credentials.apiKey) : "",
+      lastSyncAt: source.lastBrickeconomySyncAt || null,
+      role: "Canonical current LEGO valuation",
+    },
+    import: {
+      accepted: ["csv"],
+      columns: ["setNumber", "quantity", "purchasePrice", "purchaseDate", "condition", "retailer", "shipping", "vatReclaim", "rewards", "cashback", "vouchers"],
+    },
+  });
+});
+
+app.put("/api/data-sources/brickeconomy", requireAuth, async (req, res) => {
+  const apiKey = String(req.body?.apiKey || "").trim();
+  if (!apiKey) {
+    res.status(400).json({ ok: false, error: "brickeconomy_api_key_required" });
+    return;
+  }
+  const probe = await brickeconomyService.getSet("75367-1", apiKey, "ZAR");
+  if (!probe.ok) {
+    res.status(400).json({ ok: false, error: "brickeconomy_connection_failed", reason: probe.reason });
+    return;
+  }
+  req.userState.dataSources = {
+    ...(req.userState.dataSources || {}),
+    brickeconomyAuthBlob: encryptConnectorPayload({ apiKey }),
+  };
+  persistStore();
+  res.json({ ok: true, configured: true, apiKeyMasked: maskValue(apiKey), detail: "BrickEconomy connected." });
+});
+
+app.delete("/api/data-sources/brickeconomy", requireAuth, (req, res) => {
+  req.userState.dataSources = {
+    ...(req.userState.dataSources || {}),
+    brickeconomyAuthBlob: null,
+    lastBrickeconomySyncAt: null,
+  };
+  persistStore();
+  res.json({ ok: true, configured: false });
+});
+
+app.post("/api/data-sources/brickeconomy/sync", requireAuth, async (req, res) => {
+  const source = req.userState.dataSources || {};
+  const credentials = decryptConnectorPayload(source.brickeconomyAuthBlob) || {};
+  if (!credentials.apiKey) {
+    res.status(400).json({ ok: false, error: "brickeconomy_not_connected" });
+    return;
+  }
+  const result = await brickeconomyService.getCollectionSets(credentials.apiKey, "ZAR");
+  if (!result.ok) {
+    res.status(400).json({ ok: false, error: "brickeconomy_sync_failed", reason: result.reason });
+    return;
+  }
+  req.userState.dataSources.lastBrickeconomySyncAt = nowIso();
+  persistStore();
+  res.json({ ok: true, syncedAt: req.userState.dataSources.lastBrickeconomySyncAt, collection: result.data });
+});
+
+app.post("/api/collection/import/preview", requireAuth, (req, res) => {
+  const rows = Array.isArray(req.body?.rows) ? req.body.rows.slice(0, 1000) : [];
+  const normalized = rows.map((raw, index) => {
+    const setNumber = String(raw?.setNumber || raw?.set || raw?.sku || "").trim().replace(/-1$/, "");
+    const quantity = Number(raw?.quantity || raw?.qty || 1);
+    const purchasePrice = Number(raw?.purchasePrice ?? raw?.price ?? raw?.cost ?? NaN);
+    const condition = String(raw?.condition || "Sealed").trim();
+    const errors = [];
+    if (!/^\\d{4,6}$/.test(setNumber)) errors.push("Set number must be 4-6 digits.");
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 1000) errors.push("Quantity must be a whole number from 1 to 1000.");
+    if (!Number.isFinite(purchasePrice) || purchasePrice < 0) errors.push("Purchase price must be zero or greater.");
+    return {
+      row: index + 1,
+      setNumber,
+      quantity,
+      purchasePrice: Number.isFinite(purchasePrice) ? Number(purchasePrice.toFixed(2)) : null,
+      purchaseDate: String(raw?.purchaseDate || raw?.date || "").trim(),
+      condition: /^opened$/i.test(condition) ? "Opened" : "Sealed",
+      retailer: String(raw?.retailer || raw?.source || "").trim().slice(0, 120),
+      shipping: Number(raw?.shipping || 0) || 0,
+      vatReclaim: Number(raw?.vatReclaim || 0) || 0,
+      rewards: Number(raw?.rewards || 0) || 0,
+      cashback: Number(raw?.cashback || 0) || 0,
+      vouchers: Number(raw?.vouchers || 0) || 0,
+      errors,
+      valid: errors.length === 0,
+    };
+  });
+  res.json({
+    ok: true,
+    rows: normalized,
+    summary: {
+      total: normalized.length,
+      valid: normalized.filter(row => row.valid).length,
+      invalid: normalized.filter(row => !row.valid).length,
+    },
+  });
+});
+
+app.post("/api/collection/import/commit", requireAuth, async (req, res) => {
+  const rows = Array.isArray(req.body?.rows) ? req.body.rows.slice(0, 1000) : [];
+  const created = [];
+  const errors = [];
+  for (let index = 0; index < rows.length; index += 1) {
+    const raw = rows[index] || {};
+    const setNumber = String(raw.setNumber || "").trim().replace(/-1$/, "");
+    const quantity = Number(raw.quantity || 1);
+    const purchasePrice = Number(raw.purchasePrice);
+    if (!/^\\d{4,6}$/.test(setNumber) || !Number.isInteger(quantity) || quantity < 1 || !Number.isFinite(purchasePrice) || purchasePrice < 0) {
+      errors.push({ row: index + 1, error: "invalid_row" });
+      continue;
+    }
+    const item = findTradeableCollectibleBySkuOrId(setNumber);
+    if (!item) {
+      errors.push({ row: index + 1, setNumber, error: "set_not_in_brick_alpha_catalogue" });
+      continue;
+    }
+    const credits = ["vatReclaim", "rewards", "cashback", "vouchers"].reduce((sum, key) => sum + (Number(raw[key]) || 0), 0);
+    const allInTotal = Math.max(0, purchasePrice * quantity + (Number(raw.shipping) || 0) - credits);
+    const unitCost = quantity > 0 ? allInTotal / quantity : purchasePrice;
+    const note = [
+      raw.purchaseDate ? `Date: ${String(raw.purchaseDate).slice(0, 40)}` : "",
+      raw.retailer ? `Source: ${String(raw.retailer).slice(0, 120)}` : "",
+      `Condition: ${/^opened$/i.test(String(raw.condition || "")) ? "Opened" : "Sealed"}`,
+      "Imported collection data",
+    ].filter(Boolean).join(". ");
+    const trade = createCollectibleTrade(item, "BUY", req.user.id, {
+      quantity,
+      entryPrice: Number(unitCost.toFixed(2)),
+      orderNote: note,
+      executionMode: "paper",
+      executionProvider: "collection-import",
+      executionLabel: "Imported collection",
+    });
+    req.userState.trades.unshift(trade);
+    created.push(trade);
+  }
+  persistStore();
+  res.status(errors.length ? 207 : 201).json({ ok: errors.length === 0, created: created.length, errors, portfolio: req.userState.trades });
+});
 
 app.get("/api/connectors", requireAuth, (req, res) => {
   res.json({
