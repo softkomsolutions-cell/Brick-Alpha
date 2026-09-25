@@ -143,7 +143,7 @@ export function ResearchScreen({
     <div className="v3Research" data-page="research">
       <header className="v3WorkflowHero">
         <h1>Research</h1>
-        <p>BrickEconomy value, recorded growth, and the same verdict as the decision path.</p>
+        <p>BrickEconomy value, recorded growth and one consistent Brick Alpha verdict.</p>
       </header>
 
       <div className="v3BookToggle" role="tablist" aria-label="Research sections">
@@ -181,7 +181,7 @@ export function ResearchScreen({
             <option value="">Any verdict</option>
             <option value="buy-2">Buy ×2 flywheel</option>
             <option value="buy-1">Buy ×1</option>
-            <option value="below">Only below a price</option>
+            <option value="below">Only below target</option>
             <option value="skip">Skip</option>
           </select>
         </label>
