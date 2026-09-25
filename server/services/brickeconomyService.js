@@ -13,73 +13,52 @@ function configured(apiKey) {
   return Boolean(resolveApiKey(apiKey));
 }
 
-async function getSet(setNum, apiKey = null) {
-  const normalized = String(setNum || "").trim().split("-")[0];
-  const cacheKey = `set:${normalized}`;
-  const cached = cache.get(cacheKey);
-  if (cached && cached.expiresAt > Date.now()) {
-    return { ...cached.value, cache: "fresh" };
-  }
-
+async function requestJson(pathname, apiKey, cacheKey = null) {
+  const resolvedApiKey = resolveApiKey(apiKey);
   const quota = rateLimits.canRequest("brickeconomy");
-  const resolvedApiKey = resolveApiKey(apiKey);\n  if (!configured(resolvedApiKey)) {
-    return { ok: false, reason: "credentials_not_configured", quota };
-  }
-  if (!quota.allowed) {
-    return cached
-      ? { ...cached.value, cache: "stale" }
-      : { ok: false, reason: "quota_reserve_active", quota };
-  }
-
+  if (!configured(resolvedApiKey)) return { ok: false, reason: "credentials_not_configured", quota };
+  if (!quota.allowed) return { ok: false, reason: "quota_reserve_active", quota };
+  const cached = cacheKey ? cache.get(cacheKey) : null;
+  if (cached && cached.expiresAt > Date.now()) return { ...cached.value, cache: "fresh" };
   rateLimits.recordRequest("brickeconomy");
-
   try {
-    const response = await fetch(
-      `${BRICKECONOMY_BASE_URL}/set?number=${encodeURIComponent(`${normalized}-1`)}`,
-      {
-        headers: {
-          Accept: "application/json",
-          "User-Agent": "BrickAlpha-Beta/1.0",
-          "x-apikey": resolvedApiKey,
-        },
-        signal: AbortSignal.timeout(8000),
-      },
-    );
+    const response = await fetch(`${BRICKECONOMY_BASE_URL}${pathname}`, {
+      headers: { Accept: "application/json", "User-Agent": "BrickAlpha-Beta/1.0", "x-apikey": resolvedApiKey },
+      signal: AbortSignal.timeout(8000),
+    });
     const payload = await response.json().catch(() => ({}));
-
     if (!response.ok) {
       const retryAfter = response.headers.get("retry-after");
-      rateLimits.recordError(
-        "brickeconomy",
-        new Error(`brickeconomy_http_${response.status}`),
-        retryAfter,
-      );
-      return cached
-        ? { ...cached.value, cache: "stale" }
-        : {
-            ok: false,
-            reason: `http_${response.status}`,
-            quota: rateLimits.canRequest("brickeconomy"),
-          };
+      rateLimits.recordError("brickeconomy", new Error(`brickeconomy_http_${response.status}`), retryAfter);
+      return cached ? { ...cached.value, cache: "stale" } : { ok: false, reason: `http_${response.status}`, quota: rateLimits.canRequest("brickeconomy") };
     }
-
-    const value = {
-      ok: true,
-      data: payload?.data || payload,
-      quota: rateLimits.canRequest("brickeconomy"),
-    };
-    cache.set(cacheKey, { value, expiresAt: Date.now() + CACHE_TTL_MS });
+    const value = { ok: true, data: payload?.data || payload, quota: rateLimits.canRequest("brickeconomy") };
+    if (cacheKey) cache.set(cacheKey, { value, expiresAt: Date.now() + CACHE_TTL_MS });
     return value;
   } catch (error) {
     rateLimits.recordError("brickeconomy", error);
-    return cached
-      ? { ...cached.value, cache: "stale" }
-      : {
-          ok: false,
-          reason: error.name === "TimeoutError" ? "timeout" : "request_failed",
-          quota: rateLimits.canRequest("brickeconomy"),
-        };
+    return cached ? { ...cached.value, cache: "stale" } : { ok: false, reason: error.name === "TimeoutError" ? "timeout" : "request_failed", quota: rateLimits.canRequest("brickeconomy") };
   }
+}
+
+async function getSet(setNum, apiKey = null, currency = "USD") {
+  const normalized = String(setNum || "").trim();
+  const safeCurrency = String(currency || "USD").trim().toUpperCase();
+  const cacheKey = `set:${normalized}:${safeCurrency}`;
+  return requestJson(
+    `/set/${encodeURIComponent(normalized)}?currency=${encodeURIComponent(safeCurrency)}`,
+    apiKey,
+    cacheKey,
+  );
+}
+
+async function getCollectionSets(apiKey = null, currency = "ZAR") {
+  const safeCurrency = String(currency || "ZAR").trim().toUpperCase();
+  return requestJson(
+    `/collection/sets?currency=${encodeURIComponent(safeCurrency)}`,
+    apiKey,
+    `collection:sets:${safeCurrency}`,
+  );
 }
 
 function status(apiKey = null) {
@@ -91,6 +70,7 @@ function status(apiKey = null) {
 }
 
 module.exports = {
+  getCollectionSets,
   getSet,
   status,
 };
