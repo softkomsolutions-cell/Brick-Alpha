@@ -153,6 +153,13 @@ export const NAV_ITEMS = [
     hint: "Plans, premium value, and upgrade path",
   },
   {
+    id: "data-sources",
+    label: "Data Sources",
+    glyph: "DS",
+    section: "Account",
+    hint: "Import collection data or connect BrickEconomy",
+  },
+  {
     id: "settings",
     label: "Settings",
     glyph: "ST",
@@ -197,6 +204,7 @@ export const SCREEN_PREVIEWS = {
   "set-analysis": "Nine-factor set analysis with progressive evidence.",
   "log-purchase": "Log acquisition price, date, retailer, quantity, condition, and notes.",
   subscriptions: "Plan tiers, premium feature value, and the commercial upgrade path.",
+  "data-sources": "Import an existing LEGO collection or connect BrickEconomy.",
   settings: "Account preferences, alerts, install, and partner testing.",
 };
 
@@ -218,6 +226,7 @@ export const PAGE_SECTION_LINKS = {
     { id: "subscriptions-tiers", label: "Tiers" },
     { id: "subscriptions-premium", label: "Premium" },
   ],
+  "data-sources": [{ id: "data-sources", label: "Import & API" }],
   settings: [
     { id: "account-settings", label: "Account" },
     { id: "install-app", label: "Install" },
