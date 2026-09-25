@@ -31,19 +31,21 @@ function Card({ card, watching, onOpen, onWatch }) {
     <article className="v3ResearchCard">
       <button type="button" className="v3ResearchOpen" onClick={() => onOpen(card)}>
         {card.imageUrl ? (
-          <img
-            src={card.imageUrl}
-            alt={`${card.name} LEGO set`}
-            className="v3DecisionImage"
-            loading="lazy"
-            onError={(event) => {
-              event.currentTarget.style.display = "none";
-              event.currentTarget.nextElementSibling?.removeAttribute("hidden");
-            }}
-          />
-          <div hidden className="v3DecisionImage v3DecisionImageFallback">#{card.setNumber}</div>
+          <span className="v3ResearchImageWrap">
+            <img
+              src={card.imageUrl}
+              alt={`${card.name} LEGO set`}
+              className="v3DecisionImage"
+              loading="lazy"
+              onError={(event) => {
+                event.currentTarget.style.display = "none";
+                event.currentTarget.nextElementSibling?.removeAttribute("hidden");
+              }}
+            />
+            <span hidden className="v3DecisionImage v3DecisionImageFallback">#{card.setNumber}</span>
+          </span>
         ) : (
-          <div className="v3DecisionImage v3DecisionImageFallback">#{card.setNumber}</div>
+          <span className="v3DecisionImage v3DecisionImageFallback">#{card.setNumber}</span>
         )}
         <div>
           <span className="v3Eyebrow">{card.theme}</span>
