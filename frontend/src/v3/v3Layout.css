@@ -1196,3 +1196,59 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Portfolio intelligence — visual analytics, no second source of truth. */
+.v3AppShell .v3Portfolio { width:min(100%,1120px); margin-inline:auto; display:grid; gap:18px; }
+.v3AppShell .v3PortfolioHero { display:flex; align-items:flex-end; justify-content:space-between; gap:24px; background:linear-gradient(135deg,#fff 0%,#f7f8fc 100%) !important; }
+.v3AppShell .v3PortfolioHero h1 { font-size:clamp(36px,5vw,58px); letter-spacing:-.045em; margin:4px 0 6px; }
+.v3AppShell .v3PortfolioHeroReturn { display:grid; gap:4px; min-width:180px; padding:16px 18px; border:1px solid var(--ba-line,#e4e2dc); border-radius:14px; background:#fbfaf7; }
+.v3AppShell .v3PortfolioHeroReturn strong { font-size:30px; color:var(--ba-gain,#16794a); }
+.v3AppShell .v3PortfolioKpis { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; }
+.v3AppShell .v3PortfolioKpis article { display:grid; gap:8px; min-height:92px; padding:16px; border:1px solid var(--ba-line,#e4e2dc); border-radius:14px; background:#fff; }
+.v3AppShell .v3PortfolioKpis span { font-size:12px; color:var(--ba-ink-secondary,#4a4f5a); }
+.v3AppShell .v3PortfolioKpis strong { font-size:20px; letter-spacing:-.02em; }
+.v3AppShell .v3PortfolioGrid { display:grid; grid-template-columns:1.1fr .9fr; gap:14px; }
+.v3AppShell .v3PortfolioSectionHead { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:18px; }
+.v3AppShell .v3PortfolioSectionHead h2 { margin:3px 0 0; font-size:21px; }
+.v3AppShell .v3PortfolioBars { display:grid; gap:15px; }
+.v3AppShell .v3PortfolioBars > div { display:grid; gap:6px; }
+.v3AppShell .v3PortfolioBars > div > div { display:flex; justify-content:space-between; gap:12px; }
+.v3AppShell .v3PortfolioBar { display:block; width:100%; height:9px; overflow:hidden; border-radius:99px; background:#eceae4; }
+.v3AppShell .v3PortfolioBar i { display:block; height:100%; border-radius:inherit; background:var(--ba-primary,#2344a3); }
+.v3AppShell .v3PortfolioBars small { color:var(--ba-ink-secondary,#4a4f5a); }
+.v3AppShell .v3ProfitSplit { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.v3AppShell .v3ProfitSplit > div { display:grid; gap:8px; padding:14px; border-radius:12px; background:#fbfaf7; }
+.v3AppShell .v3ProfitSplit strong { font-size:21px; }
+.v3AppShell .v3ProfitSplit .v3PortfolioBar i { background:var(--ba-gain,#16794a); }
+.v3AppShell .v3CapitalFlow { display:grid; grid-template-columns:1fr auto auto; gap:5px 10px; align-items:center; margin-top:18px; padding-top:16px; border-top:1px solid var(--ba-line,#e4e2dc); }
+.v3AppShell .v3CapitalFlow > span { grid-column:1/-1; font-size:12px; color:var(--ba-ink-secondary,#4a4f5a); }
+.v3AppShell .v3CapitalFlow b { grid-row:2/4; grid-column:2; color:var(--ba-primary,#2344a3); }
+.v3AppShell .v3CapitalFlow i { font-style:normal; font-size:11px; color:var(--ba-ink-secondary,#4a4f5a); }
+.v3AppShell .v3HoldingChart { display:grid; gap:12px; }
+.v3AppShell .v3HoldingChartRow { display:grid; grid-template-columns:minmax(210px,1.3fr) minmax(160px,2fr) auto auto; gap:14px; align-items:center; padding:12px 0; border-top:1px solid #efede7; }
+.v3AppShell .v3HoldingChartRow:first-child { border-top:0; }
+.v3AppShell .v3HoldingChartRow > div:first-child { display:grid; gap:2px; }
+.v3AppShell .v3HoldingChartRow small { color:var(--ba-ink-secondary,#4a4f5a); }
+
+/* Stronger visible refinement of the current Gavin screens. */
+.v3AppShell .v3Home .v3AttentionList { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; padding:0; list-style:none; }
+.v3AppShell .v3Home .v3AttentionList button { width:100%; min-height:92px; display:grid; align-content:center; gap:3px; text-align:left; border:0; border-left:4px solid var(--ba-brick-yellow,#f2c230); background:#fbfaf7; }
+.v3AppShell .v3Collection .v3StatGrid { gap:10px; }
+.v3AppShell .v3Collection .v3StatGrid > div { min-height:82px; padding:14px; }
+.v3AppShell .v3Collection .v3FilterRow { margin-top:0 !important; }
+.v3AppShell [data-page="scan"] .actionCard { background:#fff !important; border:1px solid var(--ba-line,#e4e2dc) !important; box-shadow:0 2px 8px rgba(21,23,28,.04); }
+.v3AppShell [data-page="scan"] .actionCard:hover { border-color:var(--ba-primary,#2344a3) !important; box-shadow:0 6px 18px rgba(35,68,163,.09); }
+.v3AppShell [data-page="verdict"] .v3WorkflowHero { min-height:0 !important; }
+
+@media (max-width:900px) {
+ .v3AppShell .v3PortfolioKpis { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .v3AppShell .v3PortfolioGrid { grid-template-columns:1fr; }
+ .v3AppShell .v3HoldingChartRow { grid-template-columns:1fr auto; }
+ .v3AppShell .v3HoldingChartRow .v3PortfolioBar { grid-column:1/-1; }
+}
+@media (max-width:600px) {
+ .v3AppShell .v3PortfolioHero { align-items:stretch; flex-direction:column; }
+ .v3AppShell .v3PortfolioKpis { grid-template-columns:1fr 1fr; }
+ .v3AppShell .v3Home .v3AttentionList { grid-template-columns:1fr; }
+}
