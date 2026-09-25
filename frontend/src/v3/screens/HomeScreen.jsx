@@ -38,7 +38,7 @@ export function HomeScreen({
           <div>
             <span className="v3Eyebrow">Owned value</span>
             <h1>{money(home.ownedValue)}</h1>
-            <p>Open collection market value. Realised cash stays outside this figure.</p>
+            <p>Open collection market value. Realised cash is shown separately.</p>
           </div>
           <div className="v3BookToggle" role="group" aria-label="Collection book">
             <button type="button" className={book === "curated" ? "active" : ""} onClick={() => setBook("curated")}>
