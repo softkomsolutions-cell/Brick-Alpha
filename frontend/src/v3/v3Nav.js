@@ -10,6 +10,7 @@ export const V3_PAGE = {
   VERDICT: "verdict",
   SET_ANALYSIS: "set-analysis",
   LOG_PURCHASE: "log-purchase",
+  DATA_SOURCES: "data-sources",
 };
 
 export const LEGACY_PAGE_ALIASES = {
@@ -106,6 +107,13 @@ export const V3_SECONDARY_NAV = [
 ];
 
 export const V3_ACCOUNT_NAV = [
+  {
+    id: V3_PAGE.DATA_SOURCES,
+    label: "Data Sources",
+    glyph: "DS",
+    section: "Account",
+    hint: "Import collection data or connect BrickEconomy",
+  },
   {
     id: "settings",
     label: "Settings",
