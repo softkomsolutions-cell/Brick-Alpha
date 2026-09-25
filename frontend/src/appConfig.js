@@ -111,6 +111,13 @@ export const NAV_ITEMS = [
     hint: "Holdings, cost basis, and performance",
   },
   {
+    id: "portfolio",
+    label: "Portfolio",
+    glyph: "PF",
+    section: "Primary",
+    hint: "Performance, allocation and capital flow",
+  },
+  {
     id: "exits",
     label: "Exits",
     glyph: "EX",
@@ -184,6 +191,7 @@ export const SCREEN_PREVIEWS = {
   research: "Search and browse LEGO investment opportunities, retiring sets, and performance leaders.",
   scan: "Photograph or enter a set number for identification and Brick Alpha evaluation.",
   collection: "Your LEGO collection — cost basis, current value, gain, and per-set performance.",
+  portfolio: "Portfolio performance, allocation, concentration, and capital recycling.",
   exits: "Sell-window proximity, estimated net proceeds, and exit recommendations.",
   verdict: "Decision-first recommendation, score, confidence, ROI, and risk.",
   "set-analysis": "Nine-factor set analysis with progressive evidence.",
@@ -197,6 +205,7 @@ export const PAGE_SECTION_LINKS = {
   research: RESEARCH_SECTIONS,
   scan: [{ id: "scan-evaluate", label: "Scan" }],
   collection: COLLECTION_SECTIONS,
+  portfolio: [{ id: "portfolio-intelligence", label: "Intelligence" }],
   exits: [
     { id: "exits-overview", label: "Overview" },
     { id: "exits-candidates", label: "Candidates" },
