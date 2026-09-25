@@ -38,11 +38,10 @@ function Card({ card, watching, onOpen, onWatch }) {
               className="v3DecisionImage"
               loading="lazy"
               onError={(event) => {
-                event.currentTarget.style.display = "none";
-                event.currentTarget.nextElementSibling?.removeAttribute("hidden");
+                event.currentTarget.closest(".v3ResearchImageWrap")?.classList.add("imageFailed");
               }}
             />
-            <span hidden className="v3DecisionImage v3DecisionImageFallback">#{card.setNumber}</span>
+            <span className="v3DecisionImageFallback">#{card.setNumber}</span>
           </span>
         ) : (
           <span className="v3DecisionImage v3DecisionImageFallback">#{card.setNumber}</span>
