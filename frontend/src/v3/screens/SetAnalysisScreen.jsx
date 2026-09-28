@@ -60,9 +60,9 @@ export function SetAnalysisScreen({ navigateToPage, appSettings }) {
 
       <ol className="v3FactorList">
         {snapshot.factors.map((item, index) => (
-          <li key={item.id} className="v3DecisionCard">
+          <li key={item.id} className="v3DecisionCard v3FactorCard">
             <div className="v3FactorHead">
-              <span>{index + 1}. {item.title}</span>
+              <span><b>{index + 1}</b>{item.title}</span>
               <strong>{wholeScore(item.score)}</strong>
             </div>
             <p>{item.summary}</p>
