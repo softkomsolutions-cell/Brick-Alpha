@@ -1293,3 +1293,23 @@
 .v3AppShell .v3ResearchImageWrap.imageFailed>img{display:none!important}
 .v3AppShell .v3ResearchImageWrap.imageFailed>.v3DecisionImageFallback{display:flex}
 @media(max-width:560px){.v3AppShell .v3ResearchImageWrap,.v3AppShell .v3ResearchImageWrap>.v3DecisionImageFallback{width:92px;height:92px}}
+
+/* Final workflow polish */
+.v3AppShell .v3WorkflowEmpty{
+  min-height:0;
+  align-content:start;
+  justify-items:start;
+  padding:24px;
+}
+.v3AppShell .v3WorkflowEmpty .primaryButton{
+  width:auto;
+  min-width:132px;
+  min-height:44px;
+  margin-top:8px;
+}
+.v3AppShell .v3WorkflowEmpty p{
+  max-width:560px;
+}
+.v3AppShell .v3SidebarSectionLabel + .v3SidebarNav .v3SidebarNavGlyph{
+  font-variant-numeric:tabular-nums;
+}
