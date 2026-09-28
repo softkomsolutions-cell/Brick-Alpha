@@ -1,6 +1,7 @@
 import { BrandLogo } from "../components/brandLogo";
 import { APP_TAGLINE, APP_WORDMARK } from "../appConfig";
 import { V3_ACCOUNT_NAV, V3_DESKTOP_NAV, V3_SECONDARY_NAV } from "./v3Nav";
+import { readDecisionSnapshot } from "./decision/decisionSession";
 
 export function V3Sidebar({
   activePage,
@@ -10,6 +11,8 @@ export function V3Sidebar({
   onNavigate,
   onBrandClick,
 }) {
+  const decisionReady = Boolean(readDecisionSnapshot());
+
   return (
     <aside className="v3Sidebar" aria-label="Application navigation">
       <div className="v3SidebarBrand">
@@ -47,21 +50,27 @@ export function V3Sidebar({
       <div>
         <div className="v3SidebarSectionLabel">Decision path</div>
         <nav className="v3SidebarNav">
-          {V3_SECONDARY_NAV.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={`v3SidebarNavItem ${activePage === item.id ? "active" : ""}`}
-              aria-current={activePage === item.id ? "page" : undefined}
-              onClick={() => onNavigate(item.id)}
-            >
-              <span className="v3SidebarNavGlyph">{item.glyph}</span>
-              <span className="v3SidebarNavCopy">
-                <span>{item.label}</span>
-                <small>{item.hint}</small>
-              </span>
-            </button>
-          ))}
+          {V3_SECONDARY_NAV.map((item) => {
+            const locked = item.id !== "scan" && !decisionReady;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className={`v3SidebarNavItem ${activePage === item.id ? "active" : ""} ${locked ? "locked" : ""}`}
+                aria-current={activePage === item.id ? "page" : undefined}
+                aria-disabled={locked ? "true" : undefined}
+                disabled={locked}
+                title={locked ? "Scan or select a LEGO set first" : undefined}
+                onClick={() => onNavigate(item.id)}
+              >
+                <span className="v3SidebarNavGlyph">{item.glyph}</span>
+                <span className="v3SidebarNavCopy">
+                  <span>{item.label}</span>
+                  <small>{locked ? "Scan a set to unlock" : item.hint}</small>
+                </span>
+              </button>
+            );
+          })}
         </nav>
       </div>
 
