@@ -1891,6 +1891,7 @@ export default function App() {
           form.date ? `Date: ${form.date}` : "",
           form.retailer ? `Source: ${form.retailer}` : "",
           form.condition ? `Condition: ${form.condition}` : "",
+          form.collectionBook ? `Book: ${form.collectionBook}` : "",
           form.shipping ? `Shipping: ${form.shipping}` : "",
           form.vatReclaim ? `VAT reclaim: ${form.vatReclaim}` : "",
           form.rewards ? `Rewards: ${form.rewards}` : "",
@@ -1909,6 +1910,8 @@ export default function App() {
             quantity: form.quantity,
             acquisitionPrice: form.unitCost,
             orderNote: note,
+            collectionBook: form.collectionBook,
+            curated: form.curated,
           },
         });
         setPortfolio(data.portfolio || []);
