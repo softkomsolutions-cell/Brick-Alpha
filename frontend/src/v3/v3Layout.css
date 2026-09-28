@@ -1325,3 +1325,89 @@
 .v3SidebarNavItem.locked .v3SidebarNavGlyph{
   background:#f3f2ee;
 }
+
+/* Gavin spec: Set Analysis summary grid + compact purchase form */
+.v3AppShell [data-page="set-analysis"].v3WorkflowScreen{
+  width:min(100%,1040px);
+  max-width:1040px;
+}
+.v3AppShell [data-page="set-analysis"] .v3FactorList{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;
+}
+.v3AppShell [data-page="set-analysis"] .v3FactorCard{
+  align-content:start;
+  min-height:176px;
+  padding:16px 17px;
+}
+.v3AppShell [data-page="set-analysis"] .v3FactorHead{
+  align-items:center;
+}
+.v3AppShell [data-page="set-analysis"] .v3FactorHead > span{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-weight:700;
+}
+.v3AppShell [data-page="set-analysis"] .v3FactorHead > span b{
+  display:grid;
+  place-items:center;
+  width:24px;
+  height:24px;
+  flex:0 0 24px;
+  border-radius:8px;
+  background:var(--ba-primary-tint,#e8edfb);
+  color:var(--ba-primary,#2344a3);
+  font-size:12px;
+}
+.v3AppShell [data-page="set-analysis"] .v3FactorHead > strong{
+  font-size:18px;
+}
+.v3AppShell [data-page="set-analysis"] .v3FactorCard p{
+  margin:2px 0 0;
+  font-weight:650;
+  line-height:1.35;
+}
+.v3AppShell [data-page="set-analysis"] .v3FactorCard small{
+  color:var(--ba-ink-secondary,#4a4f5a);
+  line-height:1.45;
+}
+.v3AppShell [data-page="log-purchase"].v3WorkflowScreen{
+  width:min(100%,900px);
+  max-width:900px;
+}
+.v3AppShell .v3PurchaseGrid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+}
+.v3AppShell .v3PurchaseForm > p{
+  margin:0;
+  padding:12px 14px;
+  border-radius:10px;
+  background:#fbfaf7;
+  border:1px solid var(--ba-line,#e4e2dc);
+  font-weight:650;
+}
+.v3AppShell .v3PurchaseForm details{
+  padding:12px 14px;
+  border:1px solid var(--ba-line,#e4e2dc);
+  border-radius:10px;
+  background:#fff;
+}
+.v3AppShell .v3PurchaseForm details[open]{
+  display:grid;
+  gap:10px;
+}
+.v3AppShell .v3PurchaseForm summary{
+  cursor:pointer;
+  font-weight:700;
+}
+@media(max-width:900px){
+  .v3AppShell [data-page="set-analysis"] .v3FactorList{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:620px){
+  .v3AppShell [data-page="set-analysis"] .v3FactorList,
+  .v3AppShell .v3PurchaseGrid{grid-template-columns:1fr}
+  .v3AppShell [data-page="set-analysis"] .v3FactorCard{min-height:0}
+}
