@@ -11,14 +11,18 @@ const THEME_OPTIONS = ["Star Wars", "Icons", "Technic", "City", "Creator Expert"
 
 const STEPS = ["welcome", "how-you-buy", "add-sets"];
 
-export function V3OnboardingFlow({ onComplete, onNavigateToScan, onNavigateToCollection }) {
+export function V3OnboardingFlow({ onComplete, onNavigateToScan, onNavigateToDataSources, onApplySettings }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [profile, setProfile] = useState(() => ({ ...DEFAULT_BUYING_PROFILE }));
 
   const step = STEPS[stepIndex];
 
-  const finish = () => {
+  const finish = async () => {
     writeBuyingProfile(profile);
+    await onApplySettings?.({
+      usdZarRate: Number(profile.usdZarRate) || 18.5,
+      preferredRegion: profile.country === "South Africa" ? "south-africa" : "global",
+    });
     markV3OnboardingComplete();
     onComplete();
   };
@@ -61,17 +65,55 @@ export function V3OnboardingFlow({ onComplete, onNavigateToScan, onNavigateToCol
         <h1>{stepTitle}</h1>
 
         {step === "welcome" ? (
-          <p>
-            Brick Alpha combines investment intelligence with a simple loop: scan a set, get a
-            verdict, log purchases, track your collection, and plan exits. This takes about a
-            minute.
-          </p>
+          <>
+            <p>Set the valuation context Brick Alpha will use across the collection.</p>
+            <div className="v3OnboardingForm">
+              <label>
+                <span>Country</span>
+                <select value={profile.country} onChange={(event) => setProfile((current) => ({ ...current, country: event.target.value }))}>
+                  <option>South Africa</option>
+                  <option>United Kingdom</option>
+                  <option>United States</option>
+                  <option>Other</option>
+                </select>
+              </label>
+              <label>
+                <span>Home currency</span>
+                <select value={profile.homeCurrency} onChange={(event) => setProfile((current) => ({ ...current, homeCurrency: event.target.value }))}>
+                  <option value="ZAR">ZAR</option>
+                  <option value="GBP">GBP</option>
+                  <option value="USD">USD</option>
+                </select>
+              </label>
+              <label>
+                <span>USD exchange rate</span>
+                <input type="number" min="0.01" step="0.01" value={profile.usdZarRate} onChange={(event) => setProfile((current) => ({ ...current, usdZarRate: event.target.value }))} />
+              </label>
+            </div>
+          </>
         ) : null}
 
         {step === "how-you-buy" ? (
           <>
-            <p>Tell us how you invest so portfolio fit and recommendations can personalise later.</p>
+            <p>Configure the cost tools and buying profile used by Brick Alpha.</p>
             <div className="v3OnboardingForm">
+              <label>
+                <span>Buy through a VAT-registered business?</span>
+                <select value={profile.businessBuyer ? "yes" : "no"} onChange={(event) => setProfile((current) => ({ ...current, businessBuyer: event.target.value === "yes" }))}>
+                  <option value="no">No</option>
+                  <option value="yes">Yes</option>
+                </select>
+              </label>
+              {profile.businessBuyer ? (
+                <label>
+                  <span>VAT rate (%)</span>
+                  <input type="number" min="0" step="0.1" value={profile.vatRate} onChange={(event) => setProfile((current) => ({ ...current, vatRate: event.target.value }))} />
+                </label>
+              ) : null}
+              <label>
+                <span>Rewards programmes</span>
+                <input type="text" value={(profile.rewardsProgrammes || []).join(", ")} onChange={(event) => setProfile((current) => ({ ...current, rewardsProgrammes: event.target.value.split(",").map((item) => item.trim()).filter(Boolean) }))} placeholder="eBucks, miles (optional)" />
+              </label>
               <label>
                 <span>Typical budget per set (ZAR)</span>
                 <input
@@ -131,23 +173,19 @@ export function V3OnboardingFlow({ onComplete, onNavigateToScan, onNavigateToCol
 
         {step === "add-sets" ? (
           <>
-            <p>Seed your collection now or start scanning. You can always add more later.</p>
+            <p>Load your existing collection. Spreadsheet import is the fastest path; you can also scan or enter a set number.</p>
             <div className="v3OnboardingImportRow">
               <button type="button" className="v3OnboardingImportCard" onClick={onNavigateToScan}>
                 <strong>Scan a set</strong>
                 <small>Photo or set number — fastest path to the first set in your collection.</small>
               </button>
-              <button
-                type="button"
-                className="v3OnboardingImportCard"
-                onClick={onNavigateToCollection}
-              >
-                <strong>Add manually</strong>
-                <small>Open Log Purchase after a verdict, with price, date, source, and condition.</small>
+              <button type="button" className="v3OnboardingImportCard" onClick={onNavigateToScan}>
+                <strong>Enter set number</strong>
+                <small>Identify the set, review the verdict, then log the purchase.</small>
               </button>
-              <button type="button" className="v3OnboardingImportCard" disabled>
-                <strong>Import CSV</strong>
-                <small>Spreadsheet import is not part of this release.</small>
+              <button type="button" className="v3OnboardingImportCard" onClick={onNavigateToDataSources}>
+                <strong>Import spreadsheet · fastest</strong>
+                <small>Import an existing tracker through Data Sources.</small>
               </button>
             </div>
           </>
