@@ -2,6 +2,13 @@ const ONBOARDING_COMPLETE_KEY = "brick_alpha_v3_onboarding_complete";
 const BUYING_PROFILE_KEY = "brick_alpha_v3_buying_profile";
 
 export const DEFAULT_BUYING_PROFILE = {
+  country: "South Africa",
+  homeCurrency: "ZAR",
+  usdZarRate: 18.5,
+  businessBuyer: false,
+  vatRate: 15,
+  rewardsProgrammes: [],
+  rewardsBookingRule: "cash-equivalent",
   budgetPerSet: "",
   holdPeriod: "medium",
   riskTolerance: "balanced",
@@ -44,6 +51,7 @@ export function readBuyingProfile() {
       ...DEFAULT_BUYING_PROFILE,
       ...parsed,
       preferredThemes: Array.isArray(parsed?.preferredThemes) ? parsed.preferredThemes : [],
+      rewardsProgrammes: Array.isArray(parsed?.rewardsProgrammes) ? parsed.rewardsProgrammes : [],
     };
   } catch {
     return { ...DEFAULT_BUYING_PROFILE };
@@ -59,6 +67,9 @@ export function writeBuyingProfile(profile) {
         ...profile,
         preferredThemes: Array.isArray(profile?.preferredThemes)
           ? profile.preferredThemes
+          : [],
+        rewardsProgrammes: Array.isArray(profile?.rewardsProgrammes)
+          ? profile.rewardsProgrammes
           : [],
       }),
     );
