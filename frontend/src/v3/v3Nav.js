@@ -16,7 +16,6 @@ export const V3_PAGE = {
 export const LEGACY_PAGE_ALIASES = {
   "scan-evaluate": V3_PAGE.SCAN,
   collectibles: V3_PAGE.RESEARCH,
-  portfolio: V3_PAGE.COLLECTION,
 };
 
 export const V3_UTILITY_PAGES = [
@@ -93,22 +92,32 @@ export const V3_DESKTOP_NAV = [
 
 export const V3_SECONDARY_NAV = [
   {
+    id: V3_PAGE.SCAN,
+    label: "Scan",
+    glyph: "1",
+    hint: "Identify the set",
+    workflowStep: 1,
+  },
+  {
     id: V3_PAGE.VERDICT,
     label: "Verdict",
-    glyph: "VD",
-    hint: "Buy ×2, Buy ×1, Only below, or Skip",
+    glyph: "2",
+    hint: "Quick investment decision",
+    workflowStep: 2,
   },
   {
     id: V3_PAGE.SET_ANALYSIS,
     label: "Set Analysis",
-    glyph: "SA",
-    hint: "Nine-factor analysis behind the verdict",
+    glyph: "3",
+    hint: "Nine-factor evidence",
+    workflowStep: 3,
   },
   {
     id: V3_PAGE.LOG_PURCHASE,
     label: "Log Purchase",
-    glyph: "LP",
-    hint: "Price, date, source and condition",
+    glyph: "4",
+    hint: "Record the buy",
+    workflowStep: 4,
   },
 ];
 
