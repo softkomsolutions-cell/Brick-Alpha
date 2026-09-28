@@ -38,7 +38,7 @@ export function canonicalPage(page) {
   return LEGACY_PAGE_ALIASES[candidate] || candidate;
 }
 
-export const V3_PRIMARY_NAV = [
+const V3_CORE_PRIMARY_NAV = [
   {
     id: V3_PAGE.HOME,
     label: "Home",
@@ -69,6 +69,18 @@ export const V3_PRIMARY_NAV = [
     hint: "Cost, value and performance",
     section: "Primary",
   },
+    {
+    id: V3_PAGE.EXITS,
+    label: "Exits",
+    glyph: "EX",
+    hint: "Sell windows, proceeds and recommendations",
+    section: "Primary",
+  },
+];
+
+export const V3_PRIMARY_NAV = V3_CORE_PRIMARY_NAV;
+export const V3_DESKTOP_NAV = [
+  ...V3_CORE_PRIMARY_NAV.slice(0, 4),
   {
     id: V3_PAGE.PORTFOLIO,
     label: "Portfolio",
@@ -76,13 +88,7 @@ export const V3_PRIMARY_NAV = [
     hint: "Performance, allocation and capital flow",
     section: "Primary",
   },
-  {
-    id: V3_PAGE.EXITS,
-    label: "Exits",
-    glyph: "EX",
-    hint: "Sell windows, proceeds and recommendations",
-    section: "Primary",
-  },
+  ...V3_CORE_PRIMARY_NAV.slice(4),
 ];
 
 export const V3_SECONDARY_NAV = [
@@ -125,7 +131,7 @@ export const V3_ACCOUNT_NAV = [
 
 export function v3WorkspaceLabel(page) {
   const id = canonicalPage(page);
-  const primary = V3_PRIMARY_NAV.find((item) => item.id === id);
+  const primary = V3_DESKTOP_NAV.find((item) => item.id === id);
   if (primary) {
     return primary.label;
   }
@@ -175,7 +181,7 @@ export function v3MobileMenuItems(items, legoJourney) {
 export function isV3LegoJourneyPage(page) {
   const id = canonicalPage(page);
   return (
-    V3_PRIMARY_NAV.some((item) => item.id === id) ||
+    V3_DESKTOP_NAV.some((item) => item.id === id) ||
     V3_SECONDARY_NAV.some((item) => item.id === id) ||
     V3_ACCOUNT_NAV.some((item) => item.id === id)
   );
