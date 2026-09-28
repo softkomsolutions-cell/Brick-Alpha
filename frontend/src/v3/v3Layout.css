@@ -1313,3 +1313,15 @@
 .v3AppShell .v3SidebarSectionLabel + .v3SidebarNav .v3SidebarNavGlyph{
   font-variant-numeric:tabular-nums;
 }
+
+.v3SidebarNavItem.locked{
+  opacity:.56;
+  cursor:not-allowed;
+}
+.v3SidebarNavItem.locked:hover{
+  background:transparent;
+  border-color:transparent;
+}
+.v3SidebarNavItem.locked .v3SidebarNavGlyph{
+  background:#f3f2ee;
+}
