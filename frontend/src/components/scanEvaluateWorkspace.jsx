@@ -391,19 +391,18 @@ export function ScanEvaluateWorkspace({
         return;
       }
 
-      const enriched = buildEvaluation({
+      const canonicalMatch = {
         ...match,
-        ...(profile
-          ? {
-              name: profile.name,
-              legoTheme: profile.theme,
-              category: profile.theme,
-              retailPrice: profile.retailPrice,
-              numberOfPieces: profile.pieces,
-              numberOfMinifigures: profile.minifigures,
-            }
-          : {}),
-      });
+        name: match.name || profile?.name || "LEGO set",
+        legoTheme: match.legoTheme || profile?.theme || match.category || "",
+        category: match.category || profile?.theme || "LEGO",
+        retailPrice: match.retailPrice ?? profile?.retailPrice,
+        numberOfPieces: match.numberOfPieces ?? profile?.pieces,
+        numberOfMinifigures: match.numberOfMinifigures ?? profile?.minifigures,
+      };
+      const enriched = Number.isFinite(Number(canonicalMatch.brickAlphaScore))
+        ? canonicalMatch
+        : buildEvaluation(canonicalMatch);
 
       setIdentifiedSetNumber(normalized);
       const snapshot = buildDecisionSnapshot({
