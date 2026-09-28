@@ -2,9 +2,11 @@ import { useMemo, useState } from "react";
 import { formatCollectiblePrice } from "../../appUtils";
 import { allInAcquisition } from "../collection/ownershipModel";
 import { readDecisionSnapshot } from "../decision/decisionSession";
+import { readBuyingProfile } from "../onboarding/onboardingStorage";
 
 export function LogPurchaseScreen({ navigateToPage, onSubmitPurchase, busy = false }) {
   const snapshot = readDecisionSnapshot();
+  const buyingProfile = readBuyingProfile();
   const [status, setStatus] = useState("");
   const [form, setForm] = useState(() => ({
     price: snapshot?.currentValue ? String(Math.round(snapshot.currentValue)) : "",
@@ -12,6 +14,7 @@ export function LogPurchaseScreen({ navigateToPage, onSubmitPurchase, busy = fal
     retailer: "",
     quantity: String(snapshot?.verdict?.quantity || 1),
     condition: "sealed",
+    book: "curated",
     shipping: "",
     vatReclaim: "",
     rewards: "",
@@ -68,6 +71,8 @@ export function LogPurchaseScreen({ navigateToPage, onSubmitPurchase, busy = fal
               retailer: form.retailer,
               quantity: allIn.quantity,
               condition: form.condition,
+              collectionBook: form.book,
+              curated: form.book !== "full",
               notes: form.notes,
               setName: snapshot.name,
             });
@@ -87,11 +92,13 @@ export function LogPurchaseScreen({ navigateToPage, onSubmitPurchase, busy = fal
         </label>
         <p>All-in cost {formatCollectiblePrice(allIn.allInTotal)} · {formatCollectiblePrice(allIn.unitCost)} per unit. Leave adjustments blank when they do not apply.</p>
         <details>
-          <summary>VAT, rewards, cashback, vouchers</summary>
-          <label>
-            VAT reclaim
-            <input type="number" min="0" step="0.01" value={form.vatReclaim} onChange={update("vatReclaim")} />
-          </label>
+          <summary>Cost adjustments</summary>
+          {buyingProfile.businessBuyer ? (
+            <label>
+              VAT reclaim
+              <input type="number" min="0" step="0.01" value={form.vatReclaim} onChange={update("vatReclaim")} />
+            </label>
+          ) : null}
           <label>
             Rewards
             <input type="number" min="0" step="0.01" value={form.rewards} onChange={update("rewards")} />
@@ -121,7 +128,17 @@ export function LogPurchaseScreen({ navigateToPage, onSubmitPurchase, busy = fal
           Condition
           <select value={form.condition} onChange={update("condition")}>
             <option value="sealed">Sealed</option>
-            <option value="opened">Opened</option>
+            <option value="open-box">Open box</option>
+            <option value="loose">Loose</option>
+            <option value="built">Built</option>
+            <option value="used">Used</option>
+          </select>
+        </label>
+        <label>
+          Book
+          <select value={form.book} onChange={update("book")}>
+            <option value="curated">Curated</option>
+            <option value="full">Full collection only</option>
           </select>
         </label>
         <label>
