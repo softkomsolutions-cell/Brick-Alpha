@@ -1,6 +1,6 @@
 import { BrandLogo } from "../components/brandLogo";
 import { APP_TAGLINE, APP_WORDMARK } from "../appConfig";
-import { V3_ACCOUNT_NAV, V3_PRIMARY_NAV, V3_SECONDARY_NAV } from "./v3Nav";
+import { V3_ACCOUNT_NAV, V3_DESKTOP_NAV, V3_SECONDARY_NAV } from "./v3Nav";
 
 export function V3Sidebar({
   activePage,
@@ -26,7 +26,7 @@ export function V3Sidebar({
       <div>
         <div className="v3SidebarSectionLabel">Invest</div>
         <nav className="v3SidebarNav">
-          {V3_PRIMARY_NAV.map((item) => (
+          {V3_DESKTOP_NAV.map((item) => (
             <button
               key={item.id}
               type="button"
