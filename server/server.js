@@ -5432,6 +5432,8 @@ app.post("/api/collectibles/trades", requireAuth, async (req, res) => {
   const stopPrice = sanitizeTradePlanValue(req.body?.stopPrice);
   const targetPrice = sanitizeTradePlanValue(req.body?.targetPrice);
   const riskBudget = sanitizeTradePlanValue(req.body?.riskBudget);
+  const collectionBook = req.body?.collectionBook === "full" ? "full" : "curated";
+  const curated = req.body?.curated === false ? false : collectionBook !== "full";
   const acquisitionProvided = req.body?.acquisitionPrice != null && req.body?.acquisitionPrice !== "";
   const acquisitionPrice = acquisitionProvided ? sanitizeAcquisitionPrice(req.body?.acquisitionPrice) : null;
   const item = findTradeableCollectibleById(collectibleId);
@@ -5513,6 +5515,8 @@ app.post("/api/collectibles/trades", requireAuth, async (req, res) => {
     executionProvider: "collecttrade",
     executionLabel: "Brick Alpha Paper",
   });
+  trade.collectionBook = collectionBook;
+  trade.curated = curated;
 
   if (isFinancialDualMode()) {
     try {
