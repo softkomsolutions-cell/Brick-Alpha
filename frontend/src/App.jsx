@@ -3296,10 +3296,11 @@ export default function App() {
           setV3OnboardingVisible(false);
           jumpToPageSection("scan", "scan-evaluate", activeDesk);
         }}
-        onNavigateToCollection={() => {
+        onNavigateToDataSources={() => {
           setV3OnboardingVisible(false);
-          jumpToPageSection("log-purchase", "log-purchase", activeDesk);
+          jumpToPageSection("data-sources", "data-sources", activeDesk);
         }}
+        onApplySettings={updateSettings}
       />
     );
   }
