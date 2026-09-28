@@ -29,7 +29,7 @@ export function SetAnalysisScreen({ navigateToPage, appSettings }) {
   if (!snapshot) {
     return (
       <div className="v3WorkflowScreen" data-page="set-analysis">
-        <header className="v3WorkflowHero">
+        <header className="v3WorkflowHero v3WorkflowEmpty">
           <h1>Set Analysis</h1>
           <p>Open a verdict first. Deep factors stay attached to that frozen analysis.</p>
           <button type="button" className="primaryButton" onClick={() => navigateToPage("scan")}>
