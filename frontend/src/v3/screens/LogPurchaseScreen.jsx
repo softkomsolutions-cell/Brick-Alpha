@@ -82,14 +82,16 @@ export function LogPurchaseScreen({ navigateToPage, onSubmitPurchase, busy = fal
           }
         }}
       >
-        <label>
-          Cash paid per unit (ZAR)
-          <input type="number" min="0" step="0.01" required value={form.price} onChange={update("price")} />
-        </label>
-        <label>
-          Shipping for this purchase
-          <input type="number" min="0" step="0.01" value={form.shipping} onChange={update("shipping")} placeholder="0 if none" />
-        </label>
+        <div className="v3PurchaseGrid">
+          <label>
+            Cash paid per unit (ZAR)
+            <input type="number" min="0" step="0.01" required value={form.price} onChange={update("price")} />
+          </label>
+          <label>
+            Shipping for this purchase
+            <input type="number" min="0" step="0.01" value={form.shipping} onChange={update("shipping")} placeholder="0 if none" />
+          </label>
+        </div>
         <p>All-in cost {formatCollectiblePrice(allIn.allInTotal)} · {formatCollectiblePrice(allIn.unitCost)} per unit. Leave adjustments blank when they do not apply.</p>
         <details>
           <summary>Cost adjustments</summary>
@@ -112,35 +114,37 @@ export function LogPurchaseScreen({ navigateToPage, onSubmitPurchase, busy = fal
             <input type="number" min="0" step="0.01" value={form.vouchers} onChange={update("vouchers")} />
           </label>
         </details>
-        <label>
-          Purchase date
-          <input type="date" required value={form.date} onChange={update("date")} />
-        </label>
-        <label>
-          Retailer or source
-          <input type="text" required value={form.retailer} onChange={update("retailer")} placeholder="LEGO store, marketplace, private" />
-        </label>
-        <label>
-          Quantity
-          <input type="number" min="1" required value={form.quantity} onChange={update("quantity")} />
-        </label>
-        <label>
-          Condition
-          <select value={form.condition} onChange={update("condition")}>
-            <option value="sealed">Sealed</option>
-            <option value="open-box">Open box</option>
-            <option value="loose">Loose</option>
-            <option value="built">Built</option>
-            <option value="used">Used</option>
-          </select>
-        </label>
-        <label>
-          Book
-          <select value={form.book} onChange={update("book")}>
-            <option value="curated">Curated</option>
-            <option value="full">Full collection only</option>
-          </select>
-        </label>
+        <div className="v3PurchaseGrid">
+          <label>
+            Purchase date
+            <input type="date" required value={form.date} onChange={update("date")} />
+          </label>
+          <label>
+            Retailer or source
+            <input type="text" required value={form.retailer} onChange={update("retailer")} placeholder="LEGO store, marketplace, private" />
+          </label>
+          <label>
+            Quantity
+            <input type="number" min="1" required value={form.quantity} onChange={update("quantity")} />
+          </label>
+          <label>
+            Condition
+            <select value={form.condition} onChange={update("condition")}>
+              <option value="sealed">Sealed</option>
+              <option value="open-box">Open box</option>
+              <option value="loose">Loose</option>
+              <option value="built">Built</option>
+              <option value="used">Used</option>
+            </select>
+          </label>
+          <label>
+            Book
+            <select value={form.book} onChange={update("book")}>
+              <option value="curated">Curated</option>
+              <option value="full">Full collection only</option>
+            </select>
+          </label>
+        </div>
         <label>
           Notes
           <textarea value={form.notes} onChange={update("notes")} rows={3} />
