@@ -68,7 +68,7 @@ export function PortfolioScreen({ appSettings, openTrades = [], closedTrades = [
       </div>
 
       <section className="v3DecisionCard">
-        <div className="v3PortfolioSectionHead"><div><span className="v3Eyebrow">Holdings</span><h2>Portfolio contribution</h2></div><small>Market value and return by set</small></div>
+        <div className="v3PortfolioSectionHead"><div><span className="v3Eyebrow">Collection</span><h2>Portfolio contribution</h2></div><small>Market value and return by set</small></div>
         <div className="v3HoldingChart">
           {collection.sets.map((set) => (
             <div key={set.id} className="v3HoldingChartRow">
