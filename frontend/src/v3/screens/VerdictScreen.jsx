@@ -15,7 +15,7 @@ export function VerdictScreen({ navigateToPage, onWatch, onAddToCollection, appS
   if (!snapshot) {
     return (
       <div className="v3WorkflowScreen" data-page="verdict">
-        <header className="v3WorkflowHero">
+        <header className="v3WorkflowHero v3WorkflowEmpty">
           <h1>Verdict</h1>
           <p>Scan a set first. The verdict is calculated once and stays fixed after you watch or buy.</p>
           <button type="button" className="primaryButton" onClick={() => navigateToPage("scan")}>
