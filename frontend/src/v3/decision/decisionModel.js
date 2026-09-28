@@ -86,79 +86,108 @@ function factor(id, title, score, summary, detail) {
 export function buildNineFactors(evaluation, extras = {}) {
   const verdict = extras.verdict || mapVerdictVocabulary(evaluation);
   const retirement = extras.retirement || buildCanonicalRetirement(evaluation);
-  const minifigCount = evaluation?.numberOfMinifigures || extras.profile?.minifigures || "—";
+  const minifigCount = Number(evaluation?.numberOfMinifigures || extras.profile?.minifigures || 0);
+  const exclusiveMinifigures = numberOrZero(evaluation?.exclusiveMinifigures);
   const reprintRisk = Math.max(
     0,
-    100 - numberOrZero(evaluation?.supplyScarcity || numberOrZero(evaluation?.exclusiveMinifigures) * 12),
+    100 - numberOrZero(evaluation?.supplyScarcity || exclusiveMinifigures * 12),
   );
   const probability =
     retirement.retirementProbability == null ? "—" : `${retirement.retirementProbability}%`;
   const months = retirement.monthsRemaining;
   const growth = recordedGrowth(evaluation);
+  const currentValue = canonicalMarketValue(evaluation).value;
+  const targetPrice = numberOrZero(verdict.targetPrice);
+  const quantity = Math.max(0, numberOrZero(verdict.quantity));
+  const stackCost = targetPrice > 0 && quantity > 0 ? targetPrice * quantity : null;
+  const recoveryGap =
+    stackCost != null && currentValue != null ? Math.max(0, stackCost - currentValue) : null;
+  const annualText =
+    growth.annualPercent == null ? "Annual growth not recorded" : `Annual ${formatRecordedGrowth(growth.annualPercent)}`;
+  const ninetyText =
+    growth.ninetyDayPercent == null ? "90-day growth not recorded" : `90-day ${formatRecordedGrowth(growth.ninetyDayPercent)}`;
+  const retirementState = retirement.retirementState || retirement.status;
+  const timeOnMarketSummary = evaluation?.releaseDate
+    ? `Released ${evaluation.releaseDate}`
+    : "Release date not recorded";
+  const themeSummary = evaluation?.legoTheme || extras.profile?.theme || "Theme unavailable";
+  const minifigSummary = minifigCount
+    ? `${minifigCount} minifigure${minifigCount === 1 ? "" : "s"} · ${exclusiveMinifigures} exclusive`
+    : "Minifigure value data not recorded";
+  const channelTriggers =
+    stackCost != null
+      ? CHANNELS.map((channel) =>
+          `${channel.label} gross ${formatCollectiblePrice(Math.ceil(stackCost / (1 - channel.feeRate)))}`,
+        ).join(" · ")
+      : "Channel recovery trigger becomes available once a multi-unit stack is selected";
 
   return [
     factor(
       "time-on-market",
       "Time on market",
       evaluation?.historicalPerformance,
-      extras.profile?.brickEconomyStatus || "Tracked on the secondary market",
-      "How long sealed supply has been trading, and whether comps are still liquid.",
+      timeOnMarketSummary,
+      `Expected retirement ${retirement.expectedRetirement}. Shelf-life comparison is shown only when a release date is recorded.`,
     ),
     factor(
       "theme-strength",
       "Theme strength",
       evaluation?.themeStrength,
-      evaluation?.legoTheme || extras.profile?.theme || "Theme",
-      "Collector demand for the theme behind this set.",
+      themeSummary,
+      `${annualText}. Theme rank is not shown until a recorded BrickEconomy theme rank is available.`,
     ),
     factor(
       "time-to-retirement",
       "Time to retirement",
       evaluation?.retirementTimeline,
-      months != null && months > 0 ? `${months} months · ${retirement.status}` : retirement.status,
-      `Expected retirement ${retirement.expectedRetirement}. Probability ${probability}.`,
+      months != null && months > 0 ? `${months} months · ${retirementState}` : retirementState,
+      `Expected retirement ${retirement.expectedRetirement}. Probability ${probability}. 60-day and 30-day reminders apply inside the warning window.`,
     ),
     factor(
       "minifig-value",
       "Minifig value to set price",
       evaluation?.minifigureQuality,
-      `${minifigCount} minifigures`,
-      "Share of set value explained by minifigures and exclusive figures.",
+      minifigSummary,
+      "Exclusive-minifigure value as a percentage of set price is shown only when the source records that monetary value; target is 40%.",
     ),
     factor(
       "reprint-risk",
       "Reprint risk",
       reprintRisk,
-      numberOrZero(evaluation?.exclusiveMinifigures) >= 2 ? "Low reprint pressure" : "Watch for a reprint",
+      exclusiveMinifigures >= 2 ? "Low reprint pressure" : "Watch for a reprint",
       "Higher exclusivity and scarcity lower the chance a reprint resets the thesis.",
     ),
     factor(
       "retirement-pop",
       "Retirement pop",
       growth.annualPercent == null ? 50 : Math.max(0, Math.min(100, 50 + growth.annualPercent)),
-      growth.annualPercent == null ? "Insufficient history" : formatRecordedGrowth(growth.annualPercent),
-      "Recorded valuation history only. A 1-year, 5-year, or 10-year forecast is not a decision input.",
+      retirementState === "Retired" ? `${annualText} · ${ninetyText}` : "Pre-retirement guide",
+      retirementState === "Retired"
+        ? "Once retired, Brick Alpha judges the set on recorded annual and 90-day growth."
+        : "A first-12-month retirement-pop range is displayed only when supplied by BrickEconomy; speculative 1-year, 5-year, or 10-year forecasts are not decision inputs.",
     ),
     factor(
       "how-many",
       "How many to buy",
-      verdict.quantity ? 70 + verdict.quantity * 10 : 30,
-      verdict.quantity ? `${verdict.quantity} unit${verdict.quantity === 1 ? "" : "s"}` : "None",
-      verdict.label,
+      quantity ? 70 + quantity * 10 : 30,
+      quantity ? `${quantity} unit${quantity === 1 ? "" : "s"} · ${verdict.label}` : "None",
+      stackCost != null
+        ? `At the verdict target, stack cost is ${formatCollectiblePrice(stackCost)}. One unit at today's mark covers ${currentValue != null && stackCost > 0 ? Math.min(100, Math.round((currentValue / stackCost) * 100)) : 0}% of stack cost${recoveryGap ? `; ${formatCollectiblePrice(recoveryGap)} still to recover` : ""}.`
+        : verdict.label,
     ),
     factor(
       "when-to-sell",
       "When to sell one unit",
       evaluation?.liquidityScore,
-      months != null && months > 0 ? `After retirement, about ${months} months out` : "Supply is already tight",
-      "Sell one unit into the retirement window and keep a second only when the flywheel verdict applies.",
+      stackCost != null ? `Recover the stack from one sale` : "No multi-unit recovery trigger",
+      channelTriggers,
     ),
     factor(
       "recycle-cash",
       "Recycle the cash",
       evaluation?.portfolioFit,
-      "Redeploy proceeds into the next Buy ×1 or Buy ×2 set",
-      "Exit proceeds should fund the next high-conviction set rather than sit idle.",
+      "Fund the next July / December retirement-window candidate",
+      "After a sale, realised cash stays separate from owned value. Use Research → Retiring Soon to choose the next funded Buy ×1 / Buy ×2 candidate.",
     ),
   ];
 }
