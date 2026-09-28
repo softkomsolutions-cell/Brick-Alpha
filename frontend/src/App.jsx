@@ -63,6 +63,7 @@ import { V3Sidebar } from "./v3/V3Sidebar";
 import { V3OnboardingFlow } from "./v3/onboarding/V3OnboardingFlow";
 import { isV3OnboardingComplete } from "./v3/onboarding/onboardingStorage";
 import { clearV3DemoDeviceState } from "./v3/demo/demoDeviceState";
+import { readDecisionSnapshot } from "./v3/decision/decisionSession";
 import { isV3LegoJourneyPage, v3MobileMenuItems } from "./v3/v3Nav";
 
 function lazyNamedExport(factory, exportName) {
@@ -1019,6 +1020,16 @@ export default function App() {
     (nextPage, reopenIntro = false, nextDesk = activeDesk) => {
       if (reopenIntro) {
         setSplashVisible(true);
+        return;
+      }
+
+      const decisionOnly = new Set(["verdict", "set-analysis", "log-purchase"]);
+      if (decisionOnly.has(nextPage) && !readDecisionSnapshot()) {
+        applyWorkspaceRoute("scan", nextDesk, {
+          pushHistory: true,
+          sectionId: "scan-evaluate",
+          persistLaunch: true,
+        });
         return;
       }
 
