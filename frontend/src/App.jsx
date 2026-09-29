@@ -2917,6 +2917,20 @@ export default function App() {
       detail: "Allocation, returns and capital flow",
       action: () => handleMenuNavigate("portfolio", activeDesk),
     },
+    {
+      id: "menu-exits",
+      glyph: "EX",
+      label: "Exits",
+      detail: "Sell windows and realised results",
+      action: () => handleMenuNavigate("exits", activeDesk),
+    },
+    {
+      id: "menu-data-sources",
+      glyph: "DS",
+      label: "Data Sources",
+      detail: "Import collection data and BrickEconomy",
+      action: () => handleMenuNavigate("data-sources", activeDesk),
+    },
   ];
   const menuDeskItems = MARKET_DESKS.map((desk) => ({
     id: desk.id,
