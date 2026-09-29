@@ -496,7 +496,17 @@ function enrichBrickAlphaTrade(trade, collectibleItems = [], allTrades = []) {
   const collectible = collectibleItems.find((item) => item.id === trade.collectibleId);
   const base = collectible || {};
   const buyPrice = numberOrZero(trade.entryPrice ?? base.buyPrice);
-  const currentMarketValue = numberOrZero(trade.currentPrice ?? base.currentMarketValue);
+  const seededBrickEconomyMark =
+    /BrickEconomy mark/i.test(String(trade.orderNote || trade.note || ""))
+      ? trade.currentPrice
+      : null;
+  const currentMarketValue = numberOrZero(
+    trade.brickEconomyValue ??
+      seededBrickEconomyMark ??
+      base.currentMarketValue ??
+      base.brickEconomyValue ??
+      trade.currentPrice,
+  );
   const quantityOwned = Math.max(1, numberOrZero(trade.quantity ?? base.quantityOwned ?? 1));
   const estimatedRoi = buyPrice ? ((currentMarketValue - buyPrice) / buyPrice) * 100 : numberOrZero(trade.pnl);
   const holdingPeriodDays = daysBetween(trade.createdAt || base.purchaseDate, new Date().toISOString());
@@ -510,6 +520,8 @@ function enrichBrickAlphaTrade(trade, collectibleItems = [], allTrades = []) {
     buyPrice,
     quantityOwned,
     purchaseDate: trade.createdAt || base.purchaseDate,
+    expectedRetirementDate: trade.expectedRetirementDate || base.expectedRetirementDate,
+    actualRetirementDate: trade.actualRetirementDate || base.actualRetirementDate,
     currentMarketValue,
     estimatedRoi,
     realizedRoi: trade.status === 'closed' ? numberOrZero(trade.pnl) : 0,
