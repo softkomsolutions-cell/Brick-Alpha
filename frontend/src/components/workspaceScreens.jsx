@@ -2283,57 +2283,6 @@ export function NewsScreen({
   ];
 
   return (
-      <div className="v3WorkflowScreen v3Settings" data-page="settings">
-        <header className="v3WorkflowHero">
-          <div>
-            <span className="v3Eyebrow">Account & valuation</span>
-            <h1>Settings</h1>
-            <p>Keep Gavin's account controls, one USD/ZAR conversion rate, and the clean demo reset in one place.</p>
-          </div>
-        </header>
-        {settingsStatus ? <div className="statusBanner">{settingsStatus}</div> : null}
-        <div className="v3DataSourceGrid">
-          <section className="v3DecisionCard">
-            <span className="v3Eyebrow">Account</span>
-            <h2>{currentUser.name || "Partner Demo"}</h2>
-            <div className="v3SourceMeta">
-              <span>Signed in</span><strong>{currentUser.email}</strong>
-              <span>Timezone</span><strong>{appSettings.timezone}</strong>
-              <span>Role</span><strong>{canManageFeedback ? "Owner" : "Partner tester"}</strong>
-            </div>
-          </section>
-          <section className="v3DecisionCard">
-            <span className="v3Eyebrow">Valuation conversion</span>
-            <h2>USD/ZAR exchange rate</h2>
-            <p>One exchange rate is used anywhere a BrickEconomy USD valuation needs to be shown in rand.</p>
-            <form className="v3ExchangeForm" onSubmit={(event) => {
-              event.preventDefault();
-              const formRate = Number(new FormData(event.currentTarget).get("usdZarRate"));
-              updateSettings({ usdZarRate: formRate });
-            }}>
-              <label>
-                Rand per US dollar
-                <input name="usdZarRate" type="number" min="0.01" step="0.01" defaultValue={appSettings.usdZarRate} key={appSettings.usdZarRate} required />
-              </label>
-              <button type="submit" className="primaryButton">Save rate</button>
-            </form>
-          </section>
-        </div>
-        <section className="v3DecisionCard">
-          <div className="v3PortfolioSectionHead">
-            <div><span className="v3Eyebrow">Demo controls</span><h2>Gavin demo baseline</h2></div>
-          </div>
-          <p>Reset removes temporary demo decisions and transactions, then restores the seeded Gavin portfolio and realised-sales baseline.</p>
-          <div className="panelActions">
-            {currentUser.isDemo ? <button type="button" className="primaryButton" onClick={onDemoReset}>Reset Demo</button> : null}
-            <button type="button" className="secondaryButton" onClick={() => navigateToPage("data-sources", false, activeDesk)}>Open Data Sources</button>
-          </div>
-        </section>
-      </div>
-    );
-  }
-
-  return (
     <>
       <WorkspaceHero
         tone="news"
