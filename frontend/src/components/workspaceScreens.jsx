@@ -4737,7 +4737,6 @@ export function SettingsScreen({
   updateFeedbackStatus,
   updateSettings,
   onDemoReset,
-  legoJourney = false,
 }) {
   const feedbackItems = useMemo(() => feedbackResponse.items || [], [feedbackResponse.items]);
   const feedbackSummary = feedbackResponse.summary || {};
@@ -4849,8 +4848,7 @@ export function SettingsScreen({
     },
   ];
 
-  if (legoJourney) {
-    return (
+  return (
     <>
       <WorkspaceHero
         tone="settings"
