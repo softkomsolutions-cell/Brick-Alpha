@@ -5938,7 +5938,7 @@ app.post("/api/collection/import/preview", requireAuth, (req, res) => {
     const purchasePrice = Number(raw?.purchasePrice ?? raw?.price ?? raw?.cost ?? NaN);
     const condition = String(raw?.condition || "Sealed").trim();
     const errors = [];
-    if (!/^\\d{4,6}$/.test(setNumber)) errors.push("Set number must be 4-6 digits.");
+    if (!/^\d{4,6}$/.test(setNumber)) errors.push("Set number must be 4-6 digits.");
     else if (!findImportableCollectibleBySkuOrId(setNumber)) errors.push("Set is not in the Brick Alpha LEGO catalogue.");
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > 1000) errors.push("Quantity must be a whole number from 1 to 1000.");
     if (!Number.isFinite(purchasePrice) || purchasePrice < 0) errors.push("Purchase price must be zero or greater.");
@@ -6017,7 +6017,7 @@ app.post("/api/collection/import/commit", requireAuth, async (req, res) => {
     const setNumber = String(raw.setNumber || "").trim().replace(/-1$/, "");
     const quantity = Number(raw.quantity || 1);
     const purchasePrice = Number(raw.purchasePrice);
-    if (!/^\\d{4,6}$/.test(setNumber) || !Number.isInteger(quantity) || quantity < 1 || !Number.isFinite(purchasePrice) || purchasePrice < 0) {
+    if (!/^\d{4,6}$/.test(setNumber) || !Number.isInteger(quantity) || quantity < 1 || !Number.isFinite(purchasePrice) || purchasePrice < 0) {
       errors.push({ row: index + 1, error: "invalid_row" });
       continue;
     }
