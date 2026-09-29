@@ -108,9 +108,8 @@ const ConnectionsScreen = lazyNamedExport(
   () => import("./components/workspaceScreens"),
   "ConnectionsScreen",
 );
-const SettingsScreen = lazyNamedExport(
-  () => import("./components/workspaceScreens"),
-  "SettingsScreen",
+const SettingsScreen = lazy(() =>
+  import("./v3/screens/SettingsScreen").then((module) => ({ default: module.SettingsScreen })),
 );
 const OrderTicketModal = lazyNamedExport(
   () => import("./components/workspaceCards"),
@@ -3220,36 +3219,12 @@ export default function App() {
 
       {page === "settings" ? (
         <SettingsScreen
-          activeDesk={activeDesk}
-          activePageSections={activePageSections}
-          addTarget={addTarget}
-          alertsResponse={alertsResponse}
           appSettings={appSettings}
-          connectedProviderCount={connectedProviderCount}
           currentUser={currentUser}
-          feedbackBusyKey={feedbackBusyKey}
-          feedbackForm={feedbackForm}
-          feedbackResponse={feedbackResponse}
-          feedbackStatus={feedbackStatus}
-          installActionLabel={installActionLabel}
-          installHint={installHint}
-          installStatus={installStatus}
-          isAppInstalled={isAppInstalled}
-          jumpToPageSection={jumpToPageSection}
-          liveReadyDeskCount={liveReadyDeskCount}
-          navigateToPage={navigateToPage}
-          onInstallApp={installApp}
-          setFeedbackForm={setFeedbackForm}
-          settingsStatus={settingsStatus}
-          shareStatus={shareStatus}
-          setTargetInput={setTargetInput}
-          submitFeedback={submitFeedback}
-          targetInput={targetInput}
-          targets={targets}
-          updateFeedbackStatus={updateFeedbackStatus}
           updateSettings={updateSettings}
           onDemoReset={handleDemoReset}
-          legoJourney
+          navigateToPage={navigateToPage}
+          settingsStatus={settingsStatus}
         />
       ) : null}
     </>
