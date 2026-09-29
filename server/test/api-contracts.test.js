@@ -397,7 +397,7 @@ test("collection import preview and commit are safe, zero-cost aware, and idempo
   assert.equal(second.body.created, 0);
 
   const portfolio = await authenticated(user.token).get("/api/portfolio");
-  const imported = portfolio.body.filter((trade) => trade.sku === "75367" && trade.status === "open");
+  const imported = portfolio.body.filter((trade) => trade.collectibleId === "lego-star-wars-75367" && trade.status === "open");
   assert.equal(imported.length, 1);
   assert.equal(imported[0].quantity, 2);
   assert.equal(imported[0].entryPrice, 0);
