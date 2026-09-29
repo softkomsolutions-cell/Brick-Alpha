@@ -207,9 +207,11 @@ export function SaasTopNav({
           {notificationCount ? <span className="badge">{notificationCount}</span> : null}
         </button>
 
-        <button type="button" className="ghostButton" onClick={onOpenFeedback}>
-          Feedback
-        </button>
+        {onOpenFeedback ? (
+          <button type="button" className="ghostButton" onClick={onOpenFeedback}>
+            Feedback
+          </button>
+        ) : null}
         <button type="button" className="ghostButton" onClick={onLogout}>
           Log out
         </button>
