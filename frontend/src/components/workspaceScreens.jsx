@@ -2282,8 +2282,7 @@ export function NewsScreen({
     },
   ];
 
-  if (legoJourney) {
-    return (
+  return (
       <div className="v3WorkflowScreen v3Settings" data-page="settings">
         <header className="v3WorkflowHero">
           <div>
@@ -4901,7 +4900,8 @@ export function SettingsScreen({
     },
   ];
 
-  return (
+  if (legoJourney) {
+    return (
     <>
       <WorkspaceHero
         tone="settings"
