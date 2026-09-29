@@ -895,22 +895,22 @@ export default function App() {
   const [collectiblesResponse, setCollectiblesResponse] = useState(EMPTY_COLLECTIBLES_RESPONSE);
   const [health, setHealth] = useState(EMPTY_HEALTH);
   const [portfolio, setPortfolio] = useState([]);
-  const [targets, setTargets] = useState([]);
+  const [_targets, setTargets] = useState([]);
   const [targetInput, setTargetInput] = useState("");
   const [connectors, setConnectors] = useState([]);
-  const [feedbackResponse, setFeedbackResponse] = useState(EMPTY_FEEDBACK_RESPONSE);
+  const [_feedbackResponse, setFeedbackResponse] = useState(EMPTY_FEEDBACK_RESPONSE);
   const [_watchlistResponse, setWatchlistResponse] = useState(EMPTY_WATCHLIST_RESPONSE);
   const [alertsResponse, setAlertsResponse] = useState(EMPTY_ALERTS_RESPONSE);
   const [notificationsResponse, setNotificationsResponse] = useState(EMPTY_NOTIFICATIONS_RESPONSE);
   const [_routineResponse, setRoutineResponse] = useState(EMPTY_ROUTINE_RESPONSE);
-  const [shareStatus, setShareStatus] = useState(EMPTY_SHARE_STATUS);
+  const [_shareStatus, setShareStatus] = useState(EMPTY_SHARE_STATUS);
   const [appSettings, setAppSettings] = useState(DEFAULT_SETTINGS);
   const [settingsStatus, setSettingsStatus] = useState("");
-  const [feedbackStatus, setFeedbackStatus] = useState("");
+  const [_feedbackStatus, setFeedbackStatus] = useState("");
   const [watchlistStatus, setWatchlistStatus] = useState("");
   const [_routineStatus, setRoutineStatus] = useState("");
   const [feedbackForm, setFeedbackForm] = useState(INITIAL_FEEDBACK_FORM);
-  const [feedbackBusyKey, setFeedbackBusyKey] = useState("");
+  const [_feedbackBusyKey, setFeedbackBusyKey] = useState("");
   const [watchlistBusyKey, setWatchlistBusyKey] = useState("");
   const [connectorBusyKey, setConnectorBusyKey] = useState("");
   const [tradeActionBusy, setTradeActionBusy] = useState(false);
@@ -919,7 +919,7 @@ export default function App() {
   const [chartUploadName, setChartUploadName] = useState("");
   const [connectorForms, setConnectorForms] = useState(INITIAL_CONNECTOR_FORMS);
   const [installPromptEvent, setInstallPromptEvent] = useState(null);
-  const [installStatus, setInstallStatus] = useState("");
+  const [_installStatus, setInstallStatus] = useState("");
   const [isAppInstalled, setIsAppInstalled] = useState(() =>
     Boolean(
       window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator.standalone === true,
@@ -1052,7 +1052,7 @@ export default function App() {
     [activeDesk, applyWorkspaceRoute],
   );
 
-  const installHint = useMemo(() => {
+  const _installHint = useMemo(() => {
     if (isAppInstalled) {
       return `${APP_NAME} is already installed on this device.`;
     }
@@ -2066,7 +2066,7 @@ export default function App() {
     [appSettings.executionProfiles, updateSettings],
   );
 
-  const addTarget = useCallback(async () => {
+  const _addTarget = useCallback(async () => {
     const target = targetInput.trim();
     if (!target || !authToken) {
       return;
@@ -2226,7 +2226,7 @@ export default function App() {
     [authToken],
   );
 
-  const submitFeedback = useCallback(async () => {
+  const _submitFeedback = useCallback(async () => {
     if (!authToken) {
       return;
     }
@@ -2254,7 +2254,7 @@ export default function App() {
     }
   }, [authToken, feedbackForm]);
 
-  const updateFeedbackStatus = useCallback(
+  const _updateFeedbackStatus = useCallback(
     async (feedbackId, status) => {
       if (!authToken) {
         return;
