@@ -2005,6 +2005,10 @@ function seedDemoUserState(state, userId, options = {}) {
       executionProvider: "collecttrade",
       executionLabel: "Brick Alpha Paper",
     });
+    if (holding.currentPrice != null) {
+      trade.brickEconomyValue = holding.currentPrice;
+      trade.valuationDate = "2026-09-23";
+    }
     if (holding.salePrice != null) {
       closeTrade(trade, "Local buyer groups", { price: holding.salePrice });
       trade.closedAt = GAVIN_V3_BASELINE_AS_OF;
