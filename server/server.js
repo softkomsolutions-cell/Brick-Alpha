@@ -5608,8 +5608,53 @@ app.post("/api/trades/:tradeId/close", requireAuth, async (req, res) => {
   }
 
   const requestedSale = Number(req.body?.salePrice);
+  const requestedQuantity = Math.max(
+    1,
+    Math.min(
+      Math.max(1, Math.round(Number(trade.quantity || 1))),
+      Math.round(Number(req.body?.quantity || trade.quantity || 1)),
+    ),
+  );
   if (trade.assetClass === "collectible" && Number.isFinite(requestedSale) && requestedSale > 0) {
     trade.currentPrice = Number(requestedSale.toFixed(2));
+  }
+
+  if (
+    trade.assetClass === "collectible" &&
+    requestedQuantity < Math.max(1, Math.round(Number(trade.quantity || 1)))
+  ) {
+    const originalQuantity = Math.max(1, Math.round(Number(trade.quantity || 1)));
+    const closedTrade = {
+      ...trade,
+      id: tradeId++,
+      quantity: requestedQuantity,
+      status: "open",
+      createdAt: trade.createdAt,
+      updatedAt: nowIso(),
+    };
+    closeTrade(
+      closedTrade,
+      orderNote ? `Manual close: ${orderNote}` : "Manual close",
+      Number.isFinite(requestedSale) && requestedSale > 0 ? { price: requestedSale } : null,
+    );
+    trade.quantity = originalQuantity - requestedQuantity;
+    trade.updatedAt = nowIso();
+    req.userState.trades.unshift(closedTrade);
+    persistStore();
+
+    res.json({
+      ok: true,
+      trade: closedTrade,
+      remainingTrade: trade,
+      portfolio: req.userState.trades,
+      execution: {
+        mode: "paper",
+        providerId: trade.executionProvider || "collecttrade",
+        pair: null,
+        remoteStatus: null,
+      },
+    });
+    return;
   }
 
   const signal =
