@@ -64,7 +64,7 @@ test("collection CSV preview validates rows and commit is idempotent", async () 
   assert.equal(secondCommit.body.created, 0);
 
   const portfolio = await authenticated(user.token).get("/api/portfolio");
-  const venator = portfolio.body.find((trade) => trade.sku === "75367");
+  const venator = portfolio.body.find((trade) => trade.collectibleId === "lego-star-wars-75367");
   assert.ok(venator);
   assert.equal(venator.quantity, 2);
   assert.equal(venator.entryPrice, 26999);
@@ -91,7 +91,7 @@ test("collection import accepts a zero-cost gift", async () => {
   assert.equal(committed.body.created, 1);
 
   const portfolio = await authenticated(user.token).get("/api/portfolio");
-  const venator = portfolio.body.find((trade) => trade.sku === "75367");
+  const venator = portfolio.body.find((trade) => trade.collectibleId === "lego-star-wars-75367");
   assert.ok(venator);
   assert.equal(venator.entryPrice, 0);
 });
