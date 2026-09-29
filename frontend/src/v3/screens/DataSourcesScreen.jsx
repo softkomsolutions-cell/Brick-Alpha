@@ -39,7 +39,14 @@ export function DataSourcesScreen({ authToken, requestJson, onImported }) {
     const data = await requestJson("/api/data-sources", { token: authToken });
     setSource(data);
   };
-  useEffect(() => { load().catch((error) => setStatus(error.message)); }, [authToken]);
+  useEffect(() => {
+    let active = true;
+    Promise.resolve()
+      .then(() => requestJson("/api/data-sources", { token: authToken }))
+      .then((data) => { if (active) setSource(data); })
+      .catch((error) => { if (active) setStatus(error.message); });
+    return () => { active = false; };
+  }, [authToken, requestJson]);
   const validRows = useMemo(() => (preview?.rows || []).filter((row) => row.valid), [preview]);
 
   const connect = async () => {
