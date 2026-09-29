@@ -25,7 +25,7 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
   const rows = filterCollectionSets(view.sets, filter, theme);
 
   return (
-    <div className="v3WorkflowScreen" data-page="collection">
+    <div className="v3WorkflowScreen v3Collection" data-page="collection">
       <header className="v3WorkflowHero">
         <h1>Collection</h1>
         <p>One row per set. Market value leads. Stacks open into the units that make up the cost.</p>
@@ -81,11 +81,13 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
                     aria-expanded={expanded}
                     onClick={() => setExpandedId(expanded ? "" : set.id)}
                   >
-                    <div>
+                    <div className="v3CollectionIdentity">
                       <strong>{set.name}</strong>
                       <small>
-                        #{set.setNumber} · {set.theme} · {set.condition} · {set.units}{" "}
-                        {set.units === 1 ? "unit" : "units"}
+                        <span>#{set.setNumber}</span>
+                        <span>{set.theme}</span>
+                        <span>{set.condition}</span>
+                        <span>{set.units} {set.units === 1 ? "unit" : "units"}</span>
                       </small>
                     </div>
                     <div className="v3CollectionStats">
