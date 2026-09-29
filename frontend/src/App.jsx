@@ -2910,6 +2910,13 @@ export default function App() {
       detail: "Holdings and performance",
       action: () => handleMenuNavigate("collection", activeDesk),
     },
+    {
+      id: "menu-portfolio",
+      glyph: "PF",
+      label: "Portfolio",
+      detail: "Allocation, returns and capital flow",
+      action: () => handleMenuNavigate("portfolio", activeDesk),
+    },
   ];
   const menuDeskItems = MARKET_DESKS.map((desk) => ({
     id: desk.id,
