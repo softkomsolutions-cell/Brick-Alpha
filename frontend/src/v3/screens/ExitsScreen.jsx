@@ -23,10 +23,11 @@ function proximityLabel(months) {
 
 function SalePreview({ form, saleFor }) {
   const unit = saleFor?.unitRows?.[0];
-  const quantity = Math.max(
+  const availableQuantity = Math.max(
     1,
     (saleFor?.unitRows || []).filter((row) => row.tradeId === unit?.tradeId).length || 1,
   );
+  const quantity = Math.max(1, Math.min(availableQuantity, Number(form.quantity) || 1));
   const unitPrice = Number(form.salePrice);
   const preview = unit && Number.isFinite(unitPrice)
     ? previewRealisedSale({
@@ -88,6 +89,7 @@ export function ExitsScreen({
   const [status, setStatus] = useState("");
   const [form, setForm] = useState({
     salePrice: "",
+    quantity: "1",
     date: new Date().toISOString().slice(0, 10),
     channel: EXIT_CHANNELS[0].id,
     notes: "",
@@ -99,6 +101,7 @@ export function ExitsScreen({
     setStatus("");
     setForm({
       salePrice: unit ? String(Math.round(unit.marketValue)) : "",
+      quantity: "1",
       date: new Date().toISOString().slice(0, 10),
       channel: EXIT_CHANNELS[0].id,
       notes: "",
@@ -109,6 +112,11 @@ export function ExitsScreen({
     event.preventDefault();
     const unit = saleFor?.unitRows?.[0];
     const salePrice = Number(form.salePrice);
+    const availableQuantity = Math.max(
+      1,
+      (saleFor?.unitRows || []).filter((row) => row.tradeId === unit?.tradeId).length || 1,
+    );
+    const quantity = Math.max(1, Math.min(availableQuantity, Number(form.quantity) || 1));
     if (!unit || !Number.isFinite(salePrice) || salePrice <= 0) {
       setStatus("Enter the sale price before recording.");
       return;
@@ -118,6 +126,7 @@ export function ExitsScreen({
       await onRecordSale({
         tradeId: unit.tradeId,
         salePrice,
+        quantity,
         orderNote: [
           `Channel: ${channel.label}`,
           form.date ? `Sale date: ${form.date}` : "",
@@ -222,7 +231,7 @@ export function ExitsScreen({
       {saleFor ? (
         <form className="v3PurchaseForm v3DecisionCard" onSubmit={submitSale}>
           <h2>Record sale · {saleFor.name}</h2>
-          <p>This closes the holding at the sale price. It does not change past analysis snapshots.</p>
+          <p>Record one or more units at the sale price. Selling one unit from a stack leaves the remaining units open and does not change past analysis snapshots.</p>
           <label>
             Sale price (ZAR)
             <input
@@ -232,6 +241,18 @@ export function ExitsScreen({
               required
               value={form.salePrice}
               onChange={(event) => setForm((current) => ({ ...current, salePrice: event.target.value }))}
+            />
+          </label>
+          <label>
+            Quantity
+            <input
+              type="number"
+              min="1"
+              max={Math.max(1, saleFor.units || 1)}
+              step="1"
+              required
+              value={form.quantity}
+              onChange={(event) => setForm((current) => ({ ...current, quantity: event.target.value }))}
             />
           </label>
           <label>
