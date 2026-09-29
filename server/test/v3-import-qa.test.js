@@ -18,11 +18,12 @@ test("collection CSV preview validates rows and commit is idempotent", async () 
     {
       setNumber: "75367",
       quantity: 2,
-      purchasePrice: 26999,
+      purchasePrice: 26000,
       purchaseDate: "2026-09-29",
       condition: "Sealed",
       retailer: "QA Test",
-      shipping: 100,
+      shipping: 500,
+      vatReclaim: 100,
       rewards: 100,
     },
     {
@@ -67,7 +68,7 @@ test("collection CSV preview validates rows and commit is idempotent", async () 
   const venator = portfolio.body.find((trade) => trade.collectibleId === "lego-star-wars-75367");
   assert.ok(venator);
   assert.equal(venator.quantity, 2);
-  assert.equal(venator.entryPrice, 26999);
+  assert.equal(venator.entryPrice, 26200);
 });
 
 test("collection import accepts a zero-cost gift", async () => {
