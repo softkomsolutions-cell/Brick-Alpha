@@ -2999,7 +2999,7 @@ export default function App() {
     ? menuSupportItems.filter((item) => ["menu-home", "menu-settings"].includes(item.id))
     : menuSupportItems;
   const visibleMenuActionItems = legoJourneyActive
-    ? menuActionItems.filter((item) => ["menu-inbox", "menu-feedback", "menu-logout"].includes(item.id))
+    ? menuActionItems.filter((item) => ["menu-inbox", "menu-logout"].includes(item.id))
     : menuActionItems;
   const workspaceContent = (
     <>
@@ -3390,7 +3390,7 @@ export default function App() {
           notificationCount={notificationUnreadCount}
           onOpenSearch={openGlobalSearch}
           onOpenNotifications={openNotificationCenter}
-          onOpenFeedback={() => jumpToPageSection("settings", "feedback-board")}
+          onOpenFeedback={legoJourneyActive ? undefined : () => jumpToPageSection("settings", "feedback-board")}
           onLogout={clearSession}
           hideMarketStatus={legoJourneyActive}
           searchLabel={legoJourneyActive ? "Search sets and pages" : "Search workspaces..."}
