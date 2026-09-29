@@ -496,8 +496,16 @@ export function enrichBrickAlphaTrade(trade, collectibleItems = [], allTrades = 
   const collectible = collectibleItems.find((item) => item.id === trade.collectibleId);
   const base = collectible || {};
   const buyPrice = numberOrZero(trade.entryPrice ?? base.buyPrice);
+  const seededBrickEconomyMark =
+    /BrickEconomy mark/i.test(String(trade.orderNote || trade.note || ""))
+      ? trade.currentPrice
+      : null;
   const currentMarketValue = numberOrZero(
-    base.currentMarketValue ?? base.brickEconomyValue ?? trade.brickEconomyValue ?? trade.currentPrice,
+    trade.brickEconomyValue ??
+      seededBrickEconomyMark ??
+      base.currentMarketValue ??
+      base.brickEconomyValue ??
+      trade.currentPrice,
   );
   const quantityOwned = Math.max(1, numberOrZero(trade.quantity ?? base.quantityOwned ?? 1));
   const estimatedRoi = buyPrice ? ((currentMarketValue - buyPrice) / buyPrice) * 100 : numberOrZero(trade.pnl);
