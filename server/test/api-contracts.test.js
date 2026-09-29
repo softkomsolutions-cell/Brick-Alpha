@@ -349,3 +349,56 @@ test("market and collectible trade mutations preserve current envelopes", async 
   assert.ok(Array.isArray(closed.body.portfolio));
   assert.equal(typeof closed.body.execution, "object");
 });
+
+
+test("collection import preview and commit are safe, zero-cost aware, and idempotent", async () => {
+  const user = await registerUser();
+  const rows = [{
+    setNumber: "75367",
+    quantity: 2,
+    purchasePrice: 0,
+    purchaseDate: "2026-09-29",
+    condition: "Sealed",
+    retailer: "QA Import",
+    shipping: 0,
+    vatReclaim: 0,
+    rewards: 0,
+    cashback: 0,
+    vouchers: 0,
+  }];
+
+  const preview = await authenticated(user.token)
+    .post("/api/collection/import/preview")
+    .send({ rows });
+
+  assert.equal(preview.status, 200);
+  assert.equal(preview.body.summary.total, 1);
+  assert.equal(preview.body.summary.valid, 1);
+  assert.equal(preview.body.summary.invalid, 0);
+  assert.equal(preview.body.rows[0].purchasePrice, 0);
+  assert.equal(typeof preview.body.importId, "string");
+
+  const first = await authenticated(user.token)
+    .post("/api/collection/import/commit")
+    .send({ rows: preview.body.rows, importId: preview.body.importId });
+
+  assert.equal(first.status, 201);
+  assert.equal(first.body.ok, true);
+  assert.equal(first.body.duplicate, false);
+  assert.equal(first.body.created, 1);
+
+  const second = await authenticated(user.token)
+    .post("/api/collection/import/commit")
+    .send({ rows: preview.body.rows, importId: preview.body.importId });
+
+  assert.equal(second.status, 200);
+  assert.equal(second.body.ok, true);
+  assert.equal(second.body.duplicate, true);
+  assert.equal(second.body.created, 0);
+
+  const portfolio = await authenticated(user.token).get("/api/portfolio");
+  const imported = portfolio.body.filter((trade) => trade.sku === "75367" && trade.status === "open");
+  assert.equal(imported.length, 1);
+  assert.equal(imported[0].quantity, 2);
+  assert.equal(imported[0].entryPrice, 0);
+});
