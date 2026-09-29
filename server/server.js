@@ -3788,6 +3788,14 @@ function findTradeableCollectibleBySkuOrId(value) {
   );
 }
 
+function findImportableCollectibleBySkuOrId(value) {
+  const key = String(value || "").toUpperCase();
+  return TRADEABLE_COLLECTIBLES.concat(DEMO_LEGO_SETS).find(
+    (item) =>
+      String(item.id).toUpperCase() === key || String(item.sku).toUpperCase() === key,
+  );
+}
+
 function collectionForRequest(req) {
   return req.userState ? req.userState.trades : guestTrades;
 }
@@ -5931,6 +5939,7 @@ app.post("/api/collection/import/preview", requireAuth, (req, res) => {
     const condition = String(raw?.condition || "Sealed").trim();
     const errors = [];
     if (!/^\\d{4,6}$/.test(setNumber)) errors.push("Set number must be 4-6 digits.");
+    else if (!findImportableCollectibleBySkuOrId(setNumber)) errors.push("Set is not in the Brick Alpha LEGO catalogue.");
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > 1000) errors.push("Quantity must be a whole number from 1 to 1000.");
     if (!Number.isFinite(purchasePrice) || purchasePrice < 0) errors.push("Purchase price must be zero or greater.");
     return {
@@ -6012,7 +6021,7 @@ app.post("/api/collection/import/commit", requireAuth, async (req, res) => {
       errors.push({ row: index + 1, error: "invalid_row" });
       continue;
     }
-    const item = findTradeableCollectibleBySkuOrId(setNumber);
+    const item = findImportableCollectibleBySkuOrId(setNumber);
     if (!item) {
       errors.push({ row: index + 1, setNumber, error: "set_not_in_brick_alpha_catalogue" });
       continue;
