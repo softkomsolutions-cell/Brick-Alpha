@@ -2957,6 +2957,12 @@ export default function App() {
       action: () => handleMenuNavigate("connections", activeDesk),
     },
     {
+      id: "menu-data-sources",
+      label: "Data Sources",
+      detail: "CSV import and BrickEconomy",
+      action: () => handleMenuNavigate("data-sources", activeDesk),
+    },
+    {
       id: "menu-settings",
       label: "Settings",
       detail: "Account and setup",
@@ -2996,7 +3002,7 @@ export default function App() {
     },
   ];
   const visibleMenuSupportItems = legoJourneyActive
-    ? menuSupportItems.filter((item) => ["menu-home", "menu-settings"].includes(item.id))
+    ? menuSupportItems.filter((item) => ["menu-home", "menu-data-sources", "menu-settings"].includes(item.id))
     : menuSupportItems;
   const visibleMenuActionItems = legoJourneyActive
     ? menuActionItems.filter((item) => ["menu-inbox", "menu-logout"].includes(item.id))
