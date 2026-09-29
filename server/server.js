@@ -5950,8 +5950,14 @@ app.post("/api/collection/import/preview", requireAuth, (req, res) => {
       valid: errors.length === 0,
     };
   });
+  const importId = crypto
+    .createHash("sha256")
+    .update(JSON.stringify(normalized.map(({ row, errors, valid, ...item }) => item)))
+    .digest("hex")
+    .slice(0, 24);
   res.json({
     ok: true,
+    importId,
     rows: normalized,
     summary: {
       total: normalized.length,
@@ -5963,6 +5969,38 @@ app.post("/api/collection/import/preview", requireAuth, (req, res) => {
 
 app.post("/api/collection/import/commit", requireAuth, async (req, res) => {
   const rows = Array.isArray(req.body?.rows) ? req.body.rows.slice(0, 1000) : [];
+  const requestedImportId = String(req.body?.importId || "").trim();
+  const normalizedImportFingerprint = crypto
+    .createHash("sha256")
+    .update(JSON.stringify(rows.map((row) => ({
+      setNumber: String(row?.setNumber || "").trim().replace(/-1$/, ""),
+      quantity: Number(row?.quantity || 1),
+      purchasePrice: Number(row?.purchasePrice),
+      purchaseDate: String(row?.purchaseDate || ""),
+      condition: String(row?.condition || "Sealed"),
+      retailer: String(row?.retailer || ""),
+      shipping: Number(row?.shipping || 0),
+      vatReclaim: Number(row?.vatReclaim || 0),
+      rewards: Number(row?.rewards || 0),
+      cashback: Number(row?.cashback || 0),
+      vouchers: Number(row?.vouchers || 0),
+    }))))
+    .digest("hex")
+    .slice(0, 24);
+  const importId = requestedImportId || normalizedImportFingerprint;
+  req.userState.collectionImports = Array.isArray(req.userState.collectionImports)
+    ? req.userState.collectionImports
+    : [];
+  if (req.userState.collectionImports.includes(importId)) {
+    res.status(200).json({
+      ok: true,
+      duplicate: true,
+      created: 0,
+      errors: [],
+      portfolio: req.userState.trades,
+    });
+    return;
+  }
   const created = [];
   const errors = [];
   for (let index = 0; index < rows.length; index += 1) {
@@ -5999,8 +6037,18 @@ app.post("/api/collection/import/commit", requireAuth, async (req, res) => {
     req.userState.trades.unshift(trade);
     created.push(trade);
   }
+  if (created.length && errors.length === 0) {
+    req.userState.collectionImports.unshift(importId);
+    req.userState.collectionImports = req.userState.collectionImports.slice(0, 100);
+  }
   persistStore();
-  res.status(errors.length ? 207 : 201).json({ ok: errors.length === 0, created: created.length, errors, portfolio: req.userState.trades });
+  res.status(errors.length ? 207 : 201).json({
+    ok: errors.length === 0,
+    duplicate: false,
+    created: created.length,
+    errors,
+    portfolio: req.userState.trades,
+  });
 });
 
 app.get("/api/connectors", requireAuth, (req, res) => {
