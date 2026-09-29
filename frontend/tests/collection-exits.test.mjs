@@ -167,7 +167,7 @@ test("flywheel ready compares one unit with the whole stack cost", () => {
         trade({ id: "a", entryPrice: 4000, currentPrice: unitValue }),
         trade({ id: "b", entryPrice: 4000, currentPrice: unitValue }),
       ],
-      [castle],
+      [{ ...castle, currentMarketValue: unitValue, brickEconomyValue: unitValue }],
     ).sets[0];
 
   const above = viewFor(8500);
@@ -184,7 +184,7 @@ test("flywheel ready compares one unit with the whole stack cost", () => {
 
   const quantityStack = buildCollectionView(
     [trade({ id: "qty", quantity: 2, entryPrice: 4000, currentPrice: 8500 })],
-    [castle],
+    [{ ...castle, currentMarketValue: 8500, brickEconomyValue: 8500 }],
   ).sets[0];
   assert.equal(quantityStack.units, 2);
   assert.equal(quantityStack.cost, 8000);
