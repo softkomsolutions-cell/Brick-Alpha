@@ -24,6 +24,8 @@ jobs:
         run: npm --prefix server ci
       - name: Frontend tests
         run: npm --prefix frontend run test
+      - name: Generate Prisma client
+        run: npm --prefix server run db:generate
       - name: Server tests
         run: npm --prefix server run test
       - name: Frontend lint
