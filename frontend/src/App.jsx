@@ -2000,6 +2000,7 @@ export default function App() {
           body: {
             orderNote: form.orderNote,
             salePrice: form.salePrice,
+            quantity: form.quantity,
           },
         });
         setPortfolio(data.portfolio || []);
