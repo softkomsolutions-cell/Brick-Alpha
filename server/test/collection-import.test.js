@@ -60,7 +60,7 @@ test("collection import previews validation, computes all-in cost, and prevents 
   const portfolio = await authenticated(user.token).get("/api/portfolio");
   assert.equal(portfolio.status, 200);
   assert.equal(portfolio.body.length, 1);
-  assert.equal(portfolio.body[0].sku, "75367");
+  assert.equal(portfolio.body[0].collectibleId, "lego-star-wars-75367");
   assert.equal(portfolio.body[0].quantity, 2);
   assert.equal(portfolio.body[0].entryPrice, 1025);
 
