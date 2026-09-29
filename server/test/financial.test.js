@@ -67,7 +67,7 @@ test("trade close preserves open and closed positions in the portfolio array", a
   assert.equal(portfolio.body[0].status, "closed");
 });
 
-test("known legacy behavior: partial sales are unsupported and quantity remains whole", async () => {
+test("partial collectible sale closes only the requested units and preserves the remainder", async () => {
   const user = await registerUser({ email: "financial-partial@example.test" });
   const item = (await require("supertest")(app).get("/api/collectibles")).body.items[0];
   const created = await authenticated(user.token)
@@ -79,8 +79,13 @@ test("known legacy behavior: partial sales are unsupported and quantity remains 
     .send({ quantity: 1 });
   assert.equal(closeAttempt.status, 200);
   assert.equal(closeAttempt.body.trade.status, "closed");
-  assert.equal(closeAttempt.body.trade.quantity, 2);
-  assert.equal(closeAttempt.body.trade.saleQuantity, undefined);
+  assert.equal(closeAttempt.body.trade.quantity, 1);
+  assert.equal(closeAttempt.body.remainingTrade.status, "open");
+  assert.equal(closeAttempt.body.remainingTrade.quantity, 1);
+
+  const portfolio = await authenticated(user.token).get("/api/portfolio");
+  assert.equal(portfolio.body.filter((trade) => trade.status === "closed").length, 1);
+  assert.equal(portfolio.body.filter((trade) => trade.status === "open").length, 1);
 });
 
 test("known legacy behavior: no acquisition lots or cost-basis allocations exist", async () => {
