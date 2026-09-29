@@ -83,12 +83,14 @@ test("the v3 mobile menu hides legacy desks", () => {
     { id: "menu-trading", label: "Trading" },
     { id: "menu-crypto", label: "Crypto" },
     { id: "menu-research", label: "Research" },
+    { id: "menu-portfolio", label: "Portfolio" },
+    { id: "menu-data-sources", label: "Data Sources" },
     { id: "forex", label: "Forex" },
     { id: "etfs", label: "ETFs" },
     { id: "jse", label: "JSE" },
     { id: "menu-settings", label: "Settings" },
   ];
   const visible = v3MobileMenuItems(items, true).map((item) => item.label);
-  assert.deepEqual(visible, ["Research", "Settings"]);
+  assert.deepEqual(visible, ["Research", "Portfolio", "Data Sources", "Settings"]);
   assert.equal(v3MobileMenuItems(items, false).length, items.length);
 });
