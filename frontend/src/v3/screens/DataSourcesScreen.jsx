@@ -70,8 +70,8 @@ export function DataSourcesScreen({ authToken, requestJson, onImported }) {
   const commit = async () => {
     setBusy("import");
     try {
-      const data = await requestJson("/api/collection/import/commit", { method: "POST", token: authToken, body: { rows: validRows } });
-      setStatus(`${data.created || 0} collection position${data.created === 1 ? "" : "s"} imported.`);
+      const data = await requestJson("/api/collection/import/commit", { method: "POST", token: authToken, body: { rows: validRows, importId: preview?.importId } });
+      setStatus(data.duplicate ? "This import was already committed. Nothing was duplicated." : `${data.created || 0} collection position${data.created === 1 ? "" : "s"} imported.`);
       setRows([]); setPreview(null); await onImported?.();
     } catch (error) { setStatus(error.message); } finally { setBusy(""); }
   };
@@ -101,7 +101,7 @@ export function DataSourcesScreen({ authToken, requestJson, onImported }) {
       <div className="v3PortfolioSectionHead"><div><span className="v3Eyebrow">Safe preview</span><h2>Review before import</h2></div><strong>{preview.summary.valid} ready · {preview.summary.invalid} need attention</strong></div>
       <div className="v3ImportTable"><div className="v3ImportHead"><span>Set</span><span>Qty</span><span>Purchase price</span><span>Condition</span><span>Status</span></div>
       {preview.rows.map((row) => <div key={row.row} className={row.valid ? "" : "isInvalid"}><strong>#{row.setNumber || "—"}</strong><span>{row.quantity}</span><span>{row.purchasePrice == null ? "—" : `R${row.purchasePrice.toLocaleString()}`}</span><span>{row.condition}</span><span>{row.valid ? "Ready" : row.errors.join(" ")}</span></div>)}</div>
-      <div className="v3ImportActions"><button className="primaryButton" disabled={!validRows.length || Boolean(busy)} onClick={commit}>{busy === "import" ? "Importing…" : `Import ${validRows.length} valid rows`}</button><span>Nothing is written until you confirm this import.</span></div>
+      <div className="v3ImportActions"><button className="primaryButton" disabled={!validRows.length || Boolean(busy)} onClick={commit}>{busy === "import" ? "Importing…" : `Import ${validRows.length} valid rows`}</button><button className="secondaryButton" disabled={Boolean(busy)} onClick={() => { setPreview(null); setRows([]); setStatus("Import cancelled. Nothing was written."); }}>Cancel</button><span>Nothing is written until you confirm this import.</span></div>
     </section> : null}
     {status ? <div className="v3SourceNotice" role="status">{status}</div> : null}
   </div>;
