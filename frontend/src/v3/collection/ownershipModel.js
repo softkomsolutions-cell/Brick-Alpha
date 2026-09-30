@@ -224,7 +224,10 @@ export function buildCollectionView(openTrades = [], collectibles = []) {
     );
     const units = group.trades.flatMap((trade) => unitRows(trade, cost));
     const conditions = [...new Set(units.map((unit) => unit.condition))];
-    const holdingDays = Math.max(...group.trades.map((trade) => numberOrZero(trade.holdingPeriodDays)));
+    const hasCompletePurchaseHistory = group.trades.every((trade) => Boolean(String(trade.purchaseDate || "").trim()));
+    const holdingDays = hasCompletePurchaseHistory
+      ? Math.max(...group.trades.map((trade) => numberOrZero(trade.holdingPeriodDays)))
+      : null;
     const months = group.trades
       .map((trade) => numberOrNull(trade.monthsUntilRetirement))
       .filter((value) => value != null);
@@ -241,7 +244,9 @@ export function buildCollectionView(openTrades = [], collectibles = []) {
       marketValue,
       profit,
       roi,
-      annualised: annualisedReturnPercent(cost, marketValue, holdingDays),
+      annualised: hasCompletePurchaseHistory
+        ? annualisedReturnPercent(cost, marketValue, holdingDays)
+        : null,
       sellWindowMonths,
       expectedRetirementDate:
         group.trades.map((trade) => trade.expectedRetirementDate).find(Boolean) || null,
@@ -301,6 +306,9 @@ export function filterCollectionSets(sets, filter, theme = "") {
 export function exitRecommendation(set) {
   if (set.flywheelReady) {
     return "Sell one unit and recycle the cash";
+  }
+  if (set.sellWindowMonths != null && set.sellWindowMonths < 0) {
+    return "Retired — review the exit now";
   }
   if (set.belowCost) {
     return "Hold — below cost";
