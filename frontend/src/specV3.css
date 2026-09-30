@@ -320,3 +320,41 @@ aside[class*="Sidebar"] {
     grid-template-columns: 1fr !important;
   }
 }
+
+
+/* Gavin QA polish: keep Scan and navigation visually active and mobile-safe. */
+.saasTopNav {
+  min-height: calc(var(--ba-topnav-height) + env(safe-area-inset-top));
+  height: auto !important;
+  padding-top: env(safe-area-inset-top) !important;
+}
+
+.seHeroStats div,
+.seAcquisitionCard {
+  background: var(--ba-surface) !important;
+  border-color: var(--ba-line) !important;
+  color: var(--ba-ink) !important;
+  box-shadow: none !important;
+}
+
+.seAcquisitionCard:hover {
+  background: #FBFAF7 !important;
+  border-color: #C8C6BF !important;
+  box-shadow: 0 6px 18px rgba(21, 23, 28, 0.07) !important;
+}
+
+.seHeroStats strong {
+  color: var(--ba-primary) !important;
+}
+
+.seHeroStats span,
+.seAcquisitionCard small {
+  color: var(--ba-ink-secondary) !important;
+}
+
+@media (max-width: 720px) {
+  .saasTopNav {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+}
