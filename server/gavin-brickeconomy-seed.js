@@ -101,6 +101,13 @@ function seedGavinBrickEconomyState(state, userId, nowIso) {
       valuationCurrency: "ZAR",
       valuationSource: "BrickEconomy",
       valuationDate: "2026-09-29",
+      ...(setNumber === "70840"
+        ? {
+            actualRetirementDate: "2019-11-23",
+            retirementStatus: "Retired",
+            monthsUntilRetirement: -1,
+          }
+        : {}),
     };
   });
 
