@@ -1,10 +1,10 @@
 const fs = require("fs");
 const path = require("path");
 
-const FIXTURE_DIR = path.join(__dirname, "fixtures", "gavin-brickeconomy");
-const EXPECTED_COUNT = 351;
-const EXPECTED_PAID = 67588.12;
-const EXPECTED_VALUE = 101743.42;
+const FIXTURE_DIR = path.join(__dirname, "fixtures", "gavin-v152-zar");
+const EXPECTED_COUNT = 292;
+const EXPECTED_COST = 1109470.20;
+const EXPECTED_VALUE = 1724451.67;
 
 function money(value) {
   return Number(Number(value || 0).toFixed(2));
@@ -17,92 +17,117 @@ function loadRows() {
     const parsed = JSON.parse(fs.readFileSync(path.join(FIXTURE_DIR, file), "utf8"));
     for (const item of parsed) {
       if (Array.isArray(item)) {
-        const [setNumber, name, paid, value, condition] = item;
-        rows.push({ setNumber, name, paid, value, condition });
+        const [setNumber, name, condition, costZar, valueZar, theme, purchaseDate, year] = item;
+        rows.push({ setNumber, name, condition, costZar, valueZar, theme, purchaseDate, year });
       } else {
         rows.push(item);
       }
     }
   }
-  const paidTotal = money(rows.reduce((sum, row) => sum + Number(row.paid || 0), 0));
-  const valueTotal = money(rows.reduce((sum, row) => sum + Number(row.value || 0), 0));
-  if (rows.length !== EXPECTED_COUNT || paidTotal !== EXPECTED_PAID || valueTotal !== EXPECTED_VALUE) {
-    throw new Error(`Gavin fixture mismatch: count=${rows.length}, paid=${paidTotal}, value=${valueTotal}`);
+
+  const costTotal = money(rows.reduce((sum, row) => sum + Number(row.costZar || 0), 0));
+  const valueTotal = money(rows.reduce((sum, row) => sum + Number(row.valueZar || 0), 0));
+  if (rows.length !== EXPECTED_COUNT || costTotal !== EXPECTED_COST || valueTotal !== EXPECTED_VALUE) {
+    throw new Error(`Gavin V152 fixture mismatch: count=${rows.length}, cost=${costTotal}, value=${valueTotal}`);
   }
-  return { rows, paidTotal, valueTotal };
+  return { rows, costTotal, valueTotal };
+}
+
+function normalisePurchaseDate(value, fallback) {
+  const text = String(value || "").trim();
+  if (!text) return fallback;
+  const parts = text.split("/");
+  if (parts.length === 3) {
+    const [month, day, year] = parts;
+    const iso = new Date(`${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}T12:00:00.000Z`);
+    if (Number.isFinite(iso.getTime())) return iso.toISOString();
+  }
+  const parsed = new Date(text);
+  return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : fallback;
 }
 
 function seedGavinBrickEconomyState(state, userId, nowIso) {
-  const { rows, paidTotal, valueTotal } = loadRows();
+  const { rows, costTotal, valueTotal } = loadRows();
   const now = nowIso();
 
   state.trades = rows.map((row, index) => {
-    const paid = money(row.paid);
-    const value = money(row.value);
-    const pnlAmount = money(value - paid);
+    const cost = money(row.costZar);
+    const value = money(row.valueZar);
+    const pnlAmount = money(value - cost);
+    const setNumber = String(row.setNumber || "");
+    const createdAt = normalisePurchaseDate(row.purchaseDate, now);
+
     return {
       id: index + 1,
-      marketTicker: `COLLECTIBLE:brickeconomy-${String(row.setNumber || index + 1)}-${index + 1}`,
-      ticker: String(row.name || row.setNumber || `LEGO ${index + 1}`),
+      marketTicker: `COLLECTIBLE:v152-${setNumber || index + 1}-${index + 1}`,
+      ticker: String(row.name || setNumber || `LEGO ${index + 1}`),
       assetClass: "collectible",
       side: "BUY",
       status: "open",
-      entryPrice: paid,
+      entryPrice: cost,
       currentPrice: value,
-      pnl: paid > 0 ? Number(((pnlAmount / paid) * 100).toFixed(2)) : 0,
-      setup: "Gavin BrickEconomy portfolio",
-      createdAt: now,
+      pnl: cost > 0 ? Number(((pnlAmount / cost) * 100).toFixed(2)) : 0,
+      setup: "Gavin V152 portfolio",
+      createdAt,
       updatedAt: now,
       owner: userId,
-      collectibleId: `brickeconomy-${String(row.setNumber || index + 1)}-${index + 1}`,
+      collectibleId: `lego-${setNumber || index + 1}`,
       category: "LEGO Portfolio",
       market: "BrickEconomy",
-      venue: "BrickEconomy export",
-      note: `Set ${row.setNumber || ""}; condition ${row.condition || "Unknown"}`,
+      venue: "Coolsters V152 tracker",
+      note: `Set ${setNumber}; Condition: ${row.condition || "Unknown"}`,
       unitLabel: "items",
       quantity: 1,
-      orderNote: "Imported from Gavin BrickEconomy portfolio export.",
+      orderNote: "Imported from Coolsters LEGO Portfolio Tracker V152.",
       executionMode: "paper",
-      executionProvider: "brickeconomy-import",
-      executionLabel: "Gavin BrickEconomy Import",
+      executionProvider: "v152-import",
+      executionLabel: "Gavin V152 Import",
       pnlAmount,
-      entryValue: paid,
+      entryValue: cost,
       currentValue: value,
+      brickEconomyValue: value,
+      currentMarketValue: value,
       stopPrice: 0,
       targetPrice: 0,
       riskBudget: null,
-      riskAmount: paid,
+      riskAmount: cost,
       rewardAmount: Math.max(0, pnlAmount),
       riskRewardRatio: null,
-      sourceSetNumber: String(row.setNumber || ""),
+      sourceSetNumber: setNumber,
       sourceCondition: String(row.condition || ""),
+      sourceTheme: String(row.theme || ""),
+      sourceYear: String(row.year || ""),
+      purchaseDate: row.purchaseDate || "",
+      valuationCurrency: "ZAR",
+      valuationSource: "BrickEconomy",
+      valuationDate: "2026-09-29",
     };
   });
 
   state.gavinBrickEconomyImport = {
-    version: "2026-09-30",
+    version: "V152",
     loadedAt: now,
     positions: rows.length,
-    paidTotal,
+    costTotal,
     valueTotal,
   };
 
   state.notifications = [
     {
-      id: "gavin-brickeconomy-loaded",
-      ticker: "BRICKECONOMY",
-      label: "BrickEconomy",
+      id: "gavin-v152-loaded",
+      ticker: "V152",
+      label: "V152",
       desk: "collectibles",
-      title: "Gavin BrickEconomy portfolio loaded",
-      message: `${rows.length} holdings loaded. Paid ${paidTotal}; value ${valueTotal}.`,
+      title: "Gavin V152 portfolio loaded",
+      message: `${rows.length} positions loaded. Cost R${costTotal}; value R${valueTotal}.`,
       type: "portfolio",
       status: "unread",
       createdAt: now,
     },
-    ...(state.notifications || []).filter((item) => item.id !== "gavin-brickeconomy-loaded"),
+    ...(state.notifications || []).filter((item) => item.id !== "gavin-v152-loaded"),
   ];
 
-  return { positions: rows.length, paidTotal, valueTotal };
+  return { positions: rows.length, costTotal, valueTotal };
 }
 
 module.exports = { seedGavinBrickEconomyState, loadRows };
