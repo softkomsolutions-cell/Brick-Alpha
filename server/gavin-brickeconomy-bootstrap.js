@@ -29,8 +29,8 @@ function loadRows() {
 }
 
 if (!fs.existsSync(DATA_FILE)) {
-  console.log("Gavin BrickEconomy bootstrap skipped: no persisted store yet.");
-  process.exit(0);
+  console.log("Gavin BrickEconomy bootstrap waiting: no persisted store yet.");
+  process.exit(75);
 }
 
 const rows = loadRows();
@@ -47,8 +47,8 @@ const demoUsers = (store.users || []).filter((user) =>
 );
 
 if (!demoUsers.length) {
-  console.log("Gavin BrickEconomy bootstrap skipped: no demo user exists.");
-  process.exit(0);
+  console.log("Gavin BrickEconomy bootstrap waiting: no demo user exists.");
+  process.exit(75);
 }
 
 const now = new Date().toISOString();
