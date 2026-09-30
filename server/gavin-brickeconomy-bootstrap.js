@@ -51,8 +51,17 @@ if (!demoUsers.length) {
   process.exit(75);
 }
 
+const pendingDemoUsers = demoUsers.filter((user) => {
+  const state = store.userStates?.[user.id];
+  return state && state.gavinBrickEconomyImport?.version !== "2026-09-30";
+});
+
+if (!pendingDemoUsers.length) {
+  process.exit(75);
+}
+
 const now = new Date().toISOString();
-for (const user of demoUsers) {
+for (const user of pendingDemoUsers) {
   const state = store.userStates?.[user.id];
   if (!state) continue;
 
@@ -124,4 +133,4 @@ for (const user of demoUsers) {
 }
 
 fs.writeFileSync(DATA_FILE, JSON.stringify(store, null, 2));
-console.log(`Gavin BrickEconomy portfolio loaded: ${rows.length} positions; paid=${paidTotal}; value=${valueTotal}`);
+console.log(`Gavin BrickEconomy portfolio loaded for ${pendingDemoUsers.length} demo user(s): ${rows.length} positions; paid=${paidTotal}; value=${valueTotal}`);
