@@ -87,6 +87,7 @@ export function ResearchScreen({
     return () => window.clearTimeout(timer);
   }, []);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [targets, setTargets] = useState(() => readWatchTargets());
   const asOf = CANONICAL_AS_OF;
   const profile = readBuyingProfile();
@@ -170,7 +171,16 @@ export function ResearchScreen({
         ))}
       </div>
 
-      <form className="v3ResearchFilters" onSubmit={(event) => event.preventDefault()}>
+      <button
+        type="button"
+        className="ghostButton v3ResearchFilterToggle"
+        onClick={() => setFiltersOpen((open) => !open)}
+        aria-expanded={filtersOpen}
+      >
+        {filtersOpen ? "Hide filters" : "Filters"}
+      </button>
+
+      <form className="v3ResearchFilters" data-open={filtersOpen ? "true" : "false"} onSubmit={(event) => event.preventDefault()}>
         <label>Search<input value={filters.query} onChange={(event) => setFilter("query", event.target.value)} placeholder="Name or set number" /></label>
         <label>Theme
           <select value={filters.theme} onChange={(event) => setFilter("theme", event.target.value)}>
