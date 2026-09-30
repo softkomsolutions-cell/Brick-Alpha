@@ -4,12 +4,14 @@ set -u
 while true; do
   node server.js &
   pid=$!
+  restart_requested=0
 
   while kill -0 "$pid" 2>/dev/null; do
     node gavin-brickeconomy-bootstrap.js
     code=$?
 
     if [ "$code" -eq 0 ]; then
+      restart_requested=1
       kill "$pid" 2>/dev/null || true
       wait "$pid" 2>/dev/null || true
       break
@@ -18,13 +20,11 @@ while true; do
     sleep 2
   done
 
-  if kill -0 "$pid" 2>/dev/null; then
+  if [ "$restart_requested" -eq 1 ]; then
     continue
   fi
 
   wait "$pid" 2>/dev/null
   status=$?
-  if [ "$status" -ne 0 ] && [ "$status" -ne 143 ]; then
-    exit "$status"
-  fi
+  exit "$status"
 done
