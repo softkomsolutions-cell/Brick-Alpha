@@ -200,12 +200,13 @@ export function buildCollectionView(openTrades = [], collectibles = []) {
   const groups = new Map();
 
   for (const trade of enriched) {
-    const key = trade.collectibleId || setNumberOf(trade);
+    const setNumber = setNumberOf(trade);
+    const key = setNumber !== "—" ? setNumber : (trade.collectibleId || trade.id);
     const current = groups.get(key) || {
       id: key,
-      name: trade.label || trade.name || "LEGO set",
-      setNumber: setNumberOf(trade),
-      theme: trade.legoTheme || "Other",
+      name: trade.label || trade.name || trade.ticker || "LEGO set",
+      setNumber,
+      theme: trade.sourceTheme || trade.legoTheme || "Other",
       trades: [],
     };
     current.trades.push(trade);
@@ -255,10 +256,10 @@ export function buildCollectionView(openTrades = [], collectibles = []) {
   const conditionCounts = sets.reduce(
     (counts, set) => {
       for (const unit of set.unitRows) {
-        if (unit.condition === "Opened") {
-          counts.opened += 1;
-        } else {
+        if (unit.condition === "Sealed") {
           counts.sealed += 1;
+        } else {
+          counts.opened += 1;
         }
       }
       return counts;
