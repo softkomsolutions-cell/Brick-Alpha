@@ -24,4 +24,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
 
 WORKDIR /app/server
 
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "node gavin-brickeconomy-bootstrap.js && node server.js"]

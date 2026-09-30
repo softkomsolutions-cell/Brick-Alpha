@@ -4600,112 +4600,7 @@ function readShareStatus() {
 }
 
 app.get("/", (_req, res) => {
-  
-function seedGavinV152DemoPortfolio() {
-  const encoded = String(process.env.GAVIN_V152_GZ_B64 || "").trim();
-  if (!DEMO_MODE || !encoded) return { loaded: 0, skipped: true };
-
-  try {
-    const zlib = require("zlib");
-    const payload = JSON.parse(
-      zlib.gunzipSync(Buffer.from(encoded, "base64")).toString("utf8"),
-    );
-    const positions = Array.isArray(payload?.positions) ? payload.positions : [];
-    if (payload?.version !== "V152" || positions.length !== 292) {
-      throw new Error("invalid_gavin_v152_payload");
-    }
-
-    const demoUsers = users.filter((user) =>
-      String(user?.email || "").toLowerCase().endsWith("@collecttrade.local"),
-    );
-    const loadedAt = nowIso();
-    let loaded = 0;
-
-    for (const user of demoUsers) {
-      const state = getUserState(user.id);
-      if (state.gavinV152Version === "V152" && state.trades?.length === positions.length) {
-        continue;
-      }
-
-      state.trades = positions.map((row, index) => {
-        const entryPrice = Number(row?.cost || 0);
-        const currentPrice = Number(row?.marketValue || 0);
-        const pnlAmount = Number((currentPrice - entryPrice).toFixed(2));
-        const sourceRow = Number(row?.sourceRow || index + 8);
-        return {
-          id: index + 1,
-          marketTicker: `COLLECTIBLE:gavin-v152-${sourceRow}`,
-          ticker: String(row?.name || `LEGO ${row?.setNumber || sourceRow}`),
-          assetClass: "collectible",
-          side: "BUY",
-          status: "open",
-          entryPrice,
-          currentPrice,
-          pnl: entryPrice > 0
-            ? Number(((pnlAmount / entryPrice) * 100).toFixed(2))
-            : 0,
-          setup: "Gavin V152 portfolio import",
-          createdAt: loadedAt,
-          updatedAt: loadedAt,
-          owner: user.id,
-          collectibleId: `gavin-v152-${sourceRow}`,
-          category: "LEGO Portfolio",
-          market: "Gavin V152",
-          venue: "Coolsters V152 workbook",
-          note: `Set ${row?.setNumber || "—"}; ${row?.condition || "Unknown"}`,
-          unitLabel: "items",
-          quantity: 1,
-          orderNote: `Imported from ${payload.source}. Set ${row?.setNumber || "—"}. Condition: ${row?.condition || "Unknown"}.`,
-          executionMode: "paper",
-          executionProvider: "portfolio-v152",
-          executionLabel: "Gavin V152 Import",
-          pnlAmount,
-          entryValue: entryPrice,
-          currentValue: currentPrice,
-          stopPrice: 0,
-          targetPrice: 0,
-          riskBudget: null,
-          riskAmount: entryPrice,
-          rewardAmount: Number(Math.max(0, pnlAmount).toFixed(2)),
-          riskRewardRatio: null,
-          sourceSetNumber: String(row?.setNumber || ""),
-          sourceCondition: String(row?.condition || ""),
-          sourceWorkbookRow: sourceRow,
-        };
-      });
-      state.gavinV152Version = payload.version;
-      state.gavinV152LoadedAt = loadedAt;
-      state.gavinV152Source = String(payload.source || "Coolsters_LEGO_Portfolio_Tracker_V152.xlsx");
-      state.notifications = [
-        {
-          id: "gavin-v152-loaded",
-          ticker: "V152",
-          label: "Gavin V152",
-          desk: "collectibles",
-          title: "Gavin V152 portfolio loaded",
-          message: `${positions.length} positions loaded from ${state.gavinV152Source}.`,
-          type: "portfolio",
-          status: "unread",
-          createdAt: loadedAt,
-        },
-        ...(state.notifications || []).filter((item) => item.id !== "gavin-v152-loaded"),
-      ];
-      loaded += 1;
-    }
-
-    if (loaded) {
-      tradeId = maxTradeId() + 1;
-      persistStore();
-      console.log(`Seeded Gavin V152 portfolio: ${positions.length} positions for ${loaded} demo user(s)`);
-    }
-    return { loaded, skipped: false };
-  } catch (error) {
-    console.error("Gavin V152 seed failed:", error.message);
-    return { loaded: 0, skipped: false, error: error.message };
-  }
-}
-
-if (fs.existsSync(FRONTEND_INDEX_FILE)) {
+  if (fs.existsSync(FRONTEND_INDEX_FILE)) {
     res.sendFile(FRONTEND_INDEX_FILE);
     return;
   }
@@ -6540,7 +6435,7 @@ if (fs.existsSync(FRONTEND_INDEX_FILE)) {
   });
 }
 
-seedGavinV152DemoPortfolio();\n\nif (DISABLE_RUNTIME) {
+if (DISABLE_RUNTIME) {
   engineTick();
 } else {
   engineTick();
