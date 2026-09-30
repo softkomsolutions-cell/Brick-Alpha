@@ -1963,6 +1963,12 @@ function seedDemoUserState(state, userId, options = {}) {
     return;
   }
 
+  if (DEMO_MODE) {
+    const { seedGavinBrickEconomyState } = require("./gavin-brickeconomy-seed");
+    seedGavinBrickEconomyState(state, userId, nowIso);
+    return;
+  }
+
   const catalog = TRADEABLE_COLLECTIBLES.concat(DEMO_LEGO_SETS);
   const findBySku = (sku) => catalog.find((item) => item.sku === sku);
 
