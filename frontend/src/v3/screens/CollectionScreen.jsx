@@ -37,7 +37,7 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
         <div><span>Stacks</span><strong>{view.summary.stacks}</strong></div>
         <div><span>In profit</span><strong>{view.summary.inProfit}</strong></div>
         <div><span>Sealed</span><strong>{view.summary.sealed}</strong></div>
-        <div><span>Opened</span><strong>{view.summary.opened}</strong></div>
+        <div><span>Non-sealed</span><strong>{view.summary.opened}</strong></div>
       </section>
 
       <div className="v3FilterRow" role="tablist" aria-label="Collection filters">
