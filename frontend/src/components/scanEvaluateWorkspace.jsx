@@ -540,11 +540,6 @@ export function ScanEvaluateWorkspace({
     setActionStatus("");
   }, []);
 
-  const legoCatalogCount = useMemo(
-    () => collectibles.filter((item) => item.brand === "LEGO").length,
-    [collectibles],
-  );
-
   return (
     <section className="seWorkspace" id="scan-evaluate">
       {phase === "processing" ? <ProcessingOverlay activeStepIndex={processingIndex} /> : null}
@@ -569,8 +564,8 @@ export function ScanEvaluateWorkspace({
             </div>
             <div className="seHeroStats">
               <div>
-                <strong>{legoCatalogCount}</strong>
-                <span>Catalog sets</span>
+                <strong>BE</strong>
+                <span>BrickEconomy source</span>
               </div>
               <div>
                 <strong>AI</strong>
@@ -584,8 +579,8 @@ export function ScanEvaluateWorkspace({
           </article>
 
           <div className="seAcquisitionHeader">
-            <span className="executiveDashboardEyebrow">Acquisition methods</span>
-            <h2>Scan a LEGO set</h2>
+            <span className="executiveDashboardEyebrow">Choose a method</span>
+            <h2>Identify your set</h2>
           </div>
 
           <div className="seAcquisitionGrid">
@@ -615,24 +610,6 @@ export function ScanEvaluateWorkspace({
               </button>
             ))}
           </div>
-
-          <article
-            className="seGlassCard seUploadDropzone"
-            onClick={() => fileInputRef.current?.click()}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                fileInputRef.current?.click();
-              }
-            }}
-            role="button"
-            tabIndex={0}
-          >
-            <div className="seUploadDropzoneInner">
-              <span className="seUploadDropIcon">📷</span>
-              <strong>Drop an image here or click to browse</strong>
-              <small>PNG, JPG, HEIC · box photo, barcode, or receipt</small>
-            </div>
-          </article>
 
           <input
             ref={fileInputRef}
