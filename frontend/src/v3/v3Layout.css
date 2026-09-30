@@ -1492,3 +1492,37 @@
   .v3AppShell .v3CollectionStats{grid-template-columns:repeat(2,minmax(0,1fr))}
   .v3AppShell .v3Collection .v3UnitList li{grid-template-columns:1fr 1fr}
 }
+
+
+/* Gavin QA: mobile Research stays compact and tab labels remain complete. */
+.v3ResearchFilterToggle {
+  display: none;
+}
+
+.v3BookToggle button {
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .v3ResearchFilterToggle {
+    display: inline-flex;
+    width: max-content;
+    min-height: 44px;
+    align-items: center;
+  }
+
+  .v3ResearchFilters[data-open="false"] {
+    display: none !important;
+  }
+
+  .v3BookToggle {
+    overflow-x: auto;
+    flex-wrap: nowrap !important;
+    scrollbar-width: thin;
+  }
+
+  .v3BookToggle button {
+    flex: 0 0 auto;
+    min-width: max-content;
+  }
+}
