@@ -65,6 +65,7 @@ function saleDateLabel(value) {
 export function ExitsScreen({
   openTrades = [],
   closedTrades = [],
+  allTrades = [],
   collectibles = [],
   navigateToPage,
   onRecordSale,
@@ -80,7 +81,11 @@ export function ExitsScreen({
       }),
     [collectibles, openTrades],
   );
-  const ledger = useMemo(() => buildRealisedLedger(closedTrades), [closedTrades]);
+  const ledgerTrades =
+    closedTrades.length
+      ? closedTrades
+      : allTrades.filter((trade) => trade?.assetClass === "collectible" && trade.status === "closed");
+  const ledger = useMemo(() => buildRealisedLedger(ledgerTrades), [ledgerTrades]);
   const nearestWindow = candidates
     .map((set) => set.sellWindowMonths)
     .filter((months) => months != null)
