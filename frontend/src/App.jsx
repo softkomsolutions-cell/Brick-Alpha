@@ -1451,6 +1451,15 @@ export default function App() {
     () => enrichedPortfolio.filter((trade) => trade.status !== "open"),
     [enrichedPortfolio],
   );
+  const rawClosedTrades = useMemo(
+    () =>
+      portfolio.filter(
+        (trade) =>
+          trade?.assetClass === "collectible" &&
+          String(trade.status || "").toLowerCase() === "closed",
+      ),
+    [portfolio],
+  );
 
   const totalOpenPnl = useMemo(
     () => openTrades.reduce((sum, trade) => sum + Number(trade.pnl || 0), 0),
@@ -3161,6 +3170,7 @@ export default function App() {
         <ExitsScreen
           openTrades={openTrades}
           closedTrades={closedTrades}
+          rawClosedTrades={rawClosedTrades}
           allTrades={portfolio}
           collectibles={collectibles}
           navigateToPage={navigateToPage}
