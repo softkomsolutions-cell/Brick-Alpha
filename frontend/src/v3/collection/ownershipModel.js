@@ -282,7 +282,10 @@ export function buildCollectionView(openTrades = [], collectibles = []) {
       openValue: sets.reduce((sum, set) => sum + set.marketValue, 0),
       uniqueSets: sets.length,
       stacks: sets.filter((set) => set.isStack).length,
-      inProfit: sets.filter((set) => set.profit > 0).length,
+      inProfit: sets.reduce(
+        (count, set) => count + set.unitRows.filter((unit) => unit.profit > 0).length,
+        0,
+      ),
       sealed: conditionCounts.sealed,
       opened: conditionCounts.opened,
     },
