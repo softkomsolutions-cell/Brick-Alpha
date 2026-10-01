@@ -42,6 +42,29 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
       .sort((a, b) => b.value - a.value);
   }, [view.sets]);
 
+  const allocationPalette = [
+    "#2563eb",
+    "#0f766e",
+    "#7c3aed",
+    "#d97706",
+    "#dc2626",
+    "#0891b2",
+    "#4f46e5",
+    "#65a30d",
+    "#64748b",
+    "#9333ea",
+  ];
+  const donutGradient = useMemo(() => {
+    let cursor = 0;
+    const stops = allocation.map((item, index) => {
+      const start = cursor;
+      const end = cursor + item.share;
+      cursor = end;
+      return `${allocationPalette[index % allocationPalette.length]} ${start.toFixed(2)}% ${end.toFixed(2)}%`;
+    });
+    return stops.length ? `conic-gradient(${stops.join(", ")})` : "#e9eef7";
+  }, [allocation]);
+
   return (
     <div className="v3WorkflowScreen v3Collection" data-page="collection">
       <header className="v3WorkflowHero">
@@ -66,22 +89,55 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
           </div>
           <small>Based on current collection market value</small>
         </div>
-        <div className="v3ThemeChart">
-          {allocation.map((item) => (
-            <div className="v3ThemeChartRow" key={item.theme}>
-              <div className="v3ThemeChartLabel">
-                <strong>{item.theme}</strong>
-                <span>{item.share.toFixed(1)}%</span>
-              </div>
-              <div className="v3ThemeChartBar" aria-hidden="true">
-                <span style={{ width: `${Math.max(1, Math.min(100, item.share))}%` }} />
-              </div>
-              <div className="v3ThemeChartValue">
-                <strong>{formatCollectiblePrice(item.value)}</strong>
-                <small>{item.roi == null ? "ROI —" : `ROI ${formatSignedPercent(item.roi)}`}</small>
+        <div className="v3AllocationVisual">
+          <div className="v3ThemeDonutWrap">
+            <div
+              className="v3ThemeDonut"
+              style={{ background: donutGradient }}
+              role="img"
+              aria-label="Portfolio allocation by theme"
+            >
+              <div className="v3ThemeDonutCenter">
+                <strong>{view.summary.uniqueSets}</strong>
+                <span>unique sets</span>
               </div>
             </div>
-          ))}
+            <div className="v3ThemeLegend">
+              {allocation.slice(0, 9).map((item, index) => (
+                <div key={item.theme} className="v3ThemeLegendItem">
+                  <span
+                    className="v3ThemeLegendSwatch"
+                    style={{ background: allocationPalette[index % allocationPalette.length] }}
+                  />
+                  <strong>{item.theme}</strong>
+                  <span>{item.share.toFixed(1)}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="v3ThemeChart">
+            {allocation.map((item, index) => (
+              <div className="v3ThemeChartRow" key={item.theme}>
+                <div className="v3ThemeChartLabel">
+                  <strong>{item.theme}</strong>
+                  <span>{item.share.toFixed(1)}%</span>
+                </div>
+                <div className="v3ThemeChartBar" aria-hidden="true">
+                  <span
+                    style={{
+                      width: `${Math.max(1, Math.min(100, item.share))}%`,
+                      background: allocationPalette[index % allocationPalette.length],
+                    }}
+                  />
+                </div>
+                <div className="v3ThemeChartValue">
+                  <strong>{formatCollectiblePrice(item.value)}</strong>
+                  <small>{item.roi == null ? "ROI —" : `ROI ${formatSignedPercent(item.roi)}`}</small>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
