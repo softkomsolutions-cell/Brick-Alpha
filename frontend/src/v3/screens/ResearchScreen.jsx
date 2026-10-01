@@ -3,16 +3,27 @@ import { formatCollectiblePrice } from "../../appUtils";
 import { buildDecisionSnapshot } from "../decision/decisionModel";
 import { saveDecisionSnapshot } from "../decision/decisionSession";
 import { readBuyingProfile } from "../onboarding/onboardingStorage";
-import { buildResearchCard, consumeResearchSection, filterResearchCards, readResearchSection, splitResearchSections } from "../research/researchModel";
+import {
+  buildResearchCard,
+  consumeResearchQuery,
+  consumeResearchSection,
+  filterResearchCards,
+  readResearchQuery,
+  readResearchSection,
+  splitResearchSections,
+} from "../research/researchModel";
 import { CANONICAL_AS_OF, retirementReminderLabel } from "../retirement/retirementModel";
 import { applyWatchTriggers, readWatchTargets, removeWatchTarget, upsertWatchTarget, writeWatchTargets } from "../watch/watchTargets";
 
-const SECTIONS = [
+const BASE_SECTIONS = [
   { id: "search", label: "Search" },
+  { id: "watch", label: "Watchlist" },
+];
+
+const LIVE_SECTIONS = [
   { id: "new", label: "New Releases" },
   { id: "retiring", label: "Retiring Soon" },
   { id: "performers", label: "Top Performers" },
-  { id: "watch", label: "Watch Targets" },
 ];
 
 const EMPTY_FILTERS = {
@@ -94,13 +105,40 @@ export function ResearchScreen({
   closedTrades = [],
   navigateToPage,
   onWatch,
+  authToken,
+  requestJson,
 }) {
   const [section, setSection] = useState(() => readResearchSection());
+  const [sourceStatus, setSourceStatus] = useState(null);
+  const stagedQuery = readResearchQuery();
+  const [filters, setFilters] = useState(() => ({
+    ...EMPTY_FILTERS,
+    query: stagedQuery,
+  }));
+
   useEffect(() => {
-    const timer = window.setTimeout(consumeResearchSection, 0);
+    const timer = window.setTimeout(() => {
+      consumeResearchSection();
+      consumeResearchQuery();
+    }, 0);
     return () => window.clearTimeout(timer);
   }, []);
-  const [filters, setFilters] = useState(EMPTY_FILTERS);
+
+  useEffect(() => {
+    let active = true;
+    if (!authToken || !requestJson) return () => {};
+    Promise.resolve()
+      .then(() => requestJson("/api/data-sources", { token: authToken }))
+      .then((data) => {
+        if (active) setSourceStatus(data);
+      })
+      .catch(() => {
+        if (active) setSourceStatus(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [authToken, requestJson]);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [targets, setTargets] = useState(() => readWatchTargets());
   const asOf = CANONICAL_AS_OF;
@@ -115,6 +153,19 @@ export function ResearchScreen({
   }, [asOf, closedTrades, collectibles, openTrades, profile]);
 
   const filtered = useMemo(() => filterResearchCards(cards, filters), [cards, filters]);
+  const liveDiscoveryReady = Boolean(
+    sourceStatus?.brickeconomy?.configured &&
+    sourceStatus?.brickeconomy?.researchFeedReady,
+  );
+  const sectionOptions = liveDiscoveryReady
+    ? [BASE_SECTIONS[0], ...LIVE_SECTIONS, BASE_SECTIONS[1]]
+    : BASE_SECTIONS;
+
+  useEffect(() => {
+    if (!sectionOptions.some((item) => item.id === section)) {
+      setSection("search");
+    }
+  }, [section, sectionOptions]);
   const sections = useMemo(() => splitResearchSections(filtered), [filtered]);
   const themes = [...new Set(cards.map((card) => card.theme))].sort();
   const liveValues = Object.fromEntries(cards.map((card) => [card.setNumber, card.currentMarketValue]));
@@ -175,11 +226,23 @@ export function ResearchScreen({
     <div className="v3Research" data-page="research">
       <header className="v3WorkflowHero">
         <h1>Research</h1>
-        <p>BrickEconomy value, recorded growth and one consistent Brick Alpha verdict.</p>
+        <p>Search known LEGO sets and maintain watch targets. Live discovery is shown only when a current provider feed is available.</p>
       </header>
 
+      {!liveDiscoveryReady ? (
+        <section className="v3ResearchSourceNotice" role="status">
+          <strong>Live Research feed not connected</strong>
+          <span>
+            Search uses the known Brick Alpha catalogue. New Releases, Retiring Soon and Top Performers are hidden until a current discovery feed is connected and synced.
+          </span>
+          <button type="button" className="ghostButton" onClick={() => navigateToPage?.("data-sources")}>
+            Open Data Sources
+          </button>
+        </section>
+      ) : null}
+
       <div className="v3BookToggle" role="tablist" aria-label="Research sections">
-        {SECTIONS.map((item) => (
+        {sectionOptions.map((item) => (
           <button
             key={item.id}
             type="button"
@@ -241,6 +304,16 @@ export function ResearchScreen({
               <p>Value {target.currentValue == null ? "No recorded value" : formatCollectiblePrice(target.currentValue)} · target {formatCollectiblePrice(target.targetBuyPrice)}</p>
               <p>{target.targetVerdict} · {target.createdAt.slice(0, 10)} · {target.triggered ? "Triggered" : "Waiting"}</p>
               {target.retirementState === "Inside 6 months" ? <p className="v3RetirementWarning">Watch is urgent: inside 6 months</p> : null}
+              <button
+                type="button"
+                className="ghostButton"
+                onClick={() => {
+                  const next = removeWatchTarget(targets, target.id || target.setNumber);
+                  setTargets(writeWatchTargets(next));
+                }}
+              >
+                Remove watch
+              </button>
             </article>
           )) : <p>No watch targets yet.</p>}
         </section>
