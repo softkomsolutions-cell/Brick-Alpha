@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { formatCollectiblePrice } from "../../appUtils";
 import { buildHomeView } from "../home/homeModel";
 import { formatRecordedGrowth } from "../valuation/valuationAuthority";
@@ -22,31 +21,22 @@ export function HomeScreen({
   navigateToPage,
   openTrades = [],
 }) {
-  const [book, setBook] = useState("curated");
   const home = buildHomeView({
     openTrades,
     closedTrades,
     collectibles,
-    book,
+    book: "curated",
     settings: appSettings,
   });
 
   return (
-    <div className="v3Home" data-page="home" data-book={home.book}>
+    <div className="v3Home" data-page="home" data-book="curated">
       <header className="v3WorkflowHero">
         <div className="v3HomeHeader">
           <div>
             <span className="v3Eyebrow">Owned value</span>
             <h1>{money(home.ownedValue)}</h1>
             <p>Open collection market value. Realised cash is shown separately.</p>
-          </div>
-          <div className="v3BookToggle" role="group" aria-label="Collection book">
-            <button type="button" className={book === "curated" ? "active" : ""} onClick={() => setBook("curated")}>
-              Curated
-            </button>
-            <button type="button" className={book === "full" ? "active" : ""} onClick={() => setBook("full")}>
-              Full collection
-            </button>
           </div>
         </div>
         <p className="v3HomeMeta">
@@ -84,7 +74,7 @@ export function HomeScreen({
       </section>
 
       <section className="v3DecisionCard">
-        <h2>Needs attention</h2>
+        <h2>Investment actions</h2>
         {home.attention.length ? (
           <ul className="v3AttentionList">
             {home.attention.map((item) => (
@@ -106,24 +96,10 @@ export function HomeScreen({
             ))}
           </ul>
         ) : (
-          <p>Nothing in this book needs attention.</p>
+          <p>No investment actions need attention right now.</p>
         )}
       </section>
 
-      <section className="v3DecisionCard">
-        <h2>Allocation by theme</h2>
-        <div className="v3ThemeTable">
-          {home.themes.map((theme) => (
-            <div key={theme.theme} data-over-cap={theme.overCap ? "true" : "false"}>
-              <strong>{theme.theme}</strong>
-              <span>{theme.share.toFixed(1)}% owned</span>
-              <span>{theme.cap != null ? `Cap ${theme.cap}%` : "No cap set"}</span>
-              <span>ROI {roiLabel(theme.roi)}</span>
-              <span>{theme.cap == null ? "Monitor" : theme.overCap ? "Over cap" : "Inside cap"}</span>
-            </div>
-          ))}
-        </div>
-      </section>
     </div>
   );
 }
