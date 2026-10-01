@@ -3310,6 +3310,8 @@ export function ScanEvaluateScreen({
   openTrades,
   closedTrades = [],
   navigateToPage,
+  authToken,
+  requestJson,
 }) {
   return (
     <ScanEvaluateWorkspace
@@ -3321,6 +3323,8 @@ export function ScanEvaluateScreen({
       onAddToWatchlist={onAddToWatchlist}
       openCollectibleTicket={openCollectibleTicket}
       navigateToPage={navigateToPage}
+      authToken={authToken}
+      requestJson={requestJson}
     />
   );
 }
