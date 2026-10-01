@@ -4781,6 +4781,74 @@ app.get("/api/catalog", (_req, res) => {
   });
 });
 
+app.get("/api/lego/barcode/:code", requireAuth, async (req, res) => {
+  const code = String(req.params.code || "").replace(/\D/g, "");
+  if (!/^\d{8,14}$/.test(code)) {
+    res.status(400).json({ ok: false, error: "invalid_barcode" });
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `https://api.upcitemdb.com/prod/trial/lookup?upc=${encodeURIComponent(code)}`,
+      {
+        headers: {
+          Accept: "application/json",
+          "User-Agent": "BrickAlpha-Beta/1.0",
+        },
+        signal: AbortSignal.timeout(8000),
+      },
+    );
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !Array.isArray(payload?.items) || !payload.items.length) {
+      res.status(response.status === 429 ? 429 : 404).json({
+        ok: false,
+        error: response.status === 429 ? "barcode_lookup_limit" : "barcode_not_found",
+      });
+      return;
+    }
+
+    const item = payload.items[0] || {};
+    const haystack = [
+      item.title,
+      item.description,
+      item.model,
+      item.brand,
+      ...(Array.isArray(item.offers) ? item.offers.map((offer) => offer?.title) : []),
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    const legoLike = /\blego\b/i.test(haystack) || /\blego\b/i.test(String(item.brand || ""));
+    const candidates = [...haystack.matchAll(/\b(\d{4,6})(?:-1)?\b/g)]
+      .map((match) => match[1])
+      .filter((value) => Number(value) >= 1000);
+    const setNumber = candidates.find((value) =>
+      TRADEABLE_COLLECTIBLES_ACTIVE.some(
+        (collectible) =>
+          String(collectible.sku || "").replace(/-1$/, "") === value ||
+          String(collectible.id || "").includes(value),
+      ),
+    ) || candidates[0] || "";
+
+    res.json({
+      ok: Boolean(legoLike && setNumber),
+      barcode: code,
+      setNumber: legoLike ? setNumber : "",
+      title: item.title || "",
+      brand: item.brand || "",
+      imageUrl: Array.isArray(item.images) ? item.images[0] || "" : "",
+      source: "UPCitemdb",
+      reason: legoLike && setNumber ? "" : "lego_set_number_not_resolved",
+    });
+  } catch (error) {
+    res.status(502).json({
+      ok: false,
+      error: error?.name === "TimeoutError" ? "barcode_lookup_timeout" : "barcode_lookup_failed",
+    });
+  }
+});
+
 app.get("/api/collectibles", (_req, res) => {
   res.json({
     updatedAt: nowIso(),
