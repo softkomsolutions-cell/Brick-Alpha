@@ -3186,6 +3186,8 @@ export default function App() {
           openTrades={openTrades}
           closedTrades={closedTrades}
           navigateToPage={navigateToPage}
+          authToken={authToken}
+          requestJson={requestJson}
         />
       ) : null}
 
