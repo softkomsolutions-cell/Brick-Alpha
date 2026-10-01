@@ -45,7 +45,7 @@ const closed = [
   },
 ];
 
-test("the Gavin demo baseline is the open ISD plus the realised Castle and Rivendell ledger", () => {
+test("the Gavin demo baseline keeps current-book ROI separate from realised Castle and Rivendell sales", () => {
   const home = buildHomeView({
     openTrades: open,
     closedTrades: closed,
@@ -60,7 +60,7 @@ test("the Gavin demo baseline is the open ISD plus the realised Castle and Riven
   assert.equal(home.realisedProfit, 3964);
   assert.equal(home.realisedCash, 25863);
   assert.equal(home.positions, 1);
-  assert.equal(Math.round(home.blendedRoi * 10) / 10, 40.3);
+  assert.equal(Math.round(home.blendedRoi * 10) / 10, 23);
   assert.equal(home.source, "BrickEconomy");
   assert.equal(castle.net, 8113);
   assert.equal(castle.realisedProfit, 1114);
