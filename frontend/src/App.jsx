@@ -3248,6 +3248,7 @@ export default function App() {
       {page === "settings" ? (
         <SettingsScreen
           appSettings={appSettings}
+          legoJourney={legoJourneyActive}
           currentUser={currentUser}
           updateSettings={updateSettings}
           onDemoReset={handleDemoReset}
