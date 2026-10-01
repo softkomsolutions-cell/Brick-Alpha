@@ -3161,7 +3161,7 @@ export default function App() {
         <ExitsScreen
           openTrades={openTrades}
           closedTrades={closedTrades}
-          allTrades={enrichedPortfolio}
+          allTrades={portfolio}
           collectibles={collectibles}
           navigateToPage={navigateToPage}
           onRecordSale={submitExitSale}
