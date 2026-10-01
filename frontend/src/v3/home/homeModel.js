@@ -38,14 +38,13 @@ function latestDate(values) {
  * An R0 free gift adds its market value to owned value and is left out of
  * both the ROI numerator and the denominator.
  */
-function blendedRoi(sets, realisedProfit) {
-  const costed = sets.filter((set) => set.cost > 0 && Number.isFinite(set.marketValue));
-  const cost = costed.reduce((sum, set) => sum + set.cost, 0);
+function blendedRoi(sets) {
+  const cost = sets.reduce((sum, set) => sum + set.cost, 0);
   if (!(cost > 0)) {
     return null;
   }
-  const unrealised = costed.reduce((sum, set) => sum + (set.marketValue - set.cost), 0);
-  const roi = ((unrealised + realisedProfit) / cost) * 100;
+  const value = sets.reduce((sum, set) => sum + set.marketValue, 0);
+  const roi = ((value - cost) / cost) * 100;
   return Number.isFinite(roi) ? roi : null;
 }
 
@@ -90,9 +89,6 @@ export function buildHomeView({
   const costBasis = view.sets.reduce((sum, set) => sum + set.cost, 0);
   const realisedProfit = ledger.reduce((sum, sale) => sum + sale.realisedProfit, 0);
   const realisedCash = ledger.reduce((sum, sale) => sum + sale.net, 0);
-  const costedRealised = ledger
-    .filter((sale) => sale.cost > 0)
-    .reduce((sum, sale) => sum + sale.realisedProfit, 0);
   const exchange = resolveExchangeRate(settings);
   const authoritative = openBook.some((trade) => {
     const item = collectibles.find((candidate) => candidate.id === trade.collectibleId);
@@ -151,7 +147,7 @@ export function buildHomeView({
     unrealisedProfit: ownedValue - costBasis,
     realisedProfit,
     realisedCash,
-    blendedRoi: blendedRoi(view.sets, costedRealised),
+    blendedRoi: blendedRoi(view.sets),
     positions: view.summary.positions,
     uniqueSets: view.summary.uniqueSets,
     themes: themeRows(view.sets),
