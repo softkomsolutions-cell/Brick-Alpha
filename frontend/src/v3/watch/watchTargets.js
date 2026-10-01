@@ -61,3 +61,10 @@ export function applyWatchTriggers(targets, liveValueBySet = {}) {
     };
   });
 }
+
+
+export function removeWatchTarget(targets, id) {
+  const list = Array.isArray(targets) ? targets : [];
+  const targetId = String(id || "");
+  return list.filter((item) => String(item.id || item.setNumber || "") !== targetId);
+}
