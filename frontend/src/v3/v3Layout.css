@@ -1526,3 +1526,290 @@
     min-width: max-content;
   }
 }
+
+
+/* Gavin CRM-inspired investment dashboard visual system. */
+.v3AppShell {
+  --ba-paper: #f6f8fc;
+  --ba-surface: #ffffff;
+  --ba-ink: #172033;
+  --ba-ink-secondary: #5f6b7a;
+  --ba-line: #dfe5ef;
+  --ba-primary: #2563eb;
+  --ba-primary-tint: #eaf1ff;
+  --ba-gain: #0f8a5f;
+  --ba-loss: #c2413b;
+  background: var(--ba-paper);
+}
+
+.v3AppShell .workspaceShell,
+.v3AppShell .workspaceMain {
+  background: var(--ba-paper);
+}
+
+.v3AppShell .v3Sidebar {
+  background: #f8fafc;
+  border-right-color: #e1e7f0;
+}
+
+.v3AppShell .v3SidebarNavItem.active {
+  color: #1d4ed8;
+  background: #eaf1ff;
+  border-color: #cddcff;
+}
+
+.v3AppShell .v3SidebarNavItem.active .v3SidebarNavGlyph {
+  color: #fff;
+  background: #2563eb;
+}
+
+.v3AppShell .v3WorkflowHero,
+.v3AppShell .v3DecisionCard,
+.v3AppShell .panel,
+.v3AppShell .v3PortfolioKpis article,
+.v3AppShell .v3ResearchCard {
+  border-color: #dfe5ef;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(23, 32, 51, 0.03);
+}
+
+.v3AppShell .v3Home .v3WorkflowHero {
+  color: #fff;
+  border: 0;
+  background: linear-gradient(135deg, #17213c 0%, #203a78 72%, #2563eb 100%);
+  box-shadow: 0 12px 30px rgba(23, 33, 60, 0.18);
+}
+
+.v3AppShell .v3Home .v3WorkflowHero .v3Eyebrow,
+.v3AppShell .v3Home .v3WorkflowHero p,
+.v3AppShell .v3Home .v3WorkflowHero .v3HomeMeta {
+  color: rgba(255,255,255,.8);
+}
+
+.v3AppShell .v3Home .v3WorkflowHero h1 {
+  color: #fff;
+}
+
+.v3AppShell .primaryButton,
+.v3AppShell .v3BookToggle button.active {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #fff;
+}
+
+.v3AppShell .primaryButton:hover,
+.v3AppShell .v3BookToggle button.active:hover {
+  border-color: #1d4ed8;
+  background: #1d4ed8;
+}
+
+.v3AppShell .secondaryButton {
+  border-color: #bfd0fb;
+  background: #eef4ff;
+  color: #1d4ed8;
+}
+
+.v3AppShell .ghostButton:hover {
+  border-color: #bfd0fb;
+  background: #f4f7ff;
+  color: #1d4ed8;
+}
+
+.v3AppShell .v3HomeGrid .v3DecisionCard {
+  min-height: 104px;
+  border-top: 3px solid #2563eb;
+}
+
+.v3AppShell .v3HomeGrid .v3DecisionCard > strong,
+.v3AppShell .v3StatGrid strong,
+.v3AppShell .v3PortfolioKpis strong {
+  color: #172033;
+  font-variant-numeric: tabular-nums;
+}
+
+.v3AppShell .v3Home .v3AttentionList button {
+  border-left-color: #2563eb;
+  background: #f8faff;
+}
+
+.v3AppShell .v3PortfolioOverviewCard,
+.v3AppShell .v3CollectionAllocation {
+  padding: 20px 22px;
+}
+
+.v3AppShell .v3MetricChart,
+.v3AppShell .v3ThemeChart {
+  display: grid;
+  gap: 14px;
+}
+
+.v3AppShell .v3MetricChartRow {
+  display: grid;
+  grid-template-columns: minmax(170px, .75fr) minmax(240px, 2fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.v3AppShell .v3MetricChartLabel,
+.v3AppShell .v3ThemeChartLabel {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: baseline;
+}
+
+.v3AppShell .v3MetricChartLabel span,
+.v3AppShell .v3ThemeChartLabel span,
+.v3AppShell .v3ThemeChartValue small {
+  color: var(--ba-ink-secondary);
+  font-size: 12px;
+}
+
+.v3AppShell .v3MetricChartTrack,
+.v3AppShell .v3ThemeChartBar {
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e9eef7;
+}
+
+.v3AppShell .v3MetricChartTrack > span,
+.v3AppShell .v3ThemeChartBar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2563eb, #60a5fa);
+}
+
+.v3AppShell .v3ThemeChartRow {
+  display: grid;
+  grid-template-columns: minmax(150px,.7fr) minmax(220px,1.7fr) minmax(150px,.7fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.v3AppShell .v3ThemeChartValue {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+}
+
+.v3AppShell .v3ResearchSourceNotice {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 5px 16px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid #bfd0fb;
+  border-radius: 12px;
+  background: #eef4ff;
+  color: #172033;
+}
+
+.v3AppShell .v3ResearchSourceNotice > span {
+  color: #5f6b7a;
+  font-size: 12px;
+}
+
+.v3AppShell .v3ResearchSourceNotice > button {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.v3AppShell .v3ResearchReferenceOnly {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f7f9fc;
+  border: 1px solid #e1e7f0;
+}
+
+.v3AppShell .v3ResearchReferenceOnly span {
+  color: #5f6b7a;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.v3AppShell .v3ResearchOpen:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.v3AppShell .v3WatchActions,
+.v3AppShell .v3ProfileActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.v3AppShell .v3ProfileForm {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.v3AppShell .v3ProfileForm label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.v3AppShell .v3ProfileForm input,
+.v3AppShell .v3ProfileForm select {
+  min-height: 44px;
+  padding: 0 11px;
+  border: 1px solid #dfe5ef;
+  border-radius: 9px;
+  background: #fff;
+  color: #172033;
+}
+
+.v3AppShell .v3ProfileThemes,
+.v3AppShell .v3ProfileActions {
+  grid-column: 1 / -1;
+}
+
+.v3AppShell .v3ThemeChip {
+  border-color: #d7dfec;
+  background: #fff;
+  color: #364152;
+}
+
+.v3AppShell .v3ThemeChip.active {
+  border-color: #2563eb;
+  background: #eaf1ff;
+  color: #1d4ed8;
+}
+
+@media (max-width: 720px) {
+  .v3AppShell .v3MetricChartRow,
+  .v3AppShell .v3ThemeChartRow {
+    grid-template-columns: 1fr;
+  }
+
+  .v3AppShell .v3ThemeChartValue {
+    justify-items: start;
+  }
+
+  .v3AppShell .v3ResearchSourceNotice {
+    grid-template-columns: 1fr;
+  }
+
+  .v3AppShell .v3ResearchSourceNotice > button {
+    grid-column: 1;
+    grid-row: auto;
+    width: max-content;
+  }
+
+  .v3AppShell .v3ProfileForm {
+    grid-template-columns: 1fr;
+  }
+
+  .v3AppShell .v3ProfileThemes,
+  .v3AppShell .v3ProfileActions {
+    grid-column: 1;
+  }
+}
