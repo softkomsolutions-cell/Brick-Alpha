@@ -4725,6 +4725,7 @@ export function SettingsScreen({
   isAppInstalled,
   jumpToPageSection,
   liveReadyDeskCount,
+  legoJourney = false,
   navigateToPage,
   onInstallApp,
   setFeedbackForm,
