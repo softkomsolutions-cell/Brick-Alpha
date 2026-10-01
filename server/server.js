@@ -4781,11 +4781,96 @@ app.get("/api/catalog", (_req, res) => {
   });
 });
 
+const VERIFIED_LEGO_BARCODES = new Map([
+  ["673419340618", { setNumber: "75313", title: "AT-AT", brand: "LEGO", source: "Verified local map" }],
+]);
+
+function extractLegoSetNumberFromProduct(product = {}) {
+  const haystack = [
+    product.title,
+    product.name,
+    product.description,
+    product.model,
+    product.mpn,
+    product.brand,
+    product.category,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const legoLike = /\blego\b/i.test(haystack) || /\blego\b/i.test(String(product.brand || ""));
+  const candidates = [...haystack.matchAll(/\b(\d{4,7})(?:-1)?\b/g)]
+    .map((match) => match[1])
+    .filter((value) => Number(value) >= 1000);
+
+  const known = candidates.find((value) =>
+    TRADEABLE_COLLECTIBLES_ACTIVE.some(
+      (collectible) =>
+        String(collectible.sku || "").replace(/-1$/, "") === value ||
+        String(collectible.id || "").includes(value),
+    ),
+  );
+
+  return {
+    legoLike,
+    setNumber: known || candidates[0] || "",
+  };
+}
+
 app.get("/api/lego/barcode/:code", requireAuth, async (req, res) => {
   const code = String(req.params.code || "").replace(/\D/g, "");
   if (!/^\d{8,14}$/.test(code)) {
     res.status(400).json({ ok: false, error: "invalid_barcode" });
     return;
+  }
+
+  const verified = VERIFIED_LEGO_BARCODES.get(code);
+  if (verified) {
+    res.json({
+      ok: true,
+      barcode: code,
+      setNumber: verified.setNumber,
+      title: verified.title,
+      brand: verified.brand,
+      imageUrl: "",
+      source: verified.source,
+      reason: "",
+    });
+    return;
+  }
+
+  const upcDevKey = String(process.env.UPC_DEV_API_KEY || "").trim();
+  if (upcDevKey) {
+    try {
+      const response = await fetch(`https://upc.dev/v1/product/${encodeURIComponent(code)}`, {
+        headers: {
+          Accept: "application/json",
+          "X-API-Key": upcDevKey,
+          "User-Agent": "BrickAlpha-Beta/1.0",
+        },
+        signal: AbortSignal.timeout(8000),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (response.ok) {
+        const product = payload?.data || payload?.product || payload || {};
+        const parsed = extractLegoSetNumberFromProduct(product);
+        if (parsed.legoLike && parsed.setNumber) {
+          res.json({
+            ok: true,
+            barcode: code,
+            setNumber: parsed.setNumber,
+            title: product.name || product.title || "",
+            brand: product.brand || "",
+            imageUrl: product.image_url || product.imageUrl || "",
+            source: "upc.dev",
+            reason: "",
+          });
+          return;
+        }
+      }
+    } catch {
+      // Continue to the anonymous fallback provider.
+    }
   }
 
   try {
@@ -4800,46 +4885,33 @@ app.get("/api/lego/barcode/:code", requireAuth, async (req, res) => {
       },
     );
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok || !Array.isArray(payload?.items) || !payload.items.length) {
-      res.status(response.status === 429 ? 429 : 404).json({
-        ok: false,
-        error: response.status === 429 ? "barcode_lookup_limit" : "barcode_not_found",
+    const item = Array.isArray(payload?.items) ? payload.items[0] || {} : {};
+    const parsed = extractLegoSetNumberFromProduct({
+      ...item,
+      description: [
+        item.description,
+        ...(Array.isArray(item.offers) ? item.offers.map((offer) => offer?.title).filter(Boolean) : []),
+      ].filter(Boolean).join(" "),
+    });
+
+    if (response.ok && parsed.legoLike && parsed.setNumber) {
+      res.json({
+        ok: true,
+        barcode: code,
+        setNumber: parsed.setNumber,
+        title: item.title || "",
+        brand: item.brand || "",
+        imageUrl: Array.isArray(item.images) ? item.images[0] || "" : "",
+        source: "UPCitemdb",
+        reason: "",
       });
       return;
     }
 
-    const item = payload.items[0] || {};
-    const haystack = [
-      item.title,
-      item.description,
-      item.model,
-      item.brand,
-      ...(Array.isArray(item.offers) ? item.offers.map((offer) => offer?.title) : []),
-    ]
-      .filter(Boolean)
-      .join(" ");
-
-    const legoLike = /\blego\b/i.test(haystack) || /\blego\b/i.test(String(item.brand || ""));
-    const candidates = [...haystack.matchAll(/\b(\d{4,6})(?:-1)?\b/g)]
-      .map((match) => match[1])
-      .filter((value) => Number(value) >= 1000);
-    const setNumber = candidates.find((value) =>
-      TRADEABLE_COLLECTIBLES_ACTIVE.some(
-        (collectible) =>
-          String(collectible.sku || "").replace(/-1$/, "") === value ||
-          String(collectible.id || "").includes(value),
-      ),
-    ) || candidates[0] || "";
-
-    res.json({
-      ok: Boolean(legoLike && setNumber),
-      barcode: code,
-      setNumber: legoLike ? setNumber : "",
-      title: item.title || "",
-      brand: item.brand || "",
-      imageUrl: Array.isArray(item.images) ? item.images[0] || "" : "",
-      source: "UPCitemdb",
-      reason: legoLike && setNumber ? "" : "lego_set_number_not_resolved",
+    res.status(response.status === 429 ? 503 : 404).json({
+      ok: false,
+      error: response.status === 429 ? "barcode_provider_busy" : "barcode_not_found",
+      reason: "No provider could resolve this barcode to a LEGO set number.",
     });
   } catch (error) {
     res.status(502).json({
