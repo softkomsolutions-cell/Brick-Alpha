@@ -117,9 +117,9 @@ export function HomeScreen({
             <div key={theme.theme} data-over-cap={theme.overCap ? "true" : "false"}>
               <strong>{theme.theme}</strong>
               <span>{theme.share.toFixed(1)}% owned</span>
-              <span>Cap {theme.cap}%</span>
+              <span>{theme.cap != null ? `Cap ${theme.cap}%` : "No cap set"}</span>
               <span>ROI {roiLabel(theme.roi)}</span>
-              <span>{theme.overCap ? "Over cap" : "Inside cap"}</span>
+              <span>{theme.cap == null ? "Monitor" : theme.overCap ? "Over cap" : "Inside cap"}</span>
             </div>
           ))}
         </div>
