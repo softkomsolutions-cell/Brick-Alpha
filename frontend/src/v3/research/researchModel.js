@@ -157,3 +157,34 @@ export function consumeResearchSection() {
 export function takeResearchSection() {
   return readResearchSection();
 }
+
+
+const QUERY_KEY = "brick_alpha_v3_research_query";
+let stagedQuery = "";
+
+export function stageResearchQuery(query) {
+  stagedQuery = String(query || "").trim();
+  try {
+    window.sessionStorage.setItem(QUERY_KEY, stagedQuery);
+  } catch {
+    // In-memory query still works for the next Research visit.
+  }
+}
+
+export function readResearchQuery() {
+  if (stagedQuery) return stagedQuery;
+  try {
+    return window.sessionStorage.getItem(QUERY_KEY) || "";
+  } catch {
+    return "";
+  }
+}
+
+export function consumeResearchQuery() {
+  stagedQuery = "";
+  try {
+    window.sessionStorage.removeItem(QUERY_KEY);
+  } catch {
+    // In-memory query is already cleared.
+  }
+}
