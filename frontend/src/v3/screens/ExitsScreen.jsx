@@ -65,6 +65,7 @@ function saleDateLabel(value) {
 export function ExitsScreen({
   openTrades = [],
   closedTrades = [],
+  rawClosedTrades = [],
   allTrades = [],
   collectibles = [],
   navigateToPage,
@@ -81,7 +82,13 @@ export function ExitsScreen({
       }),
     [collectibles, openTrades],
   );
-  const ledgerTrades = (allTrades.length ? allTrades : closedTrades).filter(
+  const ledgerTrades = (
+    rawClosedTrades.length
+      ? rawClosedTrades
+      : allTrades.length
+        ? allTrades
+        : closedTrades
+  ).filter(
     (trade) =>
       trade?.assetClass === "collectible" &&
       String(trade.status || "").toLowerCase() === "closed",
