@@ -2822,25 +2822,47 @@ export default function App() {
       return [workspaceEntry, ...sectionEntries];
     });
 
-    const legoSets = collectibles
+    const catalogueSets = collectibles
       .filter((item) => item?.brand === "LEGO")
-      .map((item) => {
-        const setNumber = String(item.sku || item.id || "").match(/\d{4,7}/)?.[0] || "";
-        return {
-          id: `set-${item.id || setNumber}`,
-          label: item.name || `LEGO ${setNumber}`,
-          hint: [setNumber ? `#${setNumber}` : "", item.legoTheme || item.theme || "LEGO set"]
-            .filter(Boolean)
-            .join(" · "),
-          glyph: "◈",
-          page: "research",
-          sectionId: null,
-          searchTerm: setNumber || item.name || "",
-        };
-      });
+      .map((item) => ({
+        setNumber: String(item.sku || item.id || "").match(/\d{4,7}/)?.[0] || "",
+        name: item.name || "",
+        theme: item.legoTheme || item.theme || "LEGO set",
+        id: item.id || "",
+      }));
+
+    const ownedSets = openTrades
+      .filter((trade) => trade?.assetClass === "collectible")
+      .map((trade) => ({
+        setNumber: String(trade.sourceSetNumber || trade.sku || trade.collectibleId || "").match(/\d{4,7}/)?.[0] || "",
+        name: trade.ticker || trade.label || trade.name || "",
+        theme: trade.sourceTheme || trade.legoTheme || "Owned LEGO set",
+        id: trade.collectibleId || trade.id || "",
+      }));
+
+    const seenSets = new Set();
+    const legoSets = [...catalogueSets, ...ownedSets]
+      .filter((item) => item.setNumber || item.name)
+      .filter((item) => {
+        const key = item.setNumber || item.name.toLowerCase();
+        if (seenSets.has(key)) return false;
+        seenSets.add(key);
+        return true;
+      })
+      .map((item) => ({
+        id: `set-${item.id || item.setNumber || item.name}`,
+        label: item.name || `LEGO ${item.setNumber}`,
+        hint: [item.setNumber ? `#${item.setNumber}` : "", item.theme]
+          .filter(Boolean)
+          .join(" · "),
+        glyph: "◈",
+        page: "research",
+        sectionId: null,
+        searchTerm: item.setNumber || item.name || "",
+      }));
 
     return [...workspaceItems, ...legoSets];
-  }, [collectibles]);
+  }, [collectibles, openTrades]);
   const globalSearchResults = useMemo(() => {
     const source = isV3LegoJourneyPage(page)
       ? globalSearchIndex.filter((item) => isV3LegoJourneyPage(item.page))
