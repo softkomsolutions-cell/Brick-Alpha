@@ -126,7 +126,7 @@ test("curated book ignores full-only positions for performance and theme caps", 
   assert.equal(curatedFit, without);
 });
 
-test("a free gift adds market value and does not distort blended ROI", () => {
+test("a free gift adds market value while staying out of the cost denominator", () => {
   const home = buildHomeView({
     openTrades: [
       trade({ id: "paid", collectibleId: "paid-set", label: "Paid", entryPrice: 10000, currentPrice: 11000, legoTheme: "Ideas" }),
@@ -136,7 +136,7 @@ test("a free gift adds market value and does not distort blended ROI", () => {
   assert.equal(home.ownedValue, 16000);
   assert.equal(home.costBasis, 10000);
   assert.equal(home.unrealisedProfit, 6000);
-  assert.equal(home.blendedRoi, 10);
+  assert.equal(home.blendedRoi, 60);
   assert.equal(Number.isFinite(home.blendedRoi), true);
 });
 
