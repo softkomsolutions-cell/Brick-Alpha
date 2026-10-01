@@ -64,6 +64,7 @@ import { V3OnboardingFlow } from "./v3/onboarding/V3OnboardingFlow";
 import { isV3OnboardingComplete } from "./v3/onboarding/onboardingStorage";
 import { clearV3DemoDeviceState } from "./v3/demo/demoDeviceState";
 import { readDecisionSnapshot } from "./v3/decision/decisionSession";
+import { stageResearchQuery, stageResearchSection } from "./v3/research/researchModel";
 import { isV3LegoJourneyPage, v3MobileMenuItems } from "./v3/v3Nav";
 
 function lazyNamedExport(factory, exportName) {
@@ -2800,29 +2801,46 @@ export default function App() {
       action: () => jumpToPageSection("collection", "portfolio-dashboard"),
     },
   ];
-  const globalSearchIndex = useMemo(
-    () =>
-      NAV_ITEMS.flatMap((item) => {
-        const workspaceEntry = {
-          id: `workspace-${item.id}`,
-          label: item.label,
-          hint: item.hint,
-          glyph: item.glyph,
-          page: item.id,
+  const globalSearchIndex = useMemo(() => {
+    const workspaceItems = NAV_ITEMS.flatMap((item) => {
+      const workspaceEntry = {
+        id: `workspace-${item.id}`,
+        label: item.label,
+        hint: item.hint,
+        glyph: item.glyph,
+        page: item.id,
+        sectionId: null,
+      };
+      const sectionEntries = (PAGE_SECTION_LINKS[item.id] || []).map((section) => ({
+        id: `section-${item.id}-${section.id}`,
+        label: section.label,
+        hint: `${item.label} · ${section.label}`,
+        glyph: item.glyph,
+        page: item.id,
+        sectionId: section.id,
+      }));
+      return [workspaceEntry, ...sectionEntries];
+    });
+
+    const legoSets = collectibles
+      .filter((item) => item?.brand === "LEGO")
+      .map((item) => {
+        const setNumber = String(item.sku || item.id || "").match(/\d{4,7}/)?.[0] || "";
+        return {
+          id: `set-${item.id || setNumber}`,
+          label: item.name || `LEGO ${setNumber}`,
+          hint: [setNumber ? `#${setNumber}` : "", item.legoTheme || item.theme || "LEGO set"]
+            .filter(Boolean)
+            .join(" · "),
+          glyph: "◈",
+          page: "research",
           sectionId: null,
+          searchTerm: setNumber || item.name || "",
         };
-        const sectionEntries = (PAGE_SECTION_LINKS[item.id] || []).map((section) => ({
-          id: `section-${item.id}-${section.id}`,
-          label: section.label,
-          hint: `${item.label} · ${section.label}`,
-          glyph: item.glyph,
-          page: item.id,
-          sectionId: section.id,
-        }));
-        return [workspaceEntry, ...sectionEntries];
-      }),
-    [],
-  );
+      });
+
+    return [...workspaceItems, ...legoSets];
+  }, [collectibles]);
   const globalSearchResults = useMemo(() => {
     const source = isV3LegoJourneyPage(page)
       ? globalSearchIndex.filter((item) => isV3LegoJourneyPage(item.page))
@@ -2851,6 +2869,12 @@ export default function App() {
   const handleGlobalSearchSelect = useCallback(
     (item) => {
       closeGlobalSearch();
+      if (item.searchTerm) {
+        stageResearchSection("search");
+        stageResearchQuery(item.searchTerm);
+        navigateToPage("research", false, activeDesk);
+        return;
+      }
       if (item.sectionId) {
         jumpToPageSection(item.page, item.sectionId, activeDesk);
         return;
@@ -3122,6 +3146,8 @@ export default function App() {
           closedTrades={closedTrades}
           navigateToPage={navigateToPage}
           onWatch={addSignalToWatchlist}
+          authToken={authToken}
+          requestJson={requestJson}
         />
       ) : null}
 
