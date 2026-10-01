@@ -37,10 +37,16 @@ const EMPTY_FILTERS = {
   minNinety: "",
 };
 
-function Card({ card, watchTarget, onOpen, onWatch, onRemoveWatch }) {
+function Card({ card, watchTarget, onOpen, onWatch, onRemoveWatch, liveData }) {
   return (
     <article className="v3ResearchCard">
-      <button type="button" className="v3ResearchOpen" onClick={() => onOpen(card)}>
+      <button
+        type="button"
+        className="v3ResearchOpen"
+        onClick={() => onOpen(card)}
+        disabled={!liveData}
+        aria-disabled={!liveData}
+      >
         {card.imageUrl ? (
           <span className="v3ResearchImageWrap">
             <img
@@ -63,38 +69,47 @@ function Card({ card, watchTarget, onOpen, onWatch, onRemoveWatch }) {
           <small>#{card.setNumber}</small>
         </div>
       </button>
-      <dl className="v3ResearchFacts">
-        <div><dt>Value</dt><dd>{card.currentMarketValue == null ? "Unavailable" : formatCollectiblePrice(card.currentMarketValue)}</dd></div>
-        <div><dt>Annual</dt><dd className={card.annualGrowth == null ? "isUnavailable" : ""}>{card.annualGrowth == null ? "Not recorded" : card.annualLabel}</dd></div>
-        <div><dt>90-day</dt><dd className={card.ninetyDayGrowth == null ? "isUnavailable" : ""}>{card.ninetyDayGrowth == null ? "Not recorded" : card.ninetyLabel}</dd></div>
-        <div><dt>Retirement</dt><dd>{card.retirement.retirementState}</dd></div>
-        <div><dt>Verdict</dt><dd>{card.verdict.label}</dd></div>
-        <div><dt>Confidence</dt><dd>{card.confidence == null ? "—" : `${card.confidence}%`}</dd></div>
-        <div><dt>Watch</dt><dd>{watchTarget ? "Watching" : "Not watching"}</dd></div>
-      </dl>
-      {retirementReminderLabel(card.retirement) ? (
-        <p className="v3RetirementWarning">{retirementReminderLabel(card.retirement)}</p>
-      ) : null}
-      {card.personalisation.verdict.label !== card.verdict.label ? (
-        <p className="v3ResearchBook">For your book: {card.personalisation.verdict.label}</p>
-      ) : null}
-      <div className="v3WatchActions">
-        <button type="button" className="ghostButton" onClick={() => onWatch(card)}>
-          {watchTarget ? "Refresh target" : "Add to watchlist"}
-        </button>
-        {watchTarget ? (
-          <button type="button" className="ghostButton" onClick={() => onRemoveWatch(card)}>
-            Remove watch
-          </button>
-        ) : null}
-      </div>
-      {watchTarget ? (
-        <p className="v3ResearchBook">
-          Target {watchTarget.targetBuyPrice == null ? "not set" : formatCollectiblePrice(watchTarget.targetBuyPrice)}
-          {" · "}
-          {watchTarget.triggered ? "Target reached" : "Watching for a better entry"}
-        </p>
-      ) : null}
+      {liveData ? (
+        <>
+          <dl className="v3ResearchFacts">
+            <div><dt>Value</dt><dd>{card.currentMarketValue == null ? "Unavailable" : formatCollectiblePrice(card.currentMarketValue)}</dd></div>
+            <div><dt>Annual</dt><dd className={card.annualGrowth == null ? "isUnavailable" : ""}>{card.annualGrowth == null ? "Not recorded" : card.annualLabel}</dd></div>
+            <div><dt>90-day</dt><dd className={card.ninetyDayGrowth == null ? "isUnavailable" : ""}>{card.ninetyDayGrowth == null ? "Not recorded" : card.ninetyLabel}</dd></div>
+            <div><dt>Retirement</dt><dd>{card.retirement.retirementState}</dd></div>
+            <div><dt>Verdict</dt><dd>{card.verdict.label}</dd></div>
+            <div><dt>Confidence</dt><dd>{card.confidence == null ? "—" : `${card.confidence}%`}</dd></div>
+            <div><dt>Watch</dt><dd>{watchTarget ? "Watching" : "Not watching"}</dd></div>
+          </dl>
+          {retirementReminderLabel(card.retirement) ? (
+            <p className="v3RetirementWarning">{retirementReminderLabel(card.retirement)}</p>
+          ) : null}
+          {card.personalisation.verdict.label !== card.verdict.label ? (
+            <p className="v3ResearchBook">For your book: {card.personalisation.verdict.label}</p>
+          ) : null}
+          <div className="v3WatchActions">
+            <button type="button" className="ghostButton" onClick={() => onWatch(card)}>
+              {watchTarget ? "Refresh target" : "Add to watchlist"}
+            </button>
+            {watchTarget ? (
+              <button type="button" className="ghostButton" onClick={() => onRemoveWatch(card)}>
+                Remove watch
+              </button>
+            ) : null}
+          </div>
+          {watchTarget ? (
+            <p className="v3ResearchBook">
+              Target {watchTarget.targetBuyPrice == null ? "not set" : formatCollectiblePrice(watchTarget.targetBuyPrice)}
+              {" · "}
+              {watchTarget.triggered ? "Target reached" : "Watching for a better entry"}
+            </p>
+          ) : null}
+        </>
+      ) : (
+        <div className="v3ResearchReferenceOnly">
+          <strong>Reference identity only</strong>
+          <span>Live market value, growth, retirement timing and investment verdict are hidden until a current Research provider is connected.</span>
+        </div>
+      )}
     </article>
   );
 }
@@ -168,7 +183,9 @@ export function ResearchScreen({
   }, [section, sectionOptions]);
   const sections = useMemo(() => splitResearchSections(filtered), [filtered]);
   const themes = [...new Set(cards.map((card) => card.theme))].sort();
-  const liveValues = Object.fromEntries(cards.map((card) => [card.setNumber, card.currentMarketValue]));
+  const liveValues = liveDiscoveryReady
+    ? Object.fromEntries(cards.map((card) => [card.setNumber, card.currentMarketValue]))
+    : {};
   const watches = applyWatchTriggers(targets, liveValues);
   const watchBySet = new Map(watches.map((target) => [target.setNumber, target]));
 
