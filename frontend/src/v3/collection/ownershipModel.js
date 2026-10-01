@@ -48,20 +48,22 @@ export function annualisedReturnPercent(cost, value, holdingDays) {
 }
 
 export function conditionOf(trade) {
-  const note = `${trade?.orderNote || ""} ${trade?.note || ""} ${trade?.exitReason || ""}`;
-  const match = note.match(/Condition:\s*(sealed|opened)/i);
-  if (!match) {
-    return "Sealed";
-  }
-  return match[1].toLowerCase() === "opened" ? "Opened" : "Sealed";
+  const explicit = String(trade?.sourceCondition || trade?.condition || "").trim();
+  const text = `${explicit} ${trade?.orderNote || ""} ${trade?.note || ""} ${trade?.exitReason || ""}`.toLowerCase();
+  if (text.includes("open box") || text.includes("opened")) return "Open Box";
+  if (text.includes("built in display case")) return "Built in display case";
+  if (text.includes("built")) return "Built";
+  if (text.includes("loose") || text.includes("incomplete")) return "Loose";
+  if (text.includes("used")) return "Used";
+  if (text.includes("sealed")) return "Sealed";
+  return explicit || "Unknown";
 }
 
 function setNumberOf(trade) {
-  if (trade?.sku) {
-    return String(trade.sku);
-  }
-  const match = String(trade?.ticker || trade?.collectibleId || "").match(/(\d{4,6})/);
-  return match ? match[1] : "—";
+  if (trade?.sourceSetNumber) return String(trade.sourceSetNumber).trim();
+  if (trade?.sku) return String(trade.sku).trim();
+  const match = String(trade?.ticker || trade?.collectibleId || "").match(/(\d{4,7})/);
+  return match ? match[1] : String(trade?.collectibleId || "—");
 }
 
 function channelFromText(text) {
