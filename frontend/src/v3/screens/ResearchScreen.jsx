@@ -5,7 +5,7 @@ import { saveDecisionSnapshot } from "../decision/decisionSession";
 import { readBuyingProfile } from "../onboarding/onboardingStorage";
 import { buildResearchCard, consumeResearchSection, filterResearchCards, readResearchSection, splitResearchSections } from "../research/researchModel";
 import { CANONICAL_AS_OF, retirementReminderLabel } from "../retirement/retirementModel";
-import { applyWatchTriggers, readWatchTargets, upsertWatchTarget, writeWatchTargets } from "../watch/watchTargets";
+import { applyWatchTriggers, readWatchTargets, removeWatchTarget, upsertWatchTarget, writeWatchTargets } from "../watch/watchTargets";
 
 const SECTIONS = [
   { id: "search", label: "Search" },
@@ -26,7 +26,7 @@ const EMPTY_FILTERS = {
   minNinety: "",
 };
 
-function Card({ card, watching, onOpen, onWatch }) {
+function Card({ card, watchTarget, onOpen, onWatch, onRemoveWatch }) {
   return (
     <article className="v3ResearchCard">
       <button type="button" className="v3ResearchOpen" onClick={() => onOpen(card)}>
@@ -59,7 +59,7 @@ function Card({ card, watching, onOpen, onWatch }) {
         <div><dt>Retirement</dt><dd>{card.retirement.retirementState}</dd></div>
         <div><dt>Verdict</dt><dd>{card.verdict.label}</dd></div>
         <div><dt>Confidence</dt><dd>{card.confidence == null ? "—" : `${card.confidence}%`}</dd></div>
-        <div><dt>Watch</dt><dd>{watching ? "Watching" : "Not watching"}</dd></div>
+        <div><dt>Watch</dt><dd>{watchTarget ? "Watching" : "Not watching"}</dd></div>
       </dl>
       {retirementReminderLabel(card.retirement) ? (
         <p className="v3RetirementWarning">{retirementReminderLabel(card.retirement)}</p>
@@ -67,9 +67,23 @@ function Card({ card, watching, onOpen, onWatch }) {
       {card.personalisation.verdict.label !== card.verdict.label ? (
         <p className="v3ResearchBook">For your book: {card.personalisation.verdict.label}</p>
       ) : null}
-      <button type="button" className="ghostButton" onClick={() => onWatch(card)}>
-        {watching ? "Update watch target" : "Watch target"}
-      </button>
+      <div className="v3WatchActions">
+        <button type="button" className="ghostButton" onClick={() => onWatch(card)}>
+          {watchTarget ? "Refresh target" : "Add to watchlist"}
+        </button>
+        {watchTarget ? (
+          <button type="button" className="ghostButton" onClick={() => onRemoveWatch(card)}>
+            Remove watch
+          </button>
+        ) : null}
+      </div>
+      {watchTarget ? (
+        <p className="v3ResearchBook">
+          Target {watchTarget.targetBuyPrice == null ? "not set" : formatCollectiblePrice(watchTarget.targetBuyPrice)}
+          {" · "}
+          {watchTarget.triggered ? "Target reached" : "Watching for a better entry"}
+        </p>
+      ) : null}
     </article>
   );
 }
@@ -105,7 +119,7 @@ export function ResearchScreen({
   const themes = [...new Set(cards.map((card) => card.theme))].sort();
   const liveValues = Object.fromEntries(cards.map((card) => [card.setNumber, card.currentMarketValue]));
   const watches = applyWatchTriggers(targets, liveValues);
-  const watchingNumbers = new Set(watches.map((target) => target.setNumber));
+  const watchBySet = new Map(watches.map((target) => [target.setNumber, target]));
 
   const visible =
     section === "new"
@@ -147,6 +161,12 @@ export function ResearchScreen({
       desk: "collectible",
       targetPrice: card.verdict.targetPrice,
     });
+  };
+
+  const removeWatch = (card) => {
+    const id = card.setNumber || card.id;
+    const next = removeWatchTarget(targets, id);
+    setTargets(writeWatchTargets(next));
   };
 
   const setFilter = (key, value) => setFilters((current) => ({ ...current, [key]: value }));
