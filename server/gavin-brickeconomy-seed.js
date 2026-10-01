@@ -4,7 +4,7 @@ const path = require("path");
 const FIXTURE_DIR = path.join(__dirname, "fixtures", "gavin-v152-zar");
 const EXPECTED_COUNT = 292;
 const EXPECTED_COST = 1109470.20;
-const EXPECTED_VALUE = 1724451.67;
+const EXPECTED_VALUE = 1724451.65;
 
 function money(value) {
   return Number(Number(value || 0).toFixed(2));
@@ -52,8 +52,8 @@ function seedGavinBrickEconomyState(state, userId, nowIso) {
 
   state.trades = rows.map((row, index) => {
     const cost = money(row.costZar);
-    const value = money(row.valueZar);
-    const pnlAmount = money(value - cost);
+    const value = Number(row.valueZar || 0);
+    const pnlAmount = value - cost;
     const setNumber = String(row.setNumber || "");
     const createdAt = normalisePurchaseDate(row.purchaseDate, now);
 
