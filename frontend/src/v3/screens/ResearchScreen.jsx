@@ -362,9 +362,11 @@ export function ResearchScreen({
             <Card
               key={card.id}
               card={card}
-              watching={watchingNumbers.has(card.setNumber)}
+              watchTarget={watchBySet.get(card.setNumber)}
               onOpen={openCard}
               onWatch={watchCard}
+              onRemoveWatch={removeWatch}
+              liveData={liveDiscoveryReady}
             />
           )) : <p>No sets match this section.</p>}
         </section>
