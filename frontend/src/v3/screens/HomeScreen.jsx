@@ -28,6 +28,19 @@ export function HomeScreen({
     book: "curated",
     settings: appSettings,
   });
+  const chartMax = Math.max(
+    1,
+    home.ownedValue,
+    home.costBasis,
+    home.unrealisedProfit,
+    home.realisedCash,
+  );
+  const chartRows = [
+    { id: "value", label: "Current value", value: home.ownedValue },
+    { id: "cost", label: "Cost basis", value: home.costBasis },
+    { id: "profit", label: "Unrealised profit", value: home.unrealisedProfit },
+    { id: "cash", label: "Realised cash", value: home.realisedCash },
+  ];
 
   return (
     <div className="v3Home" data-page="home" data-book="curated">
@@ -71,6 +84,29 @@ export function HomeScreen({
           <span>Unique sets</span>
           <strong>{home.uniqueSets}</strong>
         </article>
+      </section>
+
+      <section className="v3DecisionCard v3PortfolioOverviewCard">
+        <div className="v3PortfolioSectionHead">
+          <div>
+            <span className="v3Eyebrow">Portfolio overview</span>
+            <h2>Value bridge</h2>
+          </div>
+          <small>Live figures from the current investment book</small>
+        </div>
+        <div className="v3MetricChart">
+          {chartRows.map((row) => (
+            <div className="v3MetricChartRow" key={row.id}>
+              <div className="v3MetricChartLabel">
+                <span>{row.label}</span>
+                <strong>{money(row.value)}</strong>
+              </div>
+              <div className="v3MetricChartTrack" aria-hidden="true">
+                <span style={{ width: `${Math.max(1, Math.min(100, (row.value / chartMax) * 100))}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
       </section>
 
       <section className="v3DecisionCard">
