@@ -68,7 +68,7 @@ test("collection groups a stack into one set sorted by market value", () => {
   assert.equal(view.sets[0].setNumber, "10305");
   const stack = view.sets.find((set) => set.setNumber === "10305");
   assert.equal(stack.units, 2);
-  assert.equal(stack.condition, "Sealed + Opened");
+  assert.equal(stack.condition, "Sealed + Open Box");
   assert.equal(stack.flywheelReady, false);
   const share = stack.unitRows.reduce((sum, unit) => sum + unit.shareOfStackCost, 0);
   assert.ok(Math.abs(share - 100) < 0.01);
