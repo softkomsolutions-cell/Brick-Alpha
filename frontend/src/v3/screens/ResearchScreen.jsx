@@ -160,11 +160,33 @@ export function ResearchScreen({
   const profile = readBuyingProfile();
 
   const cards = useMemo(() => {
-    return (collectibles || [])
-      .filter((item) => item.brand === "LEGO")
-      .map((item) =>
-        buildResearchCard(item, { asOf, profile, openTrades, closedTrades }),
-      );
+    const catalogue = (collectibles || [])
+      .filter((item) => item.brand === "LEGO");
+
+    const owned = (openTrades || [])
+      .filter((trade) => trade?.assetClass === "collectible")
+      .map((trade) => ({
+        id: trade.collectibleId || trade.id,
+        sku: trade.sourceSetNumber || trade.sku || "",
+        name: trade.ticker || trade.label || trade.name || "LEGO set",
+        brand: "LEGO",
+        legoTheme: trade.sourceTheme || trade.legoTheme || "Owned LEGO",
+        currentMarketValue: trade.currentMarketValue ?? trade.currentPrice ?? null,
+        brickEconomyValue: trade.brickEconomyValue ?? trade.currentMarketValue ?? trade.currentPrice ?? null,
+        valuationDate: trade.valuationDate || null,
+        sourceCondition: trade.sourceCondition || "",
+      }));
+
+    const bySet = new Map();
+    for (const item of [...catalogue, ...owned]) {
+      const setNumber = String(item.sku || item.id || "").match(/\d{4,7}/)?.[0] || "";
+      const key = setNumber || String(item.id || item.name || "");
+      if (!bySet.has(key)) bySet.set(key, item);
+    }
+
+    return [...bySet.values()].map((item) =>
+      buildResearchCard(item, { asOf, profile, openTrades, closedTrades }),
+    );
   }, [asOf, closedTrades, collectibles, openTrades, profile]);
 
   const filtered = useMemo(() => filterResearchCards(cards, filters), [cards, filters]);
