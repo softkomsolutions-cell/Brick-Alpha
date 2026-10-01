@@ -82,18 +82,7 @@ export function ExitsScreen({
       }),
     [collectibles, openTrades],
   );
-  const ledgerTrades = (
-    rawClosedTrades.length
-      ? rawClosedTrades
-      : allTrades.length
-        ? allTrades
-        : closedTrades
-  ).filter(
-    (trade) =>
-      trade?.assetClass === "collectible" &&
-      String(trade.status || "").toLowerCase() === "closed",
-  );
-  const ledger = useMemo(() => buildRealisedLedger(ledgerTrades), [ledgerTrades]);
+  const ledger = useMemo(() => buildRealisedLedger(closedTrades), [closedTrades]);
   const nearestWindow = candidates
     .map((set) => set.sellWindowMonths)
     .filter((months) => months != null)
@@ -172,6 +161,35 @@ export function ExitsScreen({
           <span>Nearest sell window</span>
           <strong>{proximityLabel(nearestWindow)}</strong>
         </div>
+      </section>
+
+      <section className="panel" aria-label="Realised sales">
+        <div className="panelHeader">
+          <strong>Realised sales</strong>
+          <small>Original cost, fees, and cash ready to recycle</small>
+        </div>
+        {ledger.length ? (
+          <div className="v3ExitList">
+            {ledger.map((sale) => (
+              <article key={sale.id} className="v3ExitCard">
+                <div className="v3ExitRowMain">
+                  <strong>{sale.name}</strong>
+                  <small>#{sale.setNumber} · {sale.channel} · {saleDateLabel(sale.saleDate)}</small>
+                </div>
+                <div className="v3ExitRowStats">
+                  <span>Cost <strong>{formatCollectiblePrice(sale.cost)}</strong></span>
+                  <span>Gross <strong>{formatCollectiblePrice(sale.gross)}</strong></span>
+                  <span>Fees <strong>{formatCollectiblePrice(sale.fees)}</strong></span>
+                  <span>Net <strong>{formatCollectiblePrice(sale.net)}</strong></span>
+                  <span>Profit <strong>{formatCollectiblePrice(sale.realisedProfit)}</strong></span>
+                </div>
+                <p className="v3ExitRecommendation">{sale.recovery}</p>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p>No realised sales yet. Record a sale from an open holding to start the ledger.</p>
+        )}
       </section>
 
       {candidates.length ? (
@@ -309,34 +327,6 @@ export function ExitsScreen({
       ) : null}
       {status ? <p className="v3StatusLine">{status}</p> : null}
 
-      <section className="panel" aria-label="Realised sales">
-        <div className="panelHeader">
-          <strong>Realised sales</strong>
-          <small>Original cost, fees, and cash ready to recycle</small>
-        </div>
-        {ledger.length ? (
-          <div className="v3ExitList">
-            {ledger.map((sale) => (
-              <article key={sale.id} className="v3ExitCard">
-                <div className="v3ExitRowMain">
-                  <strong>{sale.name}</strong>
-                  <small>#{sale.setNumber} · {sale.channel} · {saleDateLabel(sale.saleDate)}</small>
-                </div>
-                <div className="v3ExitRowStats">
-                  <span>Cost <strong>{formatCollectiblePrice(sale.cost)}</strong></span>
-                  <span>Gross <strong>{formatCollectiblePrice(sale.gross)}</strong></span>
-                  <span>Fees <strong>{formatCollectiblePrice(sale.fees)}</strong></span>
-                  <span>Net <strong>{formatCollectiblePrice(sale.net)}</strong></span>
-                  <span>Profit <strong>{formatCollectiblePrice(sale.realisedProfit)}</strong></span>
-                </div>
-                <p className="v3ExitRecommendation">{sale.recovery}</p>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <p>No realised sales yet. Record a sale from an open holding to start the ledger.</p>
-        )}
-      </section>
     </div>
   );
 }
