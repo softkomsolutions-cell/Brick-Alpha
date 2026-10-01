@@ -71,7 +71,7 @@ export function HomeScreen({
         <article className="v3DecisionCard">
           <span>Blended ROI</span>
           <strong>{roiLabel(home.blendedRoi)}</strong>
-          <small>Zero-cost gifts excluded</small>
+          <small>Zero-cost gifts excluded from cost denominator</small>
         </article>
         <article className="v3DecisionCard">
           <span>Positions</span>
