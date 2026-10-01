@@ -247,6 +247,7 @@ export function findCatalogMatch(collectibles, setNumber, demoSeed = 0) {
     if (byId) {
       return byId;
     }
+    return null;
   }
 
   return pool[demoSeed % Math.max(pool.length, 1)] || null;
