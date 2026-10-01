@@ -353,7 +353,7 @@ export function buildRealisedLedger(closedTrades = []) {
       const figures = realisedSaleFigures({ gross, cost, channel });
       return {
         id: trade.id,
-        name: trade.label || trade.name || "LEGO set",
+        name: trade.label || trade.name || trade.ticker || "LEGO set",
         setNumber: setNumberOf(trade),
         cost: figures.cost,
         gross: figures.gross,
