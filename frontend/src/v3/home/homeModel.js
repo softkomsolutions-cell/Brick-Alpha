@@ -48,23 +48,37 @@ function blendedRoi(sets) {
   return Number.isFinite(roi) ? roi : null;
 }
 
+function themeBucket(theme) {
+  const value = String(theme || "").trim();
+  if (value === "Star Wars") return "Star Wars";
+  if (["DC Comics Super Heroes", "Batman", "The LEGO Batman Movie"].includes(value)) return "Batman / DC";
+  if (["Marvel Super Heroes", "Spider-Man"].includes(value)) return "Marvel";
+  if (value === "Harry Potter") return "Harry Potter";
+  if (value === "Icons") return "Icons";
+  if (value === "Ideas") return "Ideas";
+  if (value === "The Lord of the Rings") return "Lord of the Rings";
+  if (value === "Disney") return "Disney";
+  return "Other";
+}
+
 function themeRows(sets) {
   const openValue = sets.reduce((sum, set) => sum + set.marketValue, 0);
-  return Object.entries(THEME_ALLOCATION_TARGETS).map(([theme, cap]) => {
-    const themed = sets.filter((set) => set.theme === theme);
+  const buckets = ["Star Wars", "Batman / DC", "Marvel", "Harry Potter", "Icons", "Ideas", "Lord of the Rings", "Disney", "Other"];
+  return buckets.map((theme) => {
+    const themed = sets.filter((set) => themeBucket(set.theme) === theme);
     const value = themed.reduce((sum, set) => sum + set.marketValue, 0);
-    const costed = themed.filter((set) => set.cost > 0);
-    const cost = costed.reduce((sum, set) => sum + set.cost, 0);
-    const profit = costed.reduce((sum, set) => sum + (set.marketValue - set.cost), 0);
+    const cost = themed.reduce((sum, set) => sum + set.cost, 0);
+    const profit = themed.reduce((sum, set) => sum + (set.marketValue - set.cost), 0);
     const share = openValue > 0 ? (value / openValue) * 100 : 0;
     const roi = cost > 0 ? (profit / cost) * 100 : null;
+    const cap = THEME_ALLOCATION_TARGETS[theme] ?? null;
     return {
       theme,
       cap,
       share,
       value,
       roi: roi != null && Number.isFinite(roi) ? roi : null,
-      overCap: share > cap,
+      overCap: cap != null ? share > cap : false,
     };
   });
 }
