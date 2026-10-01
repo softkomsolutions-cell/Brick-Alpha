@@ -23,6 +23,24 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
   const [theme, setTheme] = useState(view.themes[0] || "");
   const [expandedId, setExpandedId] = useState("");
   const rows = filterCollectionSets(view.sets, filter, theme);
+  const allocation = useMemo(() => {
+    const total = view.sets.reduce((sum, set) => sum + Number(set.marketValue || 0), 0);
+    const grouped = new Map();
+    for (const set of view.sets) {
+      const key = set.theme || "Other";
+      const current = grouped.get(key) || { theme: key, value: 0, cost: 0 };
+      current.value += Number(set.marketValue || 0);
+      current.cost += Number(set.cost || 0);
+      grouped.set(key, current);
+    }
+    return [...grouped.values()]
+      .map((item) => ({
+        ...item,
+        share: total > 0 ? (item.value / total) * 100 : 0,
+        roi: item.cost > 0 ? ((item.value - item.cost) / item.cost) * 100 : null,
+      }))
+      .sort((a, b) => b.value - a.value);
+  }, [view.sets]);
 
   return (
     <div className="v3WorkflowScreen v3Collection" data-page="collection">
@@ -38,6 +56,33 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
         <div><span>In profit</span><strong>{view.summary.inProfit}</strong></div>
         <div><span>Sealed</span><strong>{view.summary.sealed}</strong></div>
         <div><span>Non-sealed</span><strong>{view.summary.opened}</strong></div>
+      </section>
+
+      <section className="v3DecisionCard v3CollectionAllocation">
+        <div className="v3PortfolioSectionHead">
+          <div>
+            <span className="v3Eyebrow">Portfolio mix</span>
+            <h2>Allocation by theme</h2>
+          </div>
+          <small>Based on current collection market value</small>
+        </div>
+        <div className="v3ThemeChart">
+          {allocation.map((item) => (
+            <div className="v3ThemeChartRow" key={item.theme}>
+              <div className="v3ThemeChartLabel">
+                <strong>{item.theme}</strong>
+                <span>{item.share.toFixed(1)}%</span>
+              </div>
+              <div className="v3ThemeChartBar" aria-hidden="true">
+                <span style={{ width: `${Math.max(1, Math.min(100, item.share))}%` }} />
+              </div>
+              <div className="v3ThemeChartValue">
+                <strong>{formatCollectiblePrice(item.value)}</strong>
+                <small>{item.roi == null ? "ROI —" : `ROI ${formatSignedPercent(item.roi)}`}</small>
+              </div>
+            </div>
+          ))}
+        </div>
       </section>
 
       <div className="v3FilterRow" role="tablist" aria-label="Collection filters">
