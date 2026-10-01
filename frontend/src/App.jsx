@@ -3288,6 +3288,7 @@ export default function App() {
           currentUser={currentUser}
           updateSettings={updateSettings}
           onDemoReset={handleDemoReset}
+          onEditOnboarding={() => setV3OnboardingVisible(true)}
           navigateToPage={navigateToPage}
           settingsStatus={settingsStatus}
         />
