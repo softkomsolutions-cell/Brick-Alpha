@@ -32,8 +32,8 @@ import { readBuyingProfile } from "../v3/onboarding/onboardingStorage";
 import { CANONICAL_AS_OF } from "../v3/retirement/retirementModel";
 
 const ACQUISITION_METHODS = [
-  { id: "camera", icon: "📷", label: "Take Photo", detail: "Use your device camera" },
-  { id: "upload", icon: "🖼", label: "Upload Image", detail: "Box, barcode, or receipt" },
+  { id: "camera", icon: "📷", label: "Scan Barcode", detail: "Use your camera on the box UPC / EAN" },
+  { id: "upload", icon: "🖼", label: "Upload Barcode Image", detail: "Use a clear photo of the box barcode" },
   { id: "manual", icon: "⌨", label: "Enter Set Number", detail: "Search by number or name" },
 ];
 
@@ -289,6 +289,8 @@ export function ScanEvaluateWorkspace({
   onAddToWatchlist,
   openCollectibleTicket,
   navigateToPage,
+  authToken,
+  requestJson,
 }) {
   const fileInputRef = useRef(null);
   const hasWebcam = typeof navigator !== "undefined" && Boolean(navigator.mediaDevices?.getUserMedia);
@@ -435,29 +437,81 @@ export function ScanEvaluateWorkspace({
     [closedTrades, collectibles, handleCollectibleSelect, navigateToPage, openTrades],
   );
 
+  const decodeBarcode = useCallback(async (preview) => {
+    const Z = typeof window !== "undefined" ? window.ZXingBrowser : null;
+    if (!Z?.BrowserMultiFormatReader || !preview) return "";
+    try {
+      const reader = new Z.BrowserMultiFormatReader();
+      const result = await reader.decodeFromImageUrl(preview);
+      return String(result?.getText?.() || result?.text || "").replace(/\D/g, "");
+    } catch {
+      return "";
+    }
+  }, []);
+
+  const resolveBarcodeToSet = useCallback(
+    async (barcode) => {
+      if (!barcode || !authToken || !requestJson) return "";
+      try {
+        const data = await requestJson(`/api/lego/barcode/${encodeURIComponent(barcode)}`, {
+          token: authToken,
+        });
+        return normalizeSetNumber(data?.setNumber || "");
+      } catch {
+        return "";
+      }
+    },
+    [authToken, requestJson],
+  );
+
   const handleImageFile = useCallback(
     (file, previewOverride) => {
-      if (!file) {
-        return;
-      }
+      if (!file) return;
 
-      const applyPreview = (preview) => {
+      const applyPreview = async (preview) => {
         setImagePreview(preview);
         setImageName(file.name);
-        const setNumber = identifySetNumberFromFilename(file.name);
+
+        const filenameSet = identifySetNumberFromFilename(file.name);
+        if (filenameSet) {
+          runAnalysis(filenameSet, file, preview, file.name);
+          return;
+        }
+
+        setPhase("processing");
+        setProcessingIndex(1);
+        setActionStatus("Reading barcode…");
+
+        const barcode = await decodeBarcode(preview);
+        if (!barcode) {
+          setPhase("manual");
+          setActionStatus("No readable UPC/EAN barcode found. Scan the barcode on the box or enter the LEGO set number below.");
+          return;
+        }
+
+        setProcessingIndex(2);
+        setActionStatus(`Barcode ${barcode} detected — resolving LEGO set…`);
+        const setNumber = await resolveBarcodeToSet(barcode);
+        if (!setNumber) {
+          setPhase("manual");
+          setActionStatus(`Barcode ${barcode} was read, but no LEGO set number could be resolved. Enter the set number below.`);
+          return;
+        }
+
+        setActionStatus(`Barcode matched LEGO set #${setNumber}.`);
         runAnalysis(setNumber, file, preview, file.name);
       };
 
       if (previewOverride) {
-        applyPreview(previewOverride);
+        void applyPreview(previewOverride);
         return;
       }
 
       const reader = new FileReader();
-      reader.onload = () => applyPreview(reader.result);
+      reader.onload = () => void applyPreview(reader.result);
       reader.readAsDataURL(file);
     },
-    [runAnalysis],
+    [decodeBarcode, resolveBarcodeToSet, runAnalysis],
   );
 
   const handleFileSelect = useCallback(
@@ -559,7 +613,7 @@ export function ScanEvaluateWorkspace({
               <span className="executiveDashboardEyebrow">Hero Feature</span>
               <h2>Scan a LEGO set. Get an instant investment verdict.</h2>
               <p>
-                Photograph, upload, or enter a set number. Brick Alpha identifies the set and opens the verdict.
+                Scan the box barcode or enter a set number. Brick Alpha resolves the set and opens the investment verdict.
               </p>
             </div>
             <div className="seHeroStats">
@@ -568,8 +622,8 @@ export function ScanEvaluateWorkspace({
                 <span>BrickEconomy source</span>
               </div>
               <div>
-                <strong>AI</strong>
-                <span>Identification</span>
+                <strong>UPC</strong>
+                <span>Barcode identification</span>
               </div>
               <div>
                 <strong>5s</strong>
