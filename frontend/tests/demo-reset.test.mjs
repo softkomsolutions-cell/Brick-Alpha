@@ -5,7 +5,7 @@ import { buildRealisedLedger } from "../src/v3/collection/ownershipModel.js";
 import { clearDecisionSnapshot, readDecisionSnapshot, saveDecisionSnapshot } from "../src/v3/decision/decisionSession.js";
 import { clearV3DemoDeviceState } from "../src/v3/demo/demoDeviceState.js";
 import { consumeResearchSection, readResearchSection, stageResearchSection } from "../src/v3/research/researchModel.js";
-import { V3_PRIMARY_NAV, v3MobileMenuItems } from "../src/v3/v3Nav.js";
+import { V3_ACCOUNT_NAV, V3_DESKTOP_NAV, V3_PRIMARY_NAV, v3MobileMenuItems } from "../src/v3/v3Nav.js";
 
 const open = [{
   assetClass: "collectible",
