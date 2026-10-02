@@ -6125,24 +6125,26 @@ app.post("/api/collection/import/preview", requireAuth, (req, res) => {
 app.post("/api/collection/import/commit", requireAuth, async (req, res) => {
   const rows = Array.isArray(req.body?.rows) ? req.body.rows.slice(0, 1000) : [];
   const requestedImportId = String(req.body?.importId || "").trim();
+  const normalizedRows = rows.map((row) => ({
+    setNumber: String(row?.setNumber || "").trim().replace(/-1$/, ""),
+    quantity: Number(row?.quantity || 1),
+    purchasePrice: Number(row?.purchasePrice),
+    purchaseDate: String(row?.purchaseDate || ""),
+    condition: String(row?.condition || "Sealed"),
+    retailer: String(row?.retailer || ""),
+    shipping: Number(row?.shipping || 0),
+    vatReclaim: Number(row?.vatReclaim || 0),
+    rewards: Number(row?.rewards || 0),
+    cashback: Number(row?.cashback || 0),
+    vouchers: Number(row?.vouchers || 0),
+  }));
   const normalizedImportFingerprint = crypto
     .createHash("sha256")
-    .update(JSON.stringify(rows.map((row) => ({
-      setNumber: String(row?.setNumber || "").trim().replace(/-1$/, ""),
-      quantity: Number(row?.quantity || 1),
-      purchasePrice: Number(row?.purchasePrice),
-      purchaseDate: String(row?.purchaseDate || ""),
-      condition: String(row?.condition || "Sealed"),
-      retailer: String(row?.retailer || ""),
-      shipping: Number(row?.shipping || 0),
-      vatReclaim: Number(row?.vatReclaim || 0),
-      rewards: Number(row?.rewards || 0),
-      cashback: Number(row?.cashback || 0),
-      vouchers: Number(row?.vouchers || 0),
-    }))))
+    .update(JSON.stringify(normalizedRows))
     .digest("hex")
     .slice(0, 24);
   const importId = requestedImportId || normalizedImportFingerprint;
+
   req.userState.collectionImports = Array.isArray(req.userState.collectionImports)
     ? req.userState.collectionImports
     : [];
@@ -6156,31 +6158,45 @@ app.post("/api/collection/import/commit", requireAuth, async (req, res) => {
     });
     return;
   }
-  const created = [];
+
   const errors = [];
-  for (let index = 0; index < rows.length; index += 1) {
-    const raw = rows[index] || {};
-    const setNumber = String(raw.setNumber || "").trim().replace(/-1$/, "");
-    const quantity = Number(raw.quantity || 1);
-    const purchasePrice = Number(raw.purchasePrice);
-    if (!/^\d{4,6}$/.test(setNumber) || !Number.isInteger(quantity) || quantity < 1 || !Number.isFinite(purchasePrice) || purchasePrice < 0) {
-      errors.push({ row: index + 1, error: "invalid_row" });
-      continue;
+  const prepared = normalizedRows.map((raw, index) => {
+    const { setNumber, quantity, purchasePrice } = raw;
+    if (!/^\\d{4,6}$/.test(setNumber) || !Number.isInteger(quantity) || quantity < 1 || quantity > 1000 || !Number.isFinite(purchasePrice) || purchasePrice < 0) {
+      errors.push({ row: index + 1, setNumber, error: "invalid_row" });
+      return null;
     }
     const item = findImportableCollectibleBySkuOrId(setNumber);
     if (!item) {
       errors.push({ row: index + 1, setNumber, error: "set_not_in_brick_alpha_catalogue" });
-      continue;
+      return null;
     }
-    const credits = ["vatReclaim", "rewards", "cashback", "vouchers"].reduce((sum, key) => sum + (Number(raw[key]) || 0), 0);
+    const credits = ["vatReclaim", "rewards", "cashback", "vouchers"]
+      .reduce((sum, key) => sum + (Number(raw[key]) || 0), 0);
     const allInTotal = Math.max(0, purchasePrice * quantity + (Number(raw.shipping) || 0) - credits);
     const unitCost = quantity > 0 ? allInTotal / quantity : purchasePrice;
     const note = [
       raw.purchaseDate ? `Date: ${String(raw.purchaseDate).slice(0, 40)}` : "",
       raw.retailer ? `Source: ${String(raw.retailer).slice(0, 120)}` : "",
       `Condition: ${/^opened$/i.test(String(raw.condition || "")) ? "Opened" : "Sealed"}`,
+      `Import: ${importId}`,
       "Imported collection data",
     ].filter(Boolean).join(". ");
+    return { item, quantity, unitCost, note };
+  }).filter(Boolean);
+
+  if (errors.length) {
+    res.status(422).json({
+      ok: false,
+      duplicate: false,
+      created: 0,
+      errors,
+      portfolio: req.userState.trades,
+    });
+    return;
+  }
+
+  const created = prepared.map(({ item, quantity, unitCost, note }) => {
     const trade = createCollectibleTrade(item, "BUY", req.user.id, {
       quantity,
       entryPrice: Number(unitCost.toFixed(2)),
@@ -6190,18 +6206,18 @@ app.post("/api/collection/import/commit", requireAuth, async (req, res) => {
       executionLabel: "Imported collection",
     });
     req.userState.trades.unshift(trade);
-    created.push(trade);
-  }
-  if (created.length && errors.length === 0) {
-    req.userState.collectionImports.unshift(importId);
-    req.userState.collectionImports = req.userState.collectionImports.slice(0, 100);
-  }
+    return trade;
+  });
+
+  req.userState.collectionImports.unshift(importId);
+  req.userState.collectionImports = req.userState.collectionImports.slice(0, 100);
   persistStore();
-  res.status(errors.length ? 207 : 201).json({
-    ok: errors.length === 0,
+
+  res.status(201).json({
+    ok: true,
     duplicate: false,
     created: created.length,
-    errors,
+    errors: [],
     portfolio: req.userState.trades,
   });
 });
