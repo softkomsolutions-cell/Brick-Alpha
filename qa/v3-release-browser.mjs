@@ -46,7 +46,9 @@ async function completeOnboarding(page) {
 }
 
 function sidebarButton(page, label) {
-  return page.locator(".v3Sidebar button").filter({ hasText: label }).first();
+  return page.locator(".v3Sidebar button").filter({
+    has: page.getByText(label, { exact: true }),
+  }).first();
 }
 
 async function nav(page, label, id) {
@@ -95,7 +97,7 @@ try {
 
   for (const label of ["Verdict", "Set Analysis", "Log Purchase"]) {
     assert.equal(
-      await sidebar.locator("button").filter({ hasText: label }).first().isDisabled(),
+      await sidebarButton(page, label).isDisabled(),
       true,
       `${label} should be locked before Scan`,
     );
