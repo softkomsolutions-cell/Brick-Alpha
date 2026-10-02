@@ -28,8 +28,12 @@ async function completeOnboarding(page) {
   await expectPage(page, "home");
 }
 
+function sidebarButton(page, label) {
+  return page.locator(".v3Sidebar button").filter({ hasText: label }).first();
+}
+
 async function nav(page, label, id) {
-  await page.locator(".v3Sidebar").getByRole("button", { name: new RegExp(`^${label}\\b`) }).first().click();
+  await sidebarButton(page, label).click();
   await expectPage(page, id);
 }
 
@@ -59,7 +63,7 @@ try {
   }
   for (const label of ["Verdict", "Set Analysis", "Log Purchase"]) {
     assert.equal(
-      await sidebar.getByRole("button", { name: new RegExp(`^${label}\\b`) }).isDisabled(),
+      await sidebar.locator("button").filter({ hasText: label }).first().isDisabled(),
       true,
       `${label} should be locked before Scan`,
     );
