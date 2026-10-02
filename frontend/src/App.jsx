@@ -1702,6 +1702,8 @@ export default function App() {
 
   const handleDemoLaunch = useCallback(
     async (selection) => {
+      clearV3DemoDeviceState();
+      setV3OnboardingVisible(true);
       setDemoLaunchBusy(true);
       setAuthStatus("");
       setPreAuthLaunch(selection);
