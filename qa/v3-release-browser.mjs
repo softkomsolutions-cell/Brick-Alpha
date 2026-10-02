@@ -188,8 +188,9 @@ try {
   await nav(page, "Collection", "collection");
   await assertNamedVisibleButtons(page, "Collection");
   const resetCollection = await page.locator("[data-page='collection']").innerText();
-  assert.match(resetCollection, /#75252/);
-  assert.ok(!/#75367/.test(resetCollection), "Reset Demo left QA import in fresh baseline");
+  assert.match(resetCollection, /Positions\s+292/, "Reset Demo did not restore Gavin V152 position count");
+  assert.match(resetCollection, /Unique sets\s+195/, "Reset Demo did not restore Gavin V152 unique-set count");
+  assert.match(resetCollection, /Stacks\s+66/, "Reset Demo did not restore Gavin V152 stack count");
   await nav(page, "Settings", "settings");
   assert.equal(Number(await page.locator('input[name="usdZarRate"]').inputValue()), 18.5);
 
