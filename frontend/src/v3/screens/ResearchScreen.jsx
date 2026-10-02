@@ -194,15 +194,17 @@ export function ResearchScreen({
     sourceStatus?.brickeconomy?.configured &&
     sourceStatus?.brickeconomy?.researchFeedReady,
   );
-  const sectionOptions = liveDiscoveryReady
-    ? [BASE_SECTIONS[0], ...LIVE_SECTIONS, BASE_SECTIONS[1]]
-    : BASE_SECTIONS;
-
-  useEffect(() => {
-    if (!sectionOptions.some((item) => item.id === section)) {
-      setSection("search");
-    }
-  }, [section, sectionOptions]);
+  const sectionOptions = useMemo(
+    () => (
+      liveDiscoveryReady
+        ? [BASE_SECTIONS[0], ...LIVE_SECTIONS, BASE_SECTIONS[1]]
+        : BASE_SECTIONS
+    ),
+    [liveDiscoveryReady],
+  );
+  const effectiveSection = sectionOptions.some((item) => item.id === section)
+    ? section
+    : "search";
   const sections = useMemo(() => splitResearchSections(filtered), [filtered]);
   const themes = [...new Set(cards.map((card) => card.theme))].sort();
   const liveValues = liveDiscoveryReady
@@ -212,11 +214,11 @@ export function ResearchScreen({
   const watchBySet = new Map(watches.map((target) => [target.setNumber, target]));
 
   const visible =
-    section === "new"
+    effectiveSection === "new"
       ? sections.newReleases
-      : section === "retiring"
+      : effectiveSection === "retiring"
         ? sections.retiringSoon
-        : section === "performers"
+        : effectiveSection === "performers"
           ? sections.topPerformers
           : sections.search;
 
@@ -285,7 +287,7 @@ export function ResearchScreen({
           <button
             key={item.id}
             type="button"
-            className={section === item.id ? "active" : ""}
+            className={effectiveSection === item.id ? "active" : ""}
             onClick={() => setSection(item.id)}
           >
             {item.label}
