@@ -438,8 +438,27 @@ export function ScanEvaluateWorkspace({
   );
 
   const decodeBarcode = useCallback(async (preview) => {
-    const Z = typeof window !== "undefined" ? window.ZXingBrowser : null;
-    if (!Z?.BrowserMultiFormatReader || !preview) return "";
+    if (!preview || typeof window === "undefined") return "";
+
+    if ("BarcodeDetector" in window) {
+      try {
+        const detector = new window.BarcodeDetector({
+          formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128"],
+        });
+        const response = await fetch(preview);
+        const blob = await response.blob();
+        const bitmap = await createImageBitmap(blob);
+        const detected = await detector.detect(bitmap);
+        bitmap.close?.();
+        const raw = String(detected?.[0]?.rawValue || "").replace(/\D/g, "");
+        if (raw) return raw;
+      } catch {
+        // Continue to ZXing fallback.
+      }
+    }
+
+    const Z = window.ZXingBrowser;
+    if (!Z?.BrowserMultiFormatReader) return "";
     try {
       const reader = new Z.BrowserMultiFormatReader();
       const result = await reader.decodeFromImageUrl(preview);
