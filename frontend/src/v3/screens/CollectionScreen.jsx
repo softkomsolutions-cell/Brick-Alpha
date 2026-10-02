@@ -14,6 +14,19 @@ const FILTERS = [
   { id: "theme", label: "Theme" },
 ];
 
+const ALLOCATION_PALETTE = [
+  "#2563eb",
+  "#0f766e",
+  "#7c3aed",
+  "#d97706",
+  "#dc2626",
+  "#0891b2",
+  "#4f46e5",
+  "#65a30d",
+  "#64748b",
+  "#9333ea",
+];
+
 export function CollectionScreen({ openTrades = [], collectibles = [], navigateToPage }) {
   const view = useMemo(
     () => buildCollectionView(openTrades, collectibles),
@@ -42,25 +55,13 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
       .sort((a, b) => b.value - a.value);
   }, [view.sets]);
 
-  const allocationPalette = [
-    "#2563eb",
-    "#0f766e",
-    "#7c3aed",
-    "#d97706",
-    "#dc2626",
-    "#0891b2",
-    "#4f46e5",
-    "#65a30d",
-    "#64748b",
-    "#9333ea",
-  ];
   const donutGradient = useMemo(() => {
-    let cursor = 0;
     const stops = allocation.map((item, index) => {
-      const start = cursor;
-      const end = cursor + item.share;
-      cursor = end;
-      return `${allocationPalette[index % allocationPalette.length]} ${start.toFixed(2)}% ${end.toFixed(2)}%`;
+      const start = allocation
+        .slice(0, index)
+        .reduce((sum, entry) => sum + entry.share, 0);
+      const end = start + item.share;
+      return `${ALLOCATION_PALETTE[index % ALLOCATION_PALETTE.length]} ${start.toFixed(2)}% ${end.toFixed(2)}%`;
     });
     return stops.length ? `conic-gradient(${stops.join(", ")})` : "#e9eef7";
   }, [allocation]);
@@ -107,7 +108,7 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
                 <div key={item.theme} className="v3ThemeLegendItem">
                   <span
                     className="v3ThemeLegendSwatch"
-                    style={{ background: allocationPalette[index % allocationPalette.length] }}
+                    style={{ background: ALLOCATION_PALETTE[index % ALLOCATION_PALETTE.length] }}
                   />
                   <strong>{item.theme}</strong>
                   <span>{item.share.toFixed(1)}%</span>
@@ -127,7 +128,7 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
                   <span
                     style={{
                       width: `${Math.max(1, Math.min(100, item.share))}%`,
-                      background: allocationPalette[index % allocationPalette.length],
+                      background: ALLOCATION_PALETTE[index % ALLOCATION_PALETTE.length],
                     }}
                   />
                 </div>
