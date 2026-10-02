@@ -3085,6 +3085,7 @@ export default function App() {
           appSettings={appSettings}
           closedTrades={closedTrades}
           collectibles={collectibles}
+          currentUser={currentUser}
           navigateToPage={navigateToPage}
           openTrades={openTrades}
         />
