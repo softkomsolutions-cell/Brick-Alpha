@@ -4451,6 +4451,7 @@ function createCollectibleTrade(item, side, userId, overrides = {}) {
     {
       assetClass: "collectible",
       collectibleId: item.id,
+      sku: String(item.sku || "").trim(),
       category: item.category || item.brand || "Collectible",
       marketTicker: `COLLECTIBLE:${item.id}`,
       currentPrice: markedPrice,
