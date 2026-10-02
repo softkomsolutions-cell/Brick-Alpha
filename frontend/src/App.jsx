@@ -63,7 +63,7 @@ import { V3Sidebar } from "./v3/V3Sidebar";
 import { V3OnboardingFlow } from "./v3/onboarding/V3OnboardingFlow";
 import { isV3OnboardingComplete } from "./v3/onboarding/onboardingStorage";
 import { clearV3DemoDeviceState } from "./v3/demo/demoDeviceState";
-import { isDecisionSnapshotReady, readDecisionSnapshot } from "./v3/decision/decisionSession";
+import { isDecisionSnapshotReady } from "./v3/decision/decisionSession";
 import { stageResearchQuery, stageResearchSection } from "./v3/research/researchModel";
 import { isV3LegoJourneyPage, v3MobileMenuItems } from "./v3/v3Nav";
 
