@@ -64,12 +64,20 @@ export function HomeScreen({
   }, [collection.sets]);
 
   const donutGradient = useMemo(() => {
-    let running = 0;
-    const stops = allocation.map((item, index) => {
-      const start = running;
-      running += item.share;
-      return `${DASHBOARD_PALETTE[index % DASHBOARD_PALETTE.length]} ${start.toFixed(2)}% ${running.toFixed(2)}%`;
-    });
+    const stops = allocation.reduce(
+      (state, item, index) => {
+        const start = state.total;
+        const end = start + item.share;
+        return {
+          total: end,
+          values: [
+            ...state.values,
+            `${DASHBOARD_PALETTE[index % DASHBOARD_PALETTE.length]} ${start.toFixed(2)}% ${end.toFixed(2)}%`,
+          ],
+        };
+      },
+      { total: 0, values: [] },
+    ).values;
     return stops.length ? `conic-gradient(${stops.join(", ")})` : "#e9eef7";
   }, [allocation]);
 
