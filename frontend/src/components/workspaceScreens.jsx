@@ -3314,18 +3314,20 @@ export function ScanEvaluateScreen({
   requestJson,
 }) {
   return (
-    <ScanEvaluateWorkspace
-      collectibles={collectibles}
-      openTrades={openTrades}
-      closedTrades={closedTrades}
-      handleCollectibleSelect={handleCollectibleSelect}
-      jumpToPageSection={jumpToPageSection}
-      onAddToWatchlist={onAddToWatchlist}
-      openCollectibleTicket={openCollectibleTicket}
-      navigateToPage={navigateToPage}
-      authToken={authToken}
-      requestJson={requestJson}
-    />
+    <div data-page="scan">
+      <ScanEvaluateWorkspace
+        collectibles={collectibles}
+        openTrades={openTrades}
+        closedTrades={closedTrades}
+        handleCollectibleSelect={handleCollectibleSelect}
+        jumpToPageSection={jumpToPageSection}
+        onAddToWatchlist={onAddToWatchlist}
+        openCollectibleTicket={openCollectibleTicket}
+        navigateToPage={navigateToPage}
+        authToken={authToken}
+        requestJson={requestJson}
+      />
+    </div>
   );
 }
 
