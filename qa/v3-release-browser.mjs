@@ -80,7 +80,7 @@ try {
   }
   for (const label of ["Verdict", "Set Analysis", "Log Purchase"]) {
     assert.equal(
-      await sidebar.getByRole("button", { name: new RegExp(`^${label}\\b`) }).isDisabled(),
+      await sidebar.getByText(label, { exact: true }).locator("xpath=ancestor::button[1]").isDisabled(),
       true,
       `${label} should be locked before Scan`,
     );
