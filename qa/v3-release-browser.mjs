@@ -152,7 +152,7 @@ try {
   assert.match(await page.locator("[data-page='collection']").innerText(), /#75367/);
 
   await nav(page, "Scan", "scan");
-  await page.getByRole("button", { name: "Enter Set Number", exact: true }).click();
+  await page.getByText("Enter Set Number", { exact: true }).locator("xpath=ancestor::button[1]").click();
   await page.locator('input[placeholder="e.g. 75252"]').fill("75367");
   await page.getByRole("button", { name: "Analyse", exact: true }).click();
   await expectPage(page, "verdict");
