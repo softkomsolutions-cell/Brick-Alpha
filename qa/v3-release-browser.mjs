@@ -63,6 +63,10 @@ async function mobileMenu(page) {
   return menu;
 }
 
+function exactMenuButton(page, menu, label) {
+  return menu.locator("button").filter({ has: page.getByText(label, { exact: true }) }).first();
+}
+
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 
