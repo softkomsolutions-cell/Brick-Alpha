@@ -195,7 +195,7 @@ try {
   assert.equal(Number(await page.locator('input[name="usdZarRate"]').inputValue()), 18.5);
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.locator(".v3BottomNav").getByText("Home", { exact: true }).click();
+  await page.locator(".v3BottomNav").getByRole("button", { name: "Home", exact: true }).click();
   await expectPage(page, "home");
   const bottom = await page.locator(".v3BottomNav").innerText();
   for (const label of ["Home", "Research", "Scan", "Collection", "Exits"]) assert.ok(bottom.includes(label));
@@ -203,7 +203,7 @@ try {
   await noOverflow(page, "Home");
 
   for (const [label, id] of [["Research", "research"], ["Scan", "scan"], ["Collection", "collection"], ["Exits", "exits"]]) {
-    await page.locator(".v3BottomNav").getByText(label, { exact: true }).click();
+    await page.locator(".v3BottomNav").getByRole("button", { name: label, exact: true }).click();
     await expectPage(page, id);
     await noOverflow(page, label);
     await assertNamedVisibleButtons(page, `${label} mobile`);
