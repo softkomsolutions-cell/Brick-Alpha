@@ -31,3 +31,34 @@ jobs:
         run: npm --prefix server test
       - name: Full regression check
         run: npm run check:full
+      - name: Install browser QA runtime
+        run: |
+          npm install --no-save --no-package-lock playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start Brick Alpha QA server
+        env:
+          AUTH_SECRET: BrickAlphaBrowserQa2026SecureSecret1234567890
+          AUTH_PERSISTENCE_MODE: legacy
+          FINANCIAL_PERSISTENCE_MODE: legacy
+          VALUATION_PERSISTENCE_MODE: legacy
+          CONNECTOR_PERSISTENCE_MODE: legacy
+          DEMO_MODE: "true"
+          PORT: "5000"
+        run: |
+          node server/server.js > /tmp/brick-alpha-qa.log 2>&1 &
+          echo $! > /tmp/brick-alpha-qa.pid
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:5000/api/health >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/brick-alpha-qa.log
+          exit 1
+      - name: Browser release QA
+        env:
+          BRICK_ALPHA_QA_URL: http://127.0.0.1:5000
+        run: node qa/v3-release-browser.mjs
+      - name: Show server log on failure
+        if: failure()
+        run: cat /tmp/brick-alpha-qa.log || true
