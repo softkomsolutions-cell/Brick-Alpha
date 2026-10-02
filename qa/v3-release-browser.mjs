@@ -165,7 +165,7 @@ try {
   assert.match(verdict, /BrickEconomy/i);
   assert.ok(/Buy ×2 flywheel|Buy ×1|Only below R|Skip/.test(verdict), "Canonical verdict label missing");
 
-  const analysisButton = page.locator(".v3Sidebar").getByRole("button", { name: /^Set Analysis\b/ });
+  const analysisButton = sidebarButton(page, "Set Analysis");
   assert.equal(await analysisButton.isDisabled(), false);
   await analysisButton.click();
   await expectPage(page, "set-analysis");
@@ -175,7 +175,7 @@ try {
     assert.ok(analysis.includes(factor), `Missing set-analysis factor: ${factor}`);
   }
 
-  await page.locator(".v3Sidebar").getByRole("button", { name: /^Log Purchase\b/ }).click();
+  await sidebarButton(page, "Log Purchase").click();
   await expectPage(page, "log-purchase");
   await assertNamedVisibleButtons(page, "Log Purchase");
   assert.match(await page.locator("[data-page='log-purchase']").innerText(), /75367/);
