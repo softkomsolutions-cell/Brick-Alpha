@@ -81,7 +81,6 @@ try {
   for (const [label, id] of [
     ["Home", "home"],
     ["Research", "research"],
-    ["Scan", "scan"],
     ["Collection", "collection"],
     ["Portfolio", "portfolio"],
     ["Exits", "exits"],
