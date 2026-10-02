@@ -1899,3 +1899,413 @@
     justify-self: center;
   }
 }
+
+
+/* =========================================================
+   Brick Alpha premium wealth UI — final production override
+   Restores the approved dark / gold / blue investment system
+   after the light PDF-spec compatibility layer.
+   ========================================================= */
+
+.v3AppShell {
+  --ba-paper: #070b12;
+  --ba-surface: #0f1724;
+  --ba-surface-2: #111c2d;
+  --ba-ink: #f8fafc;
+  --ba-ink-secondary: #9ba8bc;
+  --ba-line: rgba(148, 163, 184, 0.16);
+  --ba-primary: #4f7cff;
+  --ba-primary-tint: rgba(79, 124, 255, 0.14);
+  --ba-brick-yellow: #f4c542;
+  --ba-gold: #d7b45a;
+  --ba-gain: #35d07f;
+  --ba-caution: #f3b84b;
+  --ba-loss: #ff6b6b;
+  --ba-radius: 18px;
+  --ba-radius-sm: 12px;
+  --ba-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+  background:
+    radial-gradient(circle at 72% -12%, rgba(79, 124, 255, 0.18), transparent 34rem),
+    radial-gradient(circle at 18% 0%, rgba(215, 180, 90, 0.10), transparent 28rem),
+    #070b12;
+  color-scheme: dark;
+}
+
+.v3AppShell.saasAppShell,
+.v3AppShell .workspaceShell,
+.v3AppShell .workspaceMain,
+.v3AppShell .workspaceContent {
+  background:
+    radial-gradient(circle at 80% 0%, rgba(79, 124, 255, 0.10), transparent 34rem),
+    #070b12 !important;
+  color: var(--ba-ink) !important;
+}
+
+.v3AppShell .v3Sidebar {
+  background:
+    linear-gradient(180deg, rgba(20, 30, 48, 0.98), rgba(8, 13, 22, 0.99)) !important;
+  border-right: 1px solid rgba(215, 180, 90, 0.16) !important;
+  box-shadow: 16px 0 48px rgba(0, 0, 0, 0.18);
+}
+
+.v3AppShell .v3SidebarWordmark {
+  color: #fff !important;
+  font-size: 14px;
+  letter-spacing: .08em;
+}
+
+.v3AppShell .v3SidebarTagline,
+.v3AppShell .v3SidebarSectionLabel,
+.v3AppShell .v3SidebarNavCopy small {
+  color: #7f8da4 !important;
+}
+
+.v3AppShell .v3SidebarSectionLabel {
+  color: #d7b45a !important;
+  letter-spacing: .13em;
+}
+
+.v3AppShell .v3SidebarNavItem {
+  color: #d8e0ec !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+  transition: background .16s ease, border-color .16s ease, transform .16s ease;
+}
+
+.v3AppShell .v3SidebarNavItem:hover {
+  background: rgba(255,255,255,.045) !important;
+  border-color: rgba(148,163,184,.12) !important;
+  transform: translateX(2px);
+}
+
+.v3AppShell .v3SidebarNavItem.active {
+  background: linear-gradient(90deg, rgba(79,124,255,.20), rgba(79,124,255,.06)) !important;
+  border-color: rgba(79,124,255,.30) !important;
+  box-shadow: inset 3px 0 0 #d7b45a;
+  color: #fff !important;
+}
+
+.v3AppShell .v3SidebarNavGlyph {
+  background: rgba(255,255,255,.06) !important;
+  color: #b9c5d8 !important;
+  border: 1px solid rgba(255,255,255,.06);
+}
+
+.v3AppShell .v3SidebarNavItem.active .v3SidebarNavGlyph {
+  background: rgba(215,180,90,.14) !important;
+  color: #f7d77c !important;
+  border-color: rgba(215,180,90,.22);
+}
+
+.v3AppShell .v3SidebarUser {
+  background: rgba(255,255,255,.035) !important;
+  border-color: rgba(148,163,184,.14) !important;
+  color: #fff !important;
+}
+
+.v3AppShell .saasTopNav {
+  background: rgba(7, 11, 18, 0.82) !important;
+  border-bottom: 1px solid rgba(148,163,184,.14) !important;
+  backdrop-filter: blur(18px) saturate(1.25);
+}
+
+.v3AppShell .saasTopNavBreadcrumb,
+.v3AppShell .saasTopNavBreadcrumb span,
+.v3AppShell .saasTopNavBreadcrumb strong {
+  color: #e9eef7 !important;
+}
+
+.v3AppShell .saasTopNavSearch {
+  background: rgba(255,255,255,.045) !important;
+  border-color: rgba(148,163,184,.14) !important;
+  color: #9ba8bc !important;
+}
+
+.v3AppShell .saasTopNavIconButton,
+.v3AppShell .ghostButton,
+.v3AppShell .secondaryButton {
+  background: rgba(255,255,255,.045) !important;
+  border-color: rgba(148,163,184,.18) !important;
+  color: #dce5f2 !important;
+}
+
+.v3AppShell .ghostButton:hover,
+.v3AppShell .secondaryButton:hover,
+.v3AppShell .saasTopNavIconButton:hover {
+  background: rgba(255,255,255,.075) !important;
+  border-color: rgba(215,180,90,.30) !important;
+}
+
+.v3AppShell .primaryButton {
+  background: linear-gradient(135deg, #4f7cff, #365fd6) !important;
+  border-color: rgba(111, 146, 255, .65) !important;
+  color: #fff !important;
+  box-shadow: 0 10px 26px rgba(79,124,255,.24) !important;
+}
+
+.v3AppShell [data-page="scan"] .primaryButton,
+.v3AppShell .v3BottomNavScanButton {
+  background: linear-gradient(135deg, #f6d365, #d7aa35) !important;
+  color: #111827 !important;
+  box-shadow: 0 10px 28px rgba(215,180,90,.25) !important;
+}
+
+.v3AppShell .v3WorkflowHero,
+.v3AppShell .v3DecisionCard,
+.v3AppShell .v3PurchaseForm,
+.v3AppShell .v3StatGrid > div,
+.v3AppShell .v3ExitCard,
+.v3AppShell .v3CollectionRow,
+.v3AppShell .v3ResearchCard {
+  background:
+    linear-gradient(180deg, rgba(18, 28, 45, .96), rgba(12, 20, 33, .96)) !important;
+  color: #f8fafc !important;
+  border: 1px solid rgba(148,163,184,.14) !important;
+  box-shadow: 0 16px 42px rgba(0,0,0,.18) !important;
+}
+
+.v3AppShell .v3WorkflowHero {
+  background:
+    radial-gradient(circle at 88% 22%, rgba(215,180,90,.13), transparent 20rem),
+    linear-gradient(135deg, rgba(22,36,59,.98), rgba(10,17,29,.98)) !important;
+  border-color: rgba(215,180,90,.18) !important;
+}
+
+.v3AppShell .v3WorkflowHero h1,
+.v3AppShell .v3DecisionCard h2,
+.v3AppShell .v3DecisionCard strong,
+.v3AppShell .v3ResearchOpen strong,
+.v3AppShell .v3ResearchFacts dd,
+.v3AppShell .v3CollectionMain,
+.v3AppShell .v3DisclosureToggle,
+.v3AppShell .v3StatGrid strong,
+.v3AppShell .v3Home strong,
+.v3AppShell .v3Home h1,
+.v3AppShell .v3Home h2,
+.v3AppShell .v3Research h1,
+.v3AppShell .v3Research h2 {
+  color: #f8fafc !important;
+}
+
+.v3AppShell .v3WorkflowHero p,
+.v3AppShell .v3HomeMeta,
+.v3AppShell .v3ResearchFacts dt,
+.v3AppShell .v3FeeAssumption,
+.v3AppShell .v3FlywheelLine,
+.v3AppShell .v3StatGrid span,
+.v3AppShell .v3DecisionCard > span,
+.v3AppShell .v3DecisionCard small,
+.v3AppShell .v3DecisionCard p {
+  color: #93a2b8 !important;
+}
+
+.v3AppShell .v3Eyebrow {
+  color: #d7b45a !important;
+  font-weight: 750;
+  letter-spacing: .11em;
+}
+
+.v3AppShell .v3HomeHeroPremium {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(260px, .9fr);
+  gap: 26px;
+  align-items: stretch;
+  padding: 30px !important;
+}
+
+.v3AppShell .v3HomeHeroPremium::after {
+  content: "";
+  position: absolute;
+  width: 280px;
+  height: 280px;
+  right: -80px;
+  top: -110px;
+  border-radius: 50%;
+  border: 1px solid rgba(215,180,90,.16);
+  box-shadow:
+    0 0 0 42px rgba(215,180,90,.025),
+    0 0 0 86px rgba(79,124,255,.025);
+  pointer-events: none;
+}
+
+.v3AppShell .v3HomeHeroPrimary {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  align-content: center;
+  gap: 8px;
+}
+
+.v3AppShell .v3HomeHeroValue {
+  margin: 2px 0 0;
+  font-size: clamp(36px, 5vw, 58px) !important;
+  letter-spacing: -.055em;
+  line-height: .98;
+}
+
+.v3AppShell .v3HomeHeroLabel {
+  color: #9ba8bc !important;
+  max-width: 58ch;
+}
+
+.v3AppShell .v3HomeHeroKpis {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.v3AppShell .v3HeroKpi {
+  min-height: 92px;
+  padding: 14px;
+  border-radius: 14px;
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  background: rgba(255,255,255,.045);
+  border: 1px solid rgba(148,163,184,.13);
+}
+
+.v3AppShell .v3HeroKpi span {
+  color: #8594aa !important;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.v3AppShell .v3HeroKpi strong {
+  font-size: 19px;
+  color: #fff !important;
+}
+
+.v3AppShell .v3HeroKpi.isGold {
+  background: linear-gradient(135deg, rgba(215,180,90,.15), rgba(215,180,90,.05));
+  border-color: rgba(215,180,90,.24);
+}
+
+.v3AppShell .v3HomeGrid {
+  gap: 12px;
+}
+
+.v3AppShell .v3HomeGrid .v3DecisionCard {
+  min-height: 116px;
+  align-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.v3AppShell .v3HomeGrid .v3DecisionCard::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 18px;
+  bottom: 18px;
+  width: 3px;
+  border-radius: 99px;
+  background: linear-gradient(#4f7cff, #7ba3ff);
+  opacity: .85;
+}
+
+.v3AppShell .v3PortfolioOverviewCard {
+  border-color: rgba(79,124,255,.20) !important;
+}
+
+.v3AppShell .v3MetricChartTrack {
+  background: rgba(148,163,184,.12) !important;
+}
+
+.v3AppShell .v3MetricChartTrack span {
+  background: linear-gradient(90deg, #4f7cff, #78a5ff) !important;
+  box-shadow: 0 0 18px rgba(79,124,255,.22);
+}
+
+.v3AppShell .v3AttentionList {
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 10px;
+}
+
+.v3AppShell .v3AttentionList button {
+  background: rgba(255,255,255,.035) !important;
+  border: 1px solid rgba(148,163,184,.12) !important;
+  border-left: 3px solid #4f7cff !important;
+  border-radius: 13px !important;
+  color: #f8fafc !important;
+  padding: 14px 16px !important;
+}
+
+.v3AppShell .v3AttentionList button:hover {
+  background: rgba(79,124,255,.08) !important;
+  border-color: rgba(79,124,255,.24) !important;
+}
+
+.v3AppShell .v3ResearchFilters,
+.v3AppShell .v3SourceNotice,
+.v3AppShell .v3FileDrop,
+.v3AppShell .v3ImportTable,
+.v3AppShell .v3ProfileForm input,
+.v3AppShell .v3ProfileForm select,
+.v3AppShell .v3ExchangeForm input,
+.v3AppShell .v3SourceConnect input {
+  background: rgba(255,255,255,.04) !important;
+  color: #eef3fa !important;
+  border-color: rgba(148,163,184,.16) !important;
+}
+
+.v3AppShell input::placeholder {
+  color: #718096 !important;
+}
+
+.v3AppShell .v3ThemeChip {
+  background: rgba(255,255,255,.045) !important;
+  color: #c8d3e2 !important;
+  border-color: rgba(148,163,184,.16) !important;
+}
+
+.v3AppShell .v3ThemeChip.active {
+  background: rgba(215,180,90,.14) !important;
+  border-color: rgba(215,180,90,.34) !important;
+  color: #f7d77c !important;
+}
+
+.v3AppShell .v3BottomNav {
+  background: rgba(8,13,22,.96) !important;
+  border-top-color: rgba(148,163,184,.16) !important;
+  backdrop-filter: blur(18px);
+}
+
+.v3AppShell .v3BottomNavItem {
+  color: #8492a7 !important;
+}
+
+.v3AppShell .v3BottomNavItem.active {
+  color: #f7d77c !important;
+}
+
+@media (max-width: 820px) {
+  .v3AppShell .v3HomeHeroPremium {
+    grid-template-columns: 1fr;
+    padding: 20px !important;
+  }
+
+  .v3AppShell .v3HomeHeroKpis {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .v3AppShell .v3AttentionList {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 420px) {
+  .v3AppShell .v3HomeHeroKpis {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .v3AppShell .v3HeroKpi {
+    min-height: 82px;
+    padding: 12px;
+  }
+}
