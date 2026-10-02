@@ -63,7 +63,7 @@ import { V3Sidebar } from "./v3/V3Sidebar";
 import { V3OnboardingFlow } from "./v3/onboarding/V3OnboardingFlow";
 import { isV3OnboardingComplete } from "./v3/onboarding/onboardingStorage";
 import { clearV3DemoDeviceState } from "./v3/demo/demoDeviceState";
-import { readDecisionSnapshot } from "./v3/decision/decisionSession";
+import { isDecisionSnapshotReady } from "./v3/decision/decisionSession";
 import { stageResearchQuery, stageResearchSection } from "./v3/research/researchModel";
 import { isV3LegoJourneyPage, v3MobileMenuItems } from "./v3/v3Nav";
 
@@ -1024,7 +1024,7 @@ export default function App() {
       }
 
       const decisionOnly = new Set(["verdict", "set-analysis", "log-purchase"]);
-      if (decisionOnly.has(nextPage) && !readDecisionSnapshot()) {
+      if (decisionOnly.has(nextPage) && !isDecisionSnapshotReady()) {
         applyWorkspaceRoute("scan", nextDesk, {
           pushHistory: true,
           sectionId: "scan-evaluate",
@@ -3085,6 +3085,7 @@ export default function App() {
           appSettings={appSettings}
           closedTrades={closedTrades}
           collectibles={collectibles}
+          currentUser={currentUser}
           navigateToPage={navigateToPage}
           openTrades={openTrades}
         />
@@ -3589,7 +3590,7 @@ export default function App() {
                   <strong>Choose where to go</strong>
                   <small>
                     {currentUser?.name || currentUser?.email || "Current session"} |{" "}
-                    {labelDesk(activeDesk)} | {currentWorkspaceCard.label}
+                    {legoJourneyActive ? "LEGO Investments" : labelDesk(activeDesk)} | {currentWorkspaceCard.label}
                   </small>
                 </div>
                 <button type="button" className="ghostButton mobileMenuClose" onClick={closeMenu}>

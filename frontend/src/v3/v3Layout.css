@@ -1899,3 +1899,402 @@
     justify-self: center;
   }
 }
+
+
+/* Gavin CRM reference alignment — light practice-dashboard visual system. */
+.v3AppShell {
+  --crm-bg: #f5f6fb;
+  --crm-surface: #ffffff;
+  --crm-line: #e6e8f0;
+  --crm-ink: #171a24;
+  --crm-muted: #666d7d;
+  --crm-indigo: #2d22b8;
+  --crm-indigo-2: #1f18a2;
+  --crm-blue: #315efb;
+  --crm-soft-blue: #eef3ff;
+  --crm-radius: 18px;
+}
+
+.v3AppShell.saasAppShell,
+.v3AppShell .workspaceShell,
+.v3AppShell .workspaceMain,
+.v3AppShell .workspaceContent {
+  background: var(--crm-bg) !important;
+  color: var(--crm-ink) !important;
+}
+
+.v3AppShell .v3Sidebar {
+  background: #fff !important;
+  border-right: 1px solid var(--crm-line) !important;
+  padding: 18px 14px;
+}
+
+.v3AppShell .v3SidebarBrand {
+  padding: 8px 8px 14px;
+}
+
+.v3AppShell .v3SidebarWordmark {
+  color: #1a1b22 !important;
+  font-size: 14px;
+}
+
+.v3AppShell .v3SidebarTagline,
+.v3AppShell .v3SidebarSectionLabel,
+.v3AppShell .v3SidebarNavCopy small {
+  color: #747b89 !important;
+}
+
+.v3AppShell .v3SidebarNavItem {
+  border-radius: 12px;
+  color: #20232d !important;
+}
+
+.v3AppShell .v3SidebarNavItem:hover {
+  background: #f7f8fc !important;
+  border-color: transparent !important;
+}
+
+.v3AppShell .v3SidebarNavItem.active {
+  background: linear-gradient(90deg, #edf2ff 0%, #f5f7ff 100%) !important;
+  border-color: #d8e1ff !important;
+  color: #315efb !important;
+  box-shadow: inset 3px 0 0 #315efb;
+}
+
+.v3AppShell .v3SidebarNavItem.active .v3SidebarNavGlyph {
+  background: #315efb !important;
+  color: #fff !important;
+}
+
+.v3AppShell .v3SidebarUser {
+  background: #fafbff !important;
+  border-color: var(--crm-line) !important;
+}
+
+.v3AppShell .workspaceMain {
+  padding: 24px clamp(18px, 2.5vw, 40px) 48px !important;
+}
+
+.v3AppShell .v3Home,
+.v3AppShell .v3Research,
+.v3AppShell .v3WorkflowScreen,
+.v3AppShell .v3Collection,
+.v3AppShell .v3Exits {
+  width: min(100%, 1180px) !important;
+  max-width: 1180px !important;
+  margin-inline: auto !important;
+  color: var(--crm-ink) !important;
+}
+
+.v3AppShell .v3WorkflowHero,
+.v3AppShell .v3DecisionCard,
+.v3AppShell .v3PurchaseForm,
+.v3AppShell .v3ResearchCard,
+.v3AppShell .v3CollectionRow,
+.v3AppShell .v3ExitCard,
+.v3AppShell .panel {
+  background: #fff !important;
+  color: var(--crm-ink) !important;
+  border: 1px solid var(--crm-line) !important;
+  border-radius: var(--crm-radius) !important;
+  box-shadow: 0 8px 24px rgba(25, 30, 60, 0.045);
+}
+
+.v3AppShell .v3WorkflowHero {
+  padding: 22px 24px !important;
+}
+
+.v3AppShell .v3WorkflowHero h1,
+.v3AppShell .v3Home h1,
+.v3AppShell .v3Home h2,
+.v3AppShell .v3Research h1,
+.v3AppShell .v3Research h2 {
+  color: var(--crm-ink) !important;
+}
+
+.v3AppShell .v3Eyebrow,
+.v3AppShell .v3HomeMeta,
+.v3AppShell .v3ResearchFacts dt,
+.v3AppShell .v3StatGrid span,
+.v3AppShell .v3FeeAssumption,
+.v3AppShell .v3FlywheelLine {
+  color: var(--crm-muted) !important;
+}
+
+.v3AppShell .primaryButton {
+  background: linear-gradient(135deg, #315efb 0%, #4735db 100%) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+  border-radius: 10px !important;
+  box-shadow: 0 6px 14px rgba(49, 94, 251, .18);
+}
+
+.v3AppShell .secondaryButton,
+.v3AppShell .ghostButton {
+  background: #fff !important;
+  border: 1px solid #dfe3ee !important;
+  color: #303545 !important;
+  border-radius: 10px !important;
+}
+
+.v3AppShell .v3BookToggle button[aria-pressed="true"],
+.v3AppShell .v3BookToggle button.active,
+.v3AppShell .v3FilterRow .primaryButton {
+  background: #315efb !important;
+  border-color: #315efb !important;
+  color: #fff !important;
+}
+
+.v3AppShell .v3CrmPageHeading {
+  margin: 2px 0 0;
+  font-size: clamp(24px, 3vw, 34px);
+  font-weight: 720;
+  letter-spacing: -.025em;
+  color: #1d2029;
+}
+
+.v3AppShell .v3CrmHero {
+  background: linear-gradient(118deg, #3520b9 0%, #2417a2 55%, #171085 100%) !important;
+  color: #fff !important;
+  border: 0 !important;
+  border-radius: 18px !important;
+  padding: 24px 28px !important;
+  box-shadow: 0 18px 40px rgba(43, 31, 166, .18) !important;
+}
+
+.v3AppShell .v3CrmHero h2,
+.v3AppShell .v3CrmHero strong,
+.v3AppShell .v3CrmHero span,
+.v3AppShell .v3CrmHero p {
+  color: #fff !important;
+}
+
+.v3AppShell .v3CrmHeroHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(255,255,255,.16);
+}
+
+.v3AppShell .v3CrmHeroHead h2 {
+  margin: 0 0 4px;
+  font-size: clamp(26px, 3vw, 38px);
+  line-height: 1.05;
+  letter-spacing: -.03em;
+}
+
+.v3AppShell .v3CrmHeroHead p {
+  margin: 0;
+  opacity: .78;
+}
+
+.v3AppShell .v3CrmHeroValue {
+  text-align: right;
+}
+
+.v3AppShell .v3CrmHeroValue small {
+  display: block;
+  opacity: .72;
+  margin-bottom: 4px;
+}
+
+.v3AppShell .v3CrmHeroValue strong {
+  font-size: clamp(24px, 3vw, 36px);
+}
+
+.v3AppShell .v3CrmHeroStats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  padding-top: 18px;
+}
+
+.v3AppShell .v3CrmHeroStat {
+  display: grid;
+  gap: 2px;
+}
+
+.v3AppShell .v3CrmHeroStat strong {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.v3AppShell .v3CrmHeroStat span {
+  font-size: 12px;
+  opacity: .74;
+}
+
+.v3AppShell .v3HomeGrid {
+  grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+}
+
+.v3AppShell .v3HomeGrid .v3DecisionCard {
+  min-height: 104px;
+  padding: 16px !important;
+  align-content: start;
+}
+
+.v3AppShell .v3HomeGrid .v3DecisionCard strong {
+  font-size: 20px;
+  color: #202431 !important;
+}
+
+.v3AppShell .v3CrmDashboardGrid {
+  display: grid;
+  grid-template-columns: minmax(300px, .9fr) minmax(0, 1.4fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.v3AppShell .v3CrmDonutPanel,
+.v3AppShell .v3CrmValuePanel {
+  min-height: 360px;
+}
+
+.v3AppShell .v3CrmDonutWrap {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 20px;
+  align-items: center;
+  margin-top: 16px;
+}
+
+.v3AppShell .v3CrmDonut {
+  width: 210px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+
+.v3AppShell .v3CrmDonut::after {
+  content: "";
+  width: 118px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px #edf0f6;
+}
+
+.v3AppShell .v3CrmLegend {
+  display: grid;
+  gap: 10px;
+}
+
+.v3AppShell .v3CrmLegendRow {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+}
+
+.v3AppShell .v3CrmLegendSwatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.v3AppShell .v3MetricChartTrack {
+  background: #edf1f7 !important;
+  border-radius: 999px;
+}
+
+.v3AppShell .v3MetricChartTrack span {
+  background: linear-gradient(90deg, #315efb 0%, #5e8cff 100%) !important;
+  border-radius: inherit;
+}
+
+.v3AppShell .v3AttentionList {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+}
+
+.v3AppShell .v3AttentionList button {
+  border: 1px solid #e5e8f0 !important;
+  background: #fafbfe !important;
+  border-left: 3px solid #315efb !important;
+  border-radius: 12px !important;
+  padding: 14px !important;
+}
+
+.v3AppShell .v3ThemeDonut,
+.v3AppShell .v3ThemeChartBar span,
+.v3AppShell .v3PortfolioBar i {
+  filter: saturate(.95);
+}
+
+.v3AppShell .v3CollectionAllocation,
+.v3AppShell .v3PortfolioSectionHead {
+  border-color: var(--crm-line) !important;
+}
+
+.v3AppShell .v3ResearchFilters {
+  background: #fff !important;
+  border: 1px solid var(--crm-line) !important;
+  border-radius: 14px !important;
+}
+
+.v3AppShell .v3ResearchCard[data-triggered="true"] {
+  border-color: #315efb !important;
+  box-shadow: 0 0 0 2px rgba(49,94,251,.08);
+}
+
+.v3AppShell [data-page="scan"] .seHeroCard {
+  background: linear-gradient(118deg, #3520b9 0%, #2417a2 55%, #171085 100%) !important;
+  border: 0 !important;
+  color: #fff !important;
+  box-shadow: 0 18px 40px rgba(43, 31, 166, .18);
+}
+
+.v3AppShell [data-page="scan"] .seHeroCard h2,
+.v3AppShell [data-page="scan"] .seHeroCard p,
+.v3AppShell [data-page="scan"] .seHeroCard span,
+.v3AppShell [data-page="scan"] .seHeroCard strong {
+  color: #fff !important;
+}
+
+.v3AppShell [data-page="scan"] .seAcquisitionCard,
+.v3AppShell [data-page="scan"] .seGlassCard,
+.v3AppShell [data-page="scan"] .actionCard {
+  background: #fff !important;
+  border: 1px solid var(--crm-line) !important;
+  color: var(--crm-ink) !important;
+  box-shadow: 0 8px 24px rgba(25, 30, 60, 0.045);
+}
+
+@media (max-width: 1080px) {
+  .v3AppShell .v3HomeGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+  .v3AppShell .v3CrmDashboardGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .v3AppShell .v3CrmHeroHead {
+    display: grid;
+  }
+  .v3AppShell .v3CrmHeroValue {
+    text-align: left;
+  }
+  .v3AppShell .v3CrmHeroStats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .v3AppShell .v3HomeGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .v3AppShell .v3CrmDonutWrap {
+    grid-template-columns: 1fr;
+  }
+  .v3AppShell .v3CrmDonut {
+    margin-inline: auto;
+  }
+  .v3AppShell .v3AttentionList {
+    grid-template-columns: 1fr !important;
+  }
+}

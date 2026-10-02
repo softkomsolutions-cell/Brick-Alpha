@@ -1,7 +1,7 @@
 import { BrandLogo } from "../components/brandLogo";
 import { APP_TAGLINE, APP_WORDMARK } from "../appConfig";
 import { V3_ACCOUNT_NAV, V3_DESKTOP_NAV, V3_SECONDARY_NAV } from "./v3Nav";
-import { readDecisionSnapshot } from "./decision/decisionSession";
+import { isDecisionSnapshotReady } from "./decision/decisionSession";
 
 export function V3Sidebar({
   activePage,
@@ -11,7 +11,7 @@ export function V3Sidebar({
   onNavigate,
   onBrandClick,
 }) {
-  const decisionReady = Boolean(readDecisionSnapshot());
+  const decisionReady = isDecisionSnapshotReady();
 
   return (
     <aside className="v3Sidebar" aria-label="Application navigation">

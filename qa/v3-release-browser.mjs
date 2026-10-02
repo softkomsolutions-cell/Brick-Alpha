@@ -46,7 +46,9 @@ async function completeOnboarding(page) {
 }
 
 function sidebarButton(page, label) {
-  return page.locator(".v3Sidebar button").filter({ hasText: label }).first();
+  return page.locator(".v3Sidebar button").filter({
+    has: page.getByText(label, { exact: true }),
+  }).first();
 }
 
 async function nav(page, label, id) {
@@ -59,6 +61,10 @@ async function mobileMenu(page) {
   const menu = page.locator(".mobileMenuScreen");
   await menu.waitFor({ state: "visible" });
   return menu;
+}
+
+function exactMenuButton(page, menu, label) {
+  return menu.locator("button").filter({ has: page.getByText(label, { exact: true }) }).first();
 }
 
 const browser = await chromium.launch({ headless: true });
@@ -95,7 +101,7 @@ try {
 
   for (const label of ["Verdict", "Set Analysis", "Log Purchase"]) {
     assert.equal(
-      await sidebar.locator("button").filter({ hasText: label }).first().isDisabled(),
+      await sidebarButton(page, label).isDisabled(),
       true,
       `${label} should be locked before Scan`,
     );
@@ -163,7 +169,7 @@ try {
   assert.match(verdict, /BrickEconomy/i);
   assert.ok(/Buy ×2 flywheel|Buy ×1|Only below R|Skip/.test(verdict), "Canonical verdict label missing");
 
-  const analysisButton = page.locator(".v3Sidebar").getByRole("button", { name: /^Set Analysis\b/ });
+  const analysisButton = sidebarButton(page, "Set Analysis");
   assert.equal(await analysisButton.isDisabled(), false);
   await analysisButton.click();
   await expectPage(page, "set-analysis");
@@ -173,7 +179,7 @@ try {
     assert.ok(analysis.includes(factor), `Missing set-analysis factor: ${factor}`);
   }
 
-  await page.locator(".v3Sidebar").getByRole("button", { name: /^Log Purchase\b/ }).click();
+  await sidebarButton(page, "Log Purchase").click();
   await expectPage(page, "log-purchase");
   await assertNamedVisibleButtons(page, "Log Purchase");
   assert.match(await page.locator("[data-page='log-purchase']").innerText(), /75367/);
@@ -186,13 +192,14 @@ try {
   await nav(page, "Collection", "collection");
   await assertNamedVisibleButtons(page, "Collection");
   const resetCollection = await page.locator("[data-page='collection']").innerText();
-  assert.match(resetCollection, /#75252/);
-  assert.ok(!/#75367/.test(resetCollection), "Reset Demo left QA import in fresh baseline");
+  assert.match(resetCollection, /Positions\s+292/, "Reset Demo did not restore Gavin V152 position count");
+  assert.match(resetCollection, /Unique sets\s+195/, "Reset Demo did not restore Gavin V152 unique-set count");
+  assert.match(resetCollection, /Stacks\s+66/, "Reset Demo did not restore Gavin V152 stack count");
   await nav(page, "Settings", "settings");
   assert.equal(Number(await page.locator('input[name="usdZarRate"]').inputValue()), 18.5);
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.locator(".v3BottomNav").getByText("Home", { exact: true }).click();
+  await page.locator(".v3BottomNav").getByRole("button", { name: "Home", exact: true }).click();
   await expectPage(page, "home");
   const bottom = await page.locator(".v3BottomNav").innerText();
   for (const label of ["Home", "Research", "Scan", "Collection", "Exits"]) assert.ok(bottom.includes(label));
@@ -200,7 +207,7 @@ try {
   await noOverflow(page, "Home");
 
   for (const [label, id] of [["Research", "research"], ["Scan", "scan"], ["Collection", "collection"], ["Exits", "exits"]]) {
-    await page.locator(".v3BottomNav").getByText(label, { exact: true }).click();
+    await page.locator(".v3BottomNav").getByRole("button", { name: label, exact: true }).click();
     await expectPage(page, id);
     await noOverflow(page, label);
     await assertNamedVisibleButtons(page, `${label} mobile`);
@@ -211,19 +218,19 @@ try {
   for (const label of ["Research", "Collection", "Portfolio", "Exits", "Data Sources", "Settings"]) assert.ok(menuText.includes(label), `Missing mobile menu: ${label}`);
   for (const legacy of ["News", "Trading", "Crypto", "Forex", "ETFs", "JSE", "Subscriptions"]) assert.ok(!menuText.includes(legacy), `Legacy mobile item visible: ${legacy}`);
 
-  await menu.getByRole("button", { name: /^Portfolio\b/ }).click();
+  await exactMenuButton(page, menu, "Portfolio").click();
   await expectPage(page, "portfolio");
   await noOverflow(page, "Portfolio");
   await assertNamedVisibleButtons(page, "Portfolio mobile");
 
   menu = await mobileMenu(page);
-  await menu.getByRole("button", { name: /^Data Sources\b/ }).first().click();
+  await exactMenuButton(page, menu, "Data Sources").click();
   await expectPage(page, "data-sources");
   await noOverflow(page, "Data Sources");
   await assertNamedVisibleButtons(page, "Data Sources mobile");
 
   menu = await mobileMenu(page);
-  await menu.getByRole("button", { name: /^Settings\b/ }).click();
+  await exactMenuButton(page, menu, "Settings").click();
   await expectPage(page, "settings");
   await noOverflow(page, "Settings");
   await assertNamedVisibleButtons(page, "Settings mobile");
