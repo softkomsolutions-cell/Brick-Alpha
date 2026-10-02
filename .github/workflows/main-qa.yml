@@ -1,0 +1,33 @@
+name: Brick Alpha main QA
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            server/package-lock.json
+            frontend/package-lock.json
+      - name: Install server dependencies
+        run: npm --prefix server ci
+      - name: Install frontend dependencies
+        run: npm --prefix frontend ci
+      - name: Generate Prisma client
+        run: npm --prefix server run db:generate
+      - name: Frontend tests
+        run: npm --prefix frontend run test
+      - name: Server tests
+        run: npm --prefix server test
+      - name: Full regression check
+        run: npm run check:full
