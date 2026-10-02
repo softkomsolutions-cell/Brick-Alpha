@@ -6162,7 +6162,7 @@ app.post("/api/collection/import/commit", requireAuth, async (req, res) => {
   const errors = [];
   const prepared = normalizedRows.map((raw, index) => {
     const { setNumber, quantity, purchasePrice } = raw;
-    if (!/^\\d{4,6}$/.test(setNumber) || !Number.isInteger(quantity) || quantity < 1 || quantity > 1000 || !Number.isFinite(purchasePrice) || purchasePrice < 0) {
+    if (!/^\d{4,6}$/.test(setNumber) || !Number.isInteger(quantity) || quantity < 1 || quantity > 1000 || !Number.isFinite(purchasePrice) || purchasePrice < 0) {
       errors.push({ row: index + 1, setNumber, error: "invalid_row" });
       return null;
     }
