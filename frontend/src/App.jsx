@@ -3590,7 +3590,7 @@ export default function App() {
                   <strong>Choose where to go</strong>
                   <small>
                     {currentUser?.name || currentUser?.email || "Current session"} |{" "}
-                    {labelDesk(activeDesk)} | {currentWorkspaceCard.label}
+                    {legoJourneyActive ? "LEGO Investments" : labelDesk(activeDesk)} | {currentWorkspaceCard.label}
                   </small>
                 </div>
                 <button type="button" className="ghostButton mobileMenuClose" onClick={closeMenu}>
