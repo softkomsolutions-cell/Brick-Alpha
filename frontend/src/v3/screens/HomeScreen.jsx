@@ -44,17 +44,33 @@ export function HomeScreen({
 
   return (
     <div className="v3Home" data-page="home" data-book="curated">
-      <header className="v3WorkflowHero">
-        <div className="v3HomeHeader">
-          <div>
-            <span className="v3Eyebrow">Owned value</span>
-            <h1>{money(home.ownedValue)}</h1>
-            <p>Open collection market value. Realised cash is shown separately.</p>
+      <header className="v3WorkflowHero v3HomeHeroPremium">
+        <div className="v3HomeHeroPrimary">
+          <span className="v3Eyebrow">Brick Alpha portfolio intelligence</span>
+          <h1 className="v3HomeHeroValue">{money(home.ownedValue)}</h1>
+          <p className="v3HomeHeroLabel">Current open-collection market value, with realised cash kept separate for a clean investment view.</p>
+          <p className="v3HomeMeta">
+            {home.source} · valuation date {home.valuationDate || "—"} · {home.exchangeLabel}
+          </p>
+        </div>
+        <div className="v3HomeHeroKpis" aria-label="Portfolio highlights">
+          <div className="v3HeroKpi isGold">
+            <span>Blended ROI</span>
+            <strong>{roiLabel(home.blendedRoi)}</strong>
+          </div>
+          <div className="v3HeroKpi">
+            <span>Unrealised profit</span>
+            <strong>{money(home.unrealisedProfit)}</strong>
+          </div>
+          <div className="v3HeroKpi">
+            <span>Positions</span>
+            <strong>{home.positions}</strong>
+          </div>
+          <div className="v3HeroKpi">
+            <span>Unique sets</span>
+            <strong>{home.uniqueSets}</strong>
           </div>
         </div>
-        <p className="v3HomeMeta">
-          {home.source} · valuation date {home.valuationDate || "—"} · {home.exchangeLabel}
-        </p>
       </header>
 
       <section className="v3HomeGrid" aria-label="Collection summary">
