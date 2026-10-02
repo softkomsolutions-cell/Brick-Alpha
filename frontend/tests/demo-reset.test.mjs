@@ -94,3 +94,23 @@ test("the v3 mobile menu hides legacy desks", () => {
   assert.deepEqual(visible, ["Research", "Portfolio", "Data Sources", "Settings"]);
   assert.equal(v3MobileMenuItems(items, false).length, items.length);
 });
+
+
+test("v3 mobile and desktop navigation expose the complete LEGO journey without legacy desks", () => {
+  assert.deepEqual(V3_PRIMARY_NAV.map((item) => item.label), [
+    "Home",
+    "Research",
+    "Scan",
+    "Collection",
+    "Exits",
+  ]);
+  assert.deepEqual(V3_DESKTOP_NAV.map((item) => item.label), [
+    "Home",
+    "Research",
+    "Scan",
+    "Collection",
+    "Portfolio",
+    "Exits",
+  ]);
+  assert.deepEqual(V3_ACCOUNT_NAV.map((item) => item.label), ["Data Sources", "Settings"]);
+});
