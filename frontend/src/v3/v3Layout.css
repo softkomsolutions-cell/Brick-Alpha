@@ -1901,411 +1901,400 @@
 }
 
 
-/* =========================================================
-   Brick Alpha premium wealth UI — final production override
-   Restores the approved dark / gold / blue investment system
-   after the light PDF-spec compatibility layer.
-   ========================================================= */
-
+/* Gavin CRM reference alignment — light practice-dashboard visual system. */
 .v3AppShell {
-  --ba-paper: #070b12;
-  --ba-surface: #0f1724;
-  --ba-surface-2: #111c2d;
-  --ba-ink: #f8fafc;
-  --ba-ink-secondary: #9ba8bc;
-  --ba-line: rgba(148, 163, 184, 0.16);
-  --ba-primary: #4f7cff;
-  --ba-primary-tint: rgba(79, 124, 255, 0.14);
-  --ba-brick-yellow: #f4c542;
-  --ba-gold: #d7b45a;
-  --ba-gain: #35d07f;
-  --ba-caution: #f3b84b;
-  --ba-loss: #ff6b6b;
-  --ba-radius: 18px;
-  --ba-radius-sm: 12px;
-  --ba-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
-  background:
-    radial-gradient(circle at 72% -12%, rgba(79, 124, 255, 0.18), transparent 34rem),
-    radial-gradient(circle at 18% 0%, rgba(215, 180, 90, 0.10), transparent 28rem),
-    #070b12;
-  color-scheme: dark;
+  --crm-bg: #f5f6fb;
+  --crm-surface: #ffffff;
+  --crm-line: #e6e8f0;
+  --crm-ink: #171a24;
+  --crm-muted: #666d7d;
+  --crm-indigo: #2d22b8;
+  --crm-indigo-2: #1f18a2;
+  --crm-blue: #315efb;
+  --crm-soft-blue: #eef3ff;
+  --crm-radius: 18px;
 }
 
 .v3AppShell.saasAppShell,
 .v3AppShell .workspaceShell,
 .v3AppShell .workspaceMain,
 .v3AppShell .workspaceContent {
-  background:
-    radial-gradient(circle at 80% 0%, rgba(79, 124, 255, 0.10), transparent 34rem),
-    #070b12 !important;
-  color: var(--ba-ink) !important;
+  background: var(--crm-bg) !important;
+  color: var(--crm-ink) !important;
 }
 
 .v3AppShell .v3Sidebar {
-  background:
-    linear-gradient(180deg, rgba(20, 30, 48, 0.98), rgba(8, 13, 22, 0.99)) !important;
-  border-right: 1px solid rgba(215, 180, 90, 0.16) !important;
-  box-shadow: 16px 0 48px rgba(0, 0, 0, 0.18);
+  background: #fff !important;
+  border-right: 1px solid var(--crm-line) !important;
+  padding: 18px 14px;
+}
+
+.v3AppShell .v3SidebarBrand {
+  padding: 8px 8px 14px;
 }
 
 .v3AppShell .v3SidebarWordmark {
-  color: #fff !important;
+  color: #1a1b22 !important;
   font-size: 14px;
-  letter-spacing: .08em;
 }
 
 .v3AppShell .v3SidebarTagline,
 .v3AppShell .v3SidebarSectionLabel,
 .v3AppShell .v3SidebarNavCopy small {
-  color: #7f8da4 !important;
-}
-
-.v3AppShell .v3SidebarSectionLabel {
-  color: #d7b45a !important;
-  letter-spacing: .13em;
+  color: #747b89 !important;
 }
 
 .v3AppShell .v3SidebarNavItem {
-  color: #d8e0ec !important;
-  border: 1px solid transparent !important;
-  background: transparent !important;
-  transition: background .16s ease, border-color .16s ease, transform .16s ease;
+  border-radius: 12px;
+  color: #20232d !important;
 }
 
 .v3AppShell .v3SidebarNavItem:hover {
-  background: rgba(255,255,255,.045) !important;
-  border-color: rgba(148,163,184,.12) !important;
-  transform: translateX(2px);
+  background: #f7f8fc !important;
+  border-color: transparent !important;
 }
 
 .v3AppShell .v3SidebarNavItem.active {
-  background: linear-gradient(90deg, rgba(79,124,255,.20), rgba(79,124,255,.06)) !important;
-  border-color: rgba(79,124,255,.30) !important;
-  box-shadow: inset 3px 0 0 #d7b45a;
-  color: #fff !important;
-}
-
-.v3AppShell .v3SidebarNavGlyph {
-  background: rgba(255,255,255,.06) !important;
-  color: #b9c5d8 !important;
-  border: 1px solid rgba(255,255,255,.06);
+  background: linear-gradient(90deg, #edf2ff 0%, #f5f7ff 100%) !important;
+  border-color: #d8e1ff !important;
+  color: #315efb !important;
+  box-shadow: inset 3px 0 0 #315efb;
 }
 
 .v3AppShell .v3SidebarNavItem.active .v3SidebarNavGlyph {
-  background: rgba(215,180,90,.14) !important;
-  color: #f7d77c !important;
-  border-color: rgba(215,180,90,.22);
+  background: #315efb !important;
+  color: #fff !important;
 }
 
 .v3AppShell .v3SidebarUser {
-  background: rgba(255,255,255,.035) !important;
-  border-color: rgba(148,163,184,.14) !important;
-  color: #fff !important;
+  background: #fafbff !important;
+  border-color: var(--crm-line) !important;
 }
 
-.v3AppShell .saasTopNav {
-  background: rgba(7, 11, 18, 0.82) !important;
-  border-bottom: 1px solid rgba(148,163,184,.14) !important;
-  backdrop-filter: blur(18px) saturate(1.25);
+.v3AppShell .workspaceMain {
+  padding: 24px clamp(18px, 2.5vw, 40px) 48px !important;
 }
 
-.v3AppShell .saasTopNavBreadcrumb,
-.v3AppShell .saasTopNavBreadcrumb span,
-.v3AppShell .saasTopNavBreadcrumb strong {
-  color: #e9eef7 !important;
-}
-
-.v3AppShell .saasTopNavSearch {
-  background: rgba(255,255,255,.045) !important;
-  border-color: rgba(148,163,184,.14) !important;
-  color: #9ba8bc !important;
-}
-
-.v3AppShell .saasTopNavIconButton,
-.v3AppShell .ghostButton,
-.v3AppShell .secondaryButton {
-  background: rgba(255,255,255,.045) !important;
-  border-color: rgba(148,163,184,.18) !important;
-  color: #dce5f2 !important;
-}
-
-.v3AppShell .ghostButton:hover,
-.v3AppShell .secondaryButton:hover,
-.v3AppShell .saasTopNavIconButton:hover {
-  background: rgba(255,255,255,.075) !important;
-  border-color: rgba(215,180,90,.30) !important;
-}
-
-.v3AppShell .primaryButton {
-  background: linear-gradient(135deg, #4f7cff, #365fd6) !important;
-  border-color: rgba(111, 146, 255, .65) !important;
-  color: #fff !important;
-  box-shadow: 0 10px 26px rgba(79,124,255,.24) !important;
-}
-
-.v3AppShell [data-page="scan"] .primaryButton,
-.v3AppShell .v3BottomNavScanButton {
-  background: linear-gradient(135deg, #f6d365, #d7aa35) !important;
-  color: #111827 !important;
-  box-shadow: 0 10px 28px rgba(215,180,90,.25) !important;
+.v3AppShell .v3Home,
+.v3AppShell .v3Research,
+.v3AppShell .v3WorkflowScreen,
+.v3AppShell .v3Collection,
+.v3AppShell .v3Exits {
+  width: min(100%, 1180px) !important;
+  max-width: 1180px !important;
+  margin-inline: auto !important;
+  color: var(--crm-ink) !important;
 }
 
 .v3AppShell .v3WorkflowHero,
 .v3AppShell .v3DecisionCard,
 .v3AppShell .v3PurchaseForm,
-.v3AppShell .v3StatGrid > div,
-.v3AppShell .v3ExitCard,
+.v3AppShell .v3ResearchCard,
 .v3AppShell .v3CollectionRow,
-.v3AppShell .v3ResearchCard {
-  background:
-    linear-gradient(180deg, rgba(18, 28, 45, .96), rgba(12, 20, 33, .96)) !important;
-  color: #f8fafc !important;
-  border: 1px solid rgba(148,163,184,.14) !important;
-  box-shadow: 0 16px 42px rgba(0,0,0,.18) !important;
+.v3AppShell .v3ExitCard,
+.v3AppShell .panel {
+  background: #fff !important;
+  color: var(--crm-ink) !important;
+  border: 1px solid var(--crm-line) !important;
+  border-radius: var(--crm-radius) !important;
+  box-shadow: 0 8px 24px rgba(25, 30, 60, 0.045);
 }
 
 .v3AppShell .v3WorkflowHero {
-  background:
-    radial-gradient(circle at 88% 22%, rgba(215,180,90,.13), transparent 20rem),
-    linear-gradient(135deg, rgba(22,36,59,.98), rgba(10,17,29,.98)) !important;
-  border-color: rgba(215,180,90,.18) !important;
+  padding: 22px 24px !important;
 }
 
 .v3AppShell .v3WorkflowHero h1,
-.v3AppShell .v3DecisionCard h2,
-.v3AppShell .v3DecisionCard strong,
-.v3AppShell .v3ResearchOpen strong,
-.v3AppShell .v3ResearchFacts dd,
-.v3AppShell .v3CollectionMain,
-.v3AppShell .v3DisclosureToggle,
-.v3AppShell .v3StatGrid strong,
-.v3AppShell .v3Home strong,
 .v3AppShell .v3Home h1,
 .v3AppShell .v3Home h2,
 .v3AppShell .v3Research h1,
 .v3AppShell .v3Research h2 {
-  color: #f8fafc !important;
+  color: var(--crm-ink) !important;
 }
 
-.v3AppShell .v3WorkflowHero p,
+.v3AppShell .v3Eyebrow,
 .v3AppShell .v3HomeMeta,
 .v3AppShell .v3ResearchFacts dt,
-.v3AppShell .v3FeeAssumption,
-.v3AppShell .v3FlywheelLine,
 .v3AppShell .v3StatGrid span,
-.v3AppShell .v3DecisionCard > span,
-.v3AppShell .v3DecisionCard small,
-.v3AppShell .v3DecisionCard p {
-  color: #93a2b8 !important;
+.v3AppShell .v3FeeAssumption,
+.v3AppShell .v3FlywheelLine {
+  color: var(--crm-muted) !important;
 }
 
-.v3AppShell .v3Eyebrow {
-  color: #d7b45a !important;
-  font-weight: 750;
-  letter-spacing: .11em;
+.v3AppShell .primaryButton {
+  background: linear-gradient(135deg, #315efb 0%, #4735db 100%) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+  border-radius: 10px !important;
+  box-shadow: 0 6px 14px rgba(49, 94, 251, .18);
 }
 
-.v3AppShell .v3HomeHeroPremium {
-  position: relative;
-  overflow: hidden;
-  display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(260px, .9fr);
-  gap: 26px;
-  align-items: stretch;
-  padding: 30px !important;
+.v3AppShell .secondaryButton,
+.v3AppShell .ghostButton {
+  background: #fff !important;
+  border: 1px solid #dfe3ee !important;
+  color: #303545 !important;
+  border-radius: 10px !important;
 }
 
-.v3AppShell .v3HomeHeroPremium::after {
-  content: "";
-  position: absolute;
-  width: 280px;
-  height: 280px;
-  right: -80px;
-  top: -110px;
-  border-radius: 50%;
-  border: 1px solid rgba(215,180,90,.16);
-  box-shadow:
-    0 0 0 42px rgba(215,180,90,.025),
-    0 0 0 86px rgba(79,124,255,.025);
-  pointer-events: none;
-}
-
-.v3AppShell .v3HomeHeroPrimary {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  align-content: center;
-  gap: 8px;
-}
-
-.v3AppShell .v3HomeHeroValue {
-  margin: 2px 0 0;
-  font-size: clamp(36px, 5vw, 58px) !important;
-  letter-spacing: -.055em;
-  line-height: .98;
-}
-
-.v3AppShell .v3HomeHeroLabel {
-  color: #9ba8bc !important;
-  max-width: 58ch;
-}
-
-.v3AppShell .v3HomeHeroKpis {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.v3AppShell .v3HeroKpi {
-  min-height: 92px;
-  padding: 14px;
-  border-radius: 14px;
-  display: grid;
-  align-content: center;
-  gap: 5px;
-  background: rgba(255,255,255,.045);
-  border: 1px solid rgba(148,163,184,.13);
-}
-
-.v3AppShell .v3HeroKpi span {
-  color: #8594aa !important;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: .08em;
-}
-
-.v3AppShell .v3HeroKpi strong {
-  font-size: 19px;
+.v3AppShell .v3BookToggle button[aria-pressed="true"],
+.v3AppShell .v3BookToggle button.active,
+.v3AppShell .v3FilterRow .primaryButton {
+  background: #315efb !important;
+  border-color: #315efb !important;
   color: #fff !important;
 }
 
-.v3AppShell .v3HeroKpi.isGold {
-  background: linear-gradient(135deg, rgba(215,180,90,.15), rgba(215,180,90,.05));
-  border-color: rgba(215,180,90,.24);
+.v3AppShell .v3CrmPageHeading {
+  margin: 2px 0 0;
+  font-size: clamp(24px, 3vw, 34px);
+  font-weight: 720;
+  letter-spacing: -.025em;
+  color: #1d2029;
+}
+
+.v3AppShell .v3CrmHero {
+  background: linear-gradient(118deg, #3520b9 0%, #2417a2 55%, #171085 100%) !important;
+  color: #fff !important;
+  border: 0 !important;
+  border-radius: 18px !important;
+  padding: 24px 28px !important;
+  box-shadow: 0 18px 40px rgba(43, 31, 166, .18) !important;
+}
+
+.v3AppShell .v3CrmHero h2,
+.v3AppShell .v3CrmHero strong,
+.v3AppShell .v3CrmHero span,
+.v3AppShell .v3CrmHero p {
+  color: #fff !important;
+}
+
+.v3AppShell .v3CrmHeroHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(255,255,255,.16);
+}
+
+.v3AppShell .v3CrmHeroHead h2 {
+  margin: 0 0 4px;
+  font-size: clamp(26px, 3vw, 38px);
+  line-height: 1.05;
+  letter-spacing: -.03em;
+}
+
+.v3AppShell .v3CrmHeroHead p {
+  margin: 0;
+  opacity: .78;
+}
+
+.v3AppShell .v3CrmHeroValue {
+  text-align: right;
+}
+
+.v3AppShell .v3CrmHeroValue small {
+  display: block;
+  opacity: .72;
+  margin-bottom: 4px;
+}
+
+.v3AppShell .v3CrmHeroValue strong {
+  font-size: clamp(24px, 3vw, 36px);
+}
+
+.v3AppShell .v3CrmHeroStats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  padding-top: 18px;
+}
+
+.v3AppShell .v3CrmHeroStat {
+  display: grid;
+  gap: 2px;
+}
+
+.v3AppShell .v3CrmHeroStat strong {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.v3AppShell .v3CrmHeroStat span {
+  font-size: 12px;
+  opacity: .74;
 }
 
 .v3AppShell .v3HomeGrid {
-  gap: 12px;
+  grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  gap: 12px !important;
 }
 
 .v3AppShell .v3HomeGrid .v3DecisionCard {
-  min-height: 116px;
-  align-content: center;
-  position: relative;
-  overflow: hidden;
+  min-height: 104px;
+  padding: 16px !important;
+  align-content: start;
 }
 
-.v3AppShell .v3HomeGrid .v3DecisionCard::before {
+.v3AppShell .v3HomeGrid .v3DecisionCard strong {
+  font-size: 20px;
+  color: #202431 !important;
+}
+
+.v3AppShell .v3CrmDashboardGrid {
+  display: grid;
+  grid-template-columns: minmax(300px, .9fr) minmax(0, 1.4fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.v3AppShell .v3CrmDonutPanel,
+.v3AppShell .v3CrmValuePanel {
+  min-height: 360px;
+}
+
+.v3AppShell .v3CrmDonutWrap {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 20px;
+  align-items: center;
+  margin-top: 16px;
+}
+
+.v3AppShell .v3CrmDonut {
+  width: 210px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+
+.v3AppShell .v3CrmDonut::after {
   content: "";
-  position: absolute;
-  left: 0;
-  top: 18px;
-  bottom: 18px;
-  width: 3px;
-  border-radius: 99px;
-  background: linear-gradient(#4f7cff, #7ba3ff);
-  opacity: .85;
+  width: 118px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px #edf0f6;
 }
 
-.v3AppShell .v3PortfolioOverviewCard {
-  border-color: rgba(79,124,255,.20) !important;
-}
-
-.v3AppShell .v3MetricChartTrack {
-  background: rgba(148,163,184,.12) !important;
-}
-
-.v3AppShell .v3MetricChartTrack span {
-  background: linear-gradient(90deg, #4f7cff, #78a5ff) !important;
-  box-shadow: 0 0 18px rgba(79,124,255,.22);
-}
-
-.v3AppShell .v3AttentionList {
-  grid-template-columns: repeat(2, minmax(0,1fr));
+.v3AppShell .v3CrmLegend {
+  display: grid;
   gap: 10px;
 }
 
+.v3AppShell .v3CrmLegendRow {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+}
+
+.v3AppShell .v3CrmLegendSwatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.v3AppShell .v3MetricChartTrack {
+  background: #edf1f7 !important;
+  border-radius: 999px;
+}
+
+.v3AppShell .v3MetricChartTrack span {
+  background: linear-gradient(90deg, #315efb 0%, #5e8cff 100%) !important;
+  border-radius: inherit;
+}
+
+.v3AppShell .v3AttentionList {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+}
+
 .v3AppShell .v3AttentionList button {
-  background: rgba(255,255,255,.035) !important;
-  border: 1px solid rgba(148,163,184,.12) !important;
-  border-left: 3px solid #4f7cff !important;
-  border-radius: 13px !important;
-  color: #f8fafc !important;
-  padding: 14px 16px !important;
+  border: 1px solid #e5e8f0 !important;
+  background: #fafbfe !important;
+  border-left: 3px solid #315efb !important;
+  border-radius: 12px !important;
+  padding: 14px !important;
 }
 
-.v3AppShell .v3AttentionList button:hover {
-  background: rgba(79,124,255,.08) !important;
-  border-color: rgba(79,124,255,.24) !important;
+.v3AppShell .v3ThemeDonut,
+.v3AppShell .v3ThemeChartBar span,
+.v3AppShell .v3PortfolioBar i {
+  filter: saturate(.95);
 }
 
-.v3AppShell .v3ResearchFilters,
-.v3AppShell .v3SourceNotice,
-.v3AppShell .v3FileDrop,
-.v3AppShell .v3ImportTable,
-.v3AppShell .v3ProfileForm input,
-.v3AppShell .v3ProfileForm select,
-.v3AppShell .v3ExchangeForm input,
-.v3AppShell .v3SourceConnect input {
-  background: rgba(255,255,255,.04) !important;
-  color: #eef3fa !important;
-  border-color: rgba(148,163,184,.16) !important;
+.v3AppShell .v3CollectionAllocation,
+.v3AppShell .v3PortfolioSectionHead {
+  border-color: var(--crm-line) !important;
 }
 
-.v3AppShell input::placeholder {
-  color: #718096 !important;
+.v3AppShell .v3ResearchFilters {
+  background: #fff !important;
+  border: 1px solid var(--crm-line) !important;
+  border-radius: 14px !important;
 }
 
-.v3AppShell .v3ThemeChip {
-  background: rgba(255,255,255,.045) !important;
-  color: #c8d3e2 !important;
-  border-color: rgba(148,163,184,.16) !important;
+.v3AppShell .v3ResearchCard[data-triggered="true"] {
+  border-color: #315efb !important;
+  box-shadow: 0 0 0 2px rgba(49,94,251,.08);
 }
 
-.v3AppShell .v3ThemeChip.active {
-  background: rgba(215,180,90,.14) !important;
-  border-color: rgba(215,180,90,.34) !important;
-  color: #f7d77c !important;
+.v3AppShell [data-page="scan"] .seHeroCard {
+  background: linear-gradient(118deg, #3520b9 0%, #2417a2 55%, #171085 100%) !important;
+  border: 0 !important;
+  color: #fff !important;
+  box-shadow: 0 18px 40px rgba(43, 31, 166, .18);
 }
 
-.v3AppShell .v3BottomNav {
-  background: rgba(8,13,22,.96) !important;
-  border-top-color: rgba(148,163,184,.16) !important;
-  backdrop-filter: blur(18px);
+.v3AppShell [data-page="scan"] .seHeroCard h2,
+.v3AppShell [data-page="scan"] .seHeroCard p,
+.v3AppShell [data-page="scan"] .seHeroCard span,
+.v3AppShell [data-page="scan"] .seHeroCard strong {
+  color: #fff !important;
 }
 
-.v3AppShell .v3BottomNavItem {
-  color: #8492a7 !important;
+.v3AppShell [data-page="scan"] .seAcquisitionCard,
+.v3AppShell [data-page="scan"] .seGlassCard,
+.v3AppShell [data-page="scan"] .actionCard {
+  background: #fff !important;
+  border: 1px solid var(--crm-line) !important;
+  color: var(--crm-ink) !important;
+  box-shadow: 0 8px 24px rgba(25, 30, 60, 0.045);
 }
 
-.v3AppShell .v3BottomNavItem.active {
-  color: #f7d77c !important;
-}
-
-@media (max-width: 820px) {
-  .v3AppShell .v3HomeHeroPremium {
+@media (max-width: 1080px) {
+  .v3AppShell .v3HomeGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+  .v3AppShell .v3CrmDashboardGrid {
     grid-template-columns: 1fr;
-    padding: 20px !important;
   }
+}
 
-  .v3AppShell .v3HomeHeroKpis {
-    grid-template-columns: 1fr 1fr;
+@media (max-width: 700px) {
+  .v3AppShell .v3CrmHeroHead {
+    display: grid;
   }
-
+  .v3AppShell .v3CrmHeroValue {
+    text-align: left;
+  }
+  .v3AppShell .v3CrmHeroStats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .v3AppShell .v3HomeGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .v3AppShell .v3CrmDonutWrap {
+    grid-template-columns: 1fr;
+  }
+  .v3AppShell .v3CrmDonut {
+    margin-inline: auto;
+  }
   .v3AppShell .v3AttentionList {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 420px) {
-  .v3AppShell .v3HomeHeroKpis {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .v3AppShell .v3HeroKpi {
-    min-height: 82px;
-    padding: 12px;
+    grid-template-columns: 1fr !important;
   }
 }
