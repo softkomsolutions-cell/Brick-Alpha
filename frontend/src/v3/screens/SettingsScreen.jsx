@@ -19,6 +19,9 @@ export function SettingsScreen({
     event.preventDefault();
     const numeric = Number(rate);
     if (!Number.isFinite(numeric) || numeric <= 0) return;
+    const nextProfile = { ...profile, usdZarRate: numeric };
+    setProfile(nextProfile);
+    writeBuyingProfile(nextProfile);
     await updateSettings({ usdZarRate: numeric });
   };
 
@@ -35,7 +38,7 @@ export function SettingsScreen({
     event.preventDefault();
     const next = {
       ...profile,
-      usdZarRate: Number(profile.usdZarRate) || Number(rate) || 18.5,
+      usdZarRate: Number(rate) || Number(profile.usdZarRate) || 18.5,
       rewardsProgrammes: Array.isArray(profile.rewardsProgrammes)
         ? profile.rewardsProgrammes
         : [],
