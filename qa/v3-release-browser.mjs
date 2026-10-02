@@ -218,19 +218,19 @@ try {
   for (const label of ["Research", "Collection", "Portfolio", "Exits", "Data Sources", "Settings"]) assert.ok(menuText.includes(label), `Missing mobile menu: ${label}`);
   for (const legacy of ["News", "Trading", "Crypto", "Forex", "ETFs", "JSE", "Subscriptions"]) assert.ok(!menuText.includes(legacy), `Legacy mobile item visible: ${legacy}`);
 
-  await menu.getByRole("button", { name: /^Portfolio\b/ }).click();
+  await exactMenuButton(page, menu, "Portfolio").click();
   await expectPage(page, "portfolio");
   await noOverflow(page, "Portfolio");
   await assertNamedVisibleButtons(page, "Portfolio mobile");
 
   menu = await mobileMenu(page);
-  await menu.getByRole("button", { name: /^Data Sources\b/ }).first().click();
+  await exactMenuButton(page, menu, "Data Sources").click();
   await expectPage(page, "data-sources");
   await noOverflow(page, "Data Sources");
   await assertNamedVisibleButtons(page, "Data Sources mobile");
 
   menu = await mobileMenu(page);
-  await menu.getByRole("button", { name: /^Settings\b/ }).click();
+  await exactMenuButton(page, menu, "Settings").click();
   await expectPage(page, "settings");
   await noOverflow(page, "Settings");
   await assertNamedVisibleButtons(page, "Settings mobile");
