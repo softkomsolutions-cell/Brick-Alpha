@@ -42,3 +42,13 @@ export function readDecisionSnapshot() {
     return null;
   }
 }
+
+
+export function isDecisionSnapshotReady(snapshot = readDecisionSnapshot()) {
+  return Boolean(
+    snapshot &&
+    String(snapshot.setNumber || "").trim() &&
+    snapshot.verdict &&
+    String(snapshot.verdict.label || "").trim()
+  );
+}
