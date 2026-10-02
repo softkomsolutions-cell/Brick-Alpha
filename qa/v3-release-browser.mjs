@@ -80,7 +80,7 @@ try {
   }
   for (const label of ["Verdict", "Set Analysis", "Log Purchase"]) {
     assert.equal(
-      await sidebar.locator("button").filter({ hasText: label }).first().isDisabled(),
+      await sidebar.getByRole("button", { name: new RegExp(`^${label}\\b`) }).isDisabled(),
       true,
       `${label} should be locked before Scan`,
     );
