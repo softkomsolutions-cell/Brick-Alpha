@@ -78,6 +78,21 @@ try {
   for (const legacy of ["News", "Trading", "Crypto", "Forex", "ETFs", "JSE", "Subscriptions"]) {
     assert.ok(!sidebarText.includes(legacy), `Legacy desktop nav visible: ${legacy}`);
   }
+  for (const [label, id] of [
+    ["Home", "home"],
+    ["Research", "research"],
+    ["Scan", "scan"],
+    ["Collection", "collection"],
+    ["Portfolio", "portfolio"],
+    ["Exits", "exits"],
+    ["Data Sources", "data-sources"],
+    ["Settings", "settings"],
+  ]) {
+    await nav(page, label, id);
+    await assertNamedVisibleButtons(page, label);
+  }
+  await nav(page, "Home", "home");
+
   for (const label of ["Verdict", "Set Analysis", "Log Purchase"]) {
     assert.equal(
       await sidebar.locator("button").filter({ hasText: label }).first().isDisabled(),
@@ -104,7 +119,7 @@ try {
   await expectPage(page, "data-sources");
   const apiKey = page.locator('input[type="password"]');
   assert.equal(await apiKey.count(), 1, "BrickEconomy key must use a masked password field");
-  assert.equal(await page.getByRole("button", { name: "Connect BrickEconomy", exact: true }).isDisabled(), true);
+  assert.equal(await page.getByRole("button", { name: "Test & connect", exact: true }).isDisabled(), true);
   await assertNamedVisibleButtons(page, "Data Sources");
   const csv = page.locator('input[type="file"][accept*="csv"]');
   await csv.setInputFiles({
@@ -188,6 +203,7 @@ try {
     await page.locator(".v3BottomNav").getByText(label, { exact: true }).click();
     await expectPage(page, id);
     await noOverflow(page, label);
+    await assertNamedVisibleButtons(page, `${label} mobile`);
   }
 
   let menu = await mobileMenu(page);
@@ -198,16 +214,19 @@ try {
   await menu.getByRole("button", { name: /^Portfolio\b/ }).click();
   await expectPage(page, "portfolio");
   await noOverflow(page, "Portfolio");
+  await assertNamedVisibleButtons(page, "Portfolio mobile");
 
   menu = await mobileMenu(page);
   await menu.getByRole("button", { name: /^Data Sources\b/ }).first().click();
   await expectPage(page, "data-sources");
   await noOverflow(page, "Data Sources");
+  await assertNamedVisibleButtons(page, "Data Sources mobile");
 
   menu = await mobileMenu(page);
   await menu.getByRole("button", { name: /^Settings\b/ }).click();
   await expectPage(page, "settings");
   await noOverflow(page, "Settings");
+  await assertNamedVisibleButtons(page, "Settings mobile");
 
   console.log("BRICK_ALPHA_BROWSER_QA_PASS");
 } finally {
