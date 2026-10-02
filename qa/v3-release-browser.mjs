@@ -15,6 +15,23 @@ async function noOverflow(page, label) {
   assert.ok(scrollWidth <= innerWidth + 2, `${label} overflow: ${scrollWidth} > ${innerWidth}`);
 }
 
+async function assertNamedVisibleButtons(page, label) {
+  const buttons = page.locator("button:visible");
+  const count = await buttons.count();
+  for (let index = 0; index < count; index += 1) {
+    const button = buttons.nth(index);
+    const name = await button.evaluate((node) =>
+      String(
+        node.getAttribute("aria-label") ||
+        node.getAttribute("title") ||
+        node.textContent ||
+        "",
+      ).replace(/\\s+/g, " ").trim(),
+    );
+    assert.ok(name, `${label} contains a visible button without an accessible label`);
+  }
+}
+
 async function completeOnboarding(page) {
   if (!(await page.locator(".v3OnboardingShell").isVisible().catch(() => false))) return;
   for (const [heading, button] of [
@@ -74,14 +91,21 @@ try {
   assert.equal(Number(await rate.inputValue()), 18.5);
   await rate.fill("19");
   await page.getByRole("button", { name: "Save rate", exact: true }).click();
+  await page.getByRole("button", { name: "Save investment profile", exact: true }).click();
+  await page.getByText("Investment profile saved.", { exact: true }).waitFor();
   await nav(page, "Research", "research");
   await nav(page, "Settings", "settings");
   assert.equal(Number(await page.locator('input[name="usdZarRate"]').inputValue()), 19);
+  await assertNamedVisibleButtons(page, "Settings");
   await page.locator('input[name="usdZarRate"]').fill("18.50");
   await page.getByRole("button", { name: "Save rate", exact: true }).click();
 
   await page.getByRole("button", { name: "Open Data Sources", exact: true }).click();
   await expectPage(page, "data-sources");
+  const apiKey = page.locator('input[type="password"]');
+  assert.equal(await apiKey.count(), 1, "BrickEconomy key must use a masked password field");
+  assert.equal(await page.getByRole("button", { name: "Connect BrickEconomy", exact: true }).isDisabled(), true);
+  await assertNamedVisibleButtons(page, "Data Sources");
   const csv = page.locator('input[type="file"][accept*="csv"]');
   await csv.setInputFiles({
     name: "qa-mixed.csv",
@@ -118,6 +142,7 @@ try {
   await page.locator('input[placeholder="e.g. 75252"]').fill("75367");
   await page.getByRole("button", { name: "Analyse", exact: true }).click();
   await expectPage(page, "verdict");
+  await assertNamedVisibleButtons(page, "Verdict");
   const verdict = await page.locator("[data-page='verdict']").innerText();
   assert.match(verdict, /75367/);
   assert.match(verdict, /BrickEconomy/i);
@@ -127,6 +152,7 @@ try {
   assert.equal(await analysisButton.isDisabled(), false);
   await analysisButton.click();
   await expectPage(page, "set-analysis");
+  await assertNamedVisibleButtons(page, "Set Analysis");
   const analysis = (await page.locator("[data-page='set-analysis']").innerText()).toLowerCase();
   for (const factor of ["time on", "theme strength", "time to retirement", "minifig", "reprint risk", "retirement pop", "how many to buy", "when to sell one unit", "recycle the cash"]) {
     assert.ok(analysis.includes(factor), `Missing set-analysis factor: ${factor}`);
@@ -134,6 +160,7 @@ try {
 
   await page.locator(".v3Sidebar").getByRole("button", { name: /^Log Purchase\b/ }).click();
   await expectPage(page, "log-purchase");
+  await assertNamedVisibleButtons(page, "Log Purchase");
   assert.match(await page.locator("[data-page='log-purchase']").innerText(), /75367/);
 
   await nav(page, "Settings", "settings");
@@ -142,6 +169,7 @@ try {
   await page.getByRole("button", { name: "Skip for now", exact: true }).click();
   await expectPage(page, "home");
   await nav(page, "Collection", "collection");
+  await assertNamedVisibleButtons(page, "Collection");
   const resetCollection = await page.locator("[data-page='collection']").innerText();
   assert.match(resetCollection, /#75252/);
   assert.ok(!/#75367/.test(resetCollection), "Reset Demo left QA import in fresh baseline");
