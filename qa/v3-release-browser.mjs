@@ -78,6 +78,14 @@ try {
   for (const legacy of ["News", "Trading", "Crypto", "Forex", "ETFs", "JSE", "Subscriptions"]) {
     assert.ok(!sidebarText.includes(legacy), `Legacy desktop nav visible: ${legacy}`);
   }
+  for (const label of ["Verdict", "Set Analysis", "Log Purchase"]) {
+    assert.equal(
+      await sidebar.locator("button").filter({ hasText: label }).first().isDisabled(),
+      true,
+      `${label} should be locked before Scan`,
+    );
+  }
+
   for (const [label, id] of [
     ["Home", "home"],
     ["Research", "research"],
@@ -91,14 +99,6 @@ try {
     await assertNamedVisibleButtons(page, label);
   }
   await nav(page, "Home", "home");
-
-  for (const label of ["Verdict", "Set Analysis", "Log Purchase"]) {
-    assert.equal(
-      await sidebar.locator("button").filter({ hasText: label }).first().isDisabled(),
-      true,
-      `${label} should be locked before Scan`,
-    );
-  }
 
   await nav(page, "Settings", "settings");
   const rate = page.locator('input[name="usdZarRate"]');
