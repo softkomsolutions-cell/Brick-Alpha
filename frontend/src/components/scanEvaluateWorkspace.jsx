@@ -595,7 +595,7 @@ export function ScanEvaluateWorkspace({
   }, []);
 
   return (
-    <section className="seWorkspace" id="scan-evaluate">
+    <section className="seWorkspace" id="scan-evaluate" data-page="scan">
       {phase === "processing" ? <ProcessingOverlay activeStepIndex={processingIndex} /> : null}
       {showCamera ? (
         <CameraModal

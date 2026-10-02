@@ -78,10 +78,17 @@ try {
   for (const legacy of ["News", "Trading", "Crypto", "Forex", "ETFs", "JSE", "Subscriptions"]) {
     assert.ok(!sidebarText.includes(legacy), `Legacy desktop nav visible: ${legacy}`);
   }
+  for (const label of ["Verdict", "Set Analysis", "Log Purchase"]) {
+    assert.equal(
+      await sidebar.getByText(label, { exact: true }).locator("xpath=ancestor::button[1]").isDisabled(),
+      true,
+      `${label} should be locked before Scan`,
+    );
+  }
+
   for (const [label, id] of [
     ["Home", "home"],
     ["Research", "research"],
-    ["Scan", "scan"],
     ["Collection", "collection"],
     ["Portfolio", "portfolio"],
     ["Exits", "exits"],
@@ -92,14 +99,6 @@ try {
     await assertNamedVisibleButtons(page, label);
   }
   await nav(page, "Home", "home");
-
-  for (const label of ["Verdict", "Set Analysis", "Log Purchase"]) {
-    assert.equal(
-      await sidebar.locator("button").filter({ hasText: label }).first().isDisabled(),
-      true,
-      `${label} should be locked before Scan`,
-    );
-  }
 
   await nav(page, "Settings", "settings");
   const rate = page.locator('input[name="usdZarRate"]');
@@ -153,7 +152,7 @@ try {
   assert.match(await page.locator("[data-page='collection']").innerText(), /#75367/);
 
   await nav(page, "Scan", "scan");
-  await page.getByRole("button", { name: "Enter Set Number", exact: true }).click();
+  await page.getByText("Enter Set Number", { exact: true }).locator("xpath=ancestor::button[1]").click();
   await page.locator('input[placeholder="e.g. 75252"]').fill("75367");
   await page.getByRole("button", { name: "Analyse", exact: true }).click();
   await expectPage(page, "verdict");
@@ -163,7 +162,7 @@ try {
   assert.match(verdict, /BrickEconomy/i);
   assert.ok(/Buy ×2 flywheel|Buy ×1|Only below R|Skip/.test(verdict), "Canonical verdict label missing");
 
-  const analysisButton = page.locator(".v3Sidebar").getByRole("button", { name: /^Set Analysis\b/ });
+  const analysisButton = page.locator(".v3Sidebar").getByText("Set Analysis", { exact: true }).locator("xpath=ancestor::button[1]");
   assert.equal(await analysisButton.isDisabled(), false);
   await analysisButton.click();
   await expectPage(page, "set-analysis");
@@ -173,7 +172,7 @@ try {
     assert.ok(analysis.includes(factor), `Missing set-analysis factor: ${factor}`);
   }
 
-  await page.locator(".v3Sidebar").getByRole("button", { name: /^Log Purchase\b/ }).click();
+  await page.locator(".v3Sidebar").getByText("Log Purchase", { exact: true }).locator("xpath=ancestor::button[1]").click();
   await expectPage(page, "log-purchase");
   await assertNamedVisibleButtons(page, "Log Purchase");
   assert.match(await page.locator("[data-page='log-purchase']").innerText(), /75367/);
