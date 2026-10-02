@@ -662,6 +662,7 @@ export function ScanEvaluateWorkspace({
                 key={method.id}
                 type="button"
                 className="seAcquisitionCard"
+                aria-label={method.label}
                 onClick={() => {
                   if (method.id === "upload") {
                     fileInputRef.current?.click();
