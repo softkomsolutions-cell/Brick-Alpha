@@ -149,7 +149,8 @@ try {
   assert.equal(Number(await page.locator('input[name="usdZarRate"]').inputValue()), 18.5);
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await nav(page, "Home", "home");
+  await page.locator(".v3BottomNav").getByText("Home", { exact: true }).click();
+  await expectPage(page, "home");
   const bottom = await page.locator(".v3BottomNav").innerText();
   for (const label of ["Home", "Research", "Scan", "Collection", "Exits"]) assert.ok(bottom.includes(label));
   assert.ok(!bottom.includes("Portfolio"), "Portfolio should not crowd mobile bottom nav");
