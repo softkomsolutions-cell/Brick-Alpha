@@ -28,6 +28,7 @@ const { createConnectorProviderRegistry } = require('./services/connectors/provi
 const { connectorFreshness } = require('./services/connectors/freshness');
 const { createJobRunner } = require('./services/job-runner');
 const brickeconomyService = require('./services/brickeconomyService');
+const { getUsdZarRate } = require('./services/exchangeRateService');
 const authConfig = readAuthConfig();
 const authRateLimiter = createAuthRateLimiter();
 const financialConfig = readFinancialConfig();
@@ -108,7 +109,7 @@ const DEFAULT_SETTINGS = {
       providerId: "easyequities",
     },
   },
-  usdZarRate: 18.5,
+  usdZarRate: 16.67,
 };
 
 const ALERT_SUBSCRIPTION_TIERS = {
@@ -1468,7 +1469,7 @@ function sanitizeSettings(input) {
 function sanitizeUsdZarRate(value) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric) || numeric <= 0) {
-    return 18.5;
+    return 16.67;
   }
   return Math.round(numeric * 100) / 100;
 }
@@ -5993,12 +5994,19 @@ app.post("/api/assets/:assetId/valuation/recalculate", requireAuth, async (req, 
   }
 });
 
-app.get("/api/settings", requireAuth, (req, res) => {
-  res.json({
+app.get("/api/settings", requireAuth, authHandler(async req => {
+  const fx = await getUsdZarRate();
+  return {
     ok: true,
-    settings: req.userState.settings,
-  });
-});
+    settings: {
+      ...req.userState.settings,
+      usdZarRate: fx.ok ? fx.rate : sanitizeUsdZarRate(req.userState.settings?.usdZarRate),
+      exchangeRateSource: fx.ok ? fx.source : "Saved fallback",
+      exchangeRateDate: fx.asOf,
+      exchangeRateStatus: fx.ok ? "live" : "fallback",
+    },
+  };
+}));
 
 app.put("/api/settings", requireAuth, authHandler(async req => {
   const settings = sanitizeSettings({
@@ -6007,9 +6015,16 @@ app.put("/api/settings", requireAuth, authHandler(async req => {
   });
   await authService.setSettings(req.user.id, settings);
   req.userState.settings = settings;
+  const fx = await getUsdZarRate();
   return {
     ok: true,
-    settings: req.userState.settings,
+    settings: {
+      ...req.userState.settings,
+      usdZarRate: fx.ok ? fx.rate : sanitizeUsdZarRate(req.userState.settings?.usdZarRate),
+      exchangeRateSource: fx.ok ? fx.source : "Saved fallback",
+      exchangeRateDate: fx.asOf,
+      exchangeRateStatus: fx.ok ? "live" : "fallback",
+    },
   };
 }));
 
