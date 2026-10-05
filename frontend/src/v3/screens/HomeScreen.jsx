@@ -94,7 +94,7 @@ export function HomeScreen({
     { id: "profit", label: "Unrealised profit", value: home.unrealisedProfit },
     { id: "cash", label: "Realised cash", value: home.realisedCash },
   ];
-  const displayName = String(currentUser?.name || "Gavin").split(" ")[0];
+  const displayName = currentUser?.isDemo ? "Gavin" : String(currentUser?.name || "Gavin").split(" ")[0];
 
   return (
     <div className="v3Home" data-page="home" data-book="curated">
