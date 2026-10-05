@@ -4,7 +4,7 @@ const BUYING_PROFILE_KEY = "brick_alpha_v3_buying_profile";
 export const DEFAULT_BUYING_PROFILE = {
   country: "South Africa",
   homeCurrency: "ZAR",
-  usdZarRate: 18.5,
+  usdZarRate: 16.67,
   businessBuyer: false,
   vatRate: 15,
   rewardsProgrammes: [],
