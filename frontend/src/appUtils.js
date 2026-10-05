@@ -227,13 +227,16 @@ export function normalizeAppSettings(input) {
       },
       executionProfiles: normalizeExecutionProfiles(input?.executionProfiles),
       usdZarRate: sanitizeUsdZarRate(input?.usdZarRate),
+      exchangeRateSource: input?.exchangeRateSource || "Saved fallback",
+      exchangeRateDate: input?.exchangeRateDate || null,
+      exchangeRateStatus: input?.exchangeRateStatus === "live" ? "live" : "fallback",
     };
 }
 
 function sanitizeUsdZarRate(value) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric) || numeric <= 0) {
-    return 18.5;
+    return 16.67;
   }
   return Math.round(numeric * 100) / 100;
 }
