@@ -111,7 +111,7 @@ export function SetAnalysisScreen({ navigateToPage, appSettings }) {
       <Disclosure title="Evidence and provenance">
         <p>
           Analysis frozen {snapshot.analyzedAt}. Current value {formatCanonicalValue(snapshot.currentValue)} from{" "}
-          {snapshot.valuationSource}. Valuation date {snapshot.valuationDate || "—"}. Exchange rate {exchange.label}. Annual growth {formatRecordedGrowth(snapshot.annualGrowth)}. 90-day
+          {snapshot.valuationSource}.{snapshot.valuationDate && !["—", "-", "N/A"].includes(String(snapshot.valuationDate).trim()) ? ` Valuation date ${snapshot.valuationDate}.` : ""} Exchange rate {exchange.label}. Annual growth {formatRecordedGrowth(snapshot.annualGrowth)}. 90-day
           growth {formatRecordedGrowth(snapshot.growth90Day)}. Retail {formatCollectiblePrice(snapshot.retailPrice)} is
           not the market value.
         </p>
