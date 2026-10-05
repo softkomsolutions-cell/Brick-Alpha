@@ -55,7 +55,7 @@ export function VerdictScreen({ navigateToPage, onWatch, onAddToCollection, appS
             <span>Current value</span>
             <strong>{formatCanonicalValue(snapshot.currentValue)}</strong>
             <small>
-              {snapshot.valuationSource || "BrickEconomy"} · {snapshot.valuationDate || "—"} · {exchange.label}
+              {snapshot.valuationSource || "BrickEconomy"}{snapshot.valuationDate ? ` · ${snapshot.valuationDate}` : ""} · {exchange.label}
             </small>
           </div>
           <div className="v3Metric"><span>Confidence</span><strong>{snapshot.confidence}%</strong></div>
