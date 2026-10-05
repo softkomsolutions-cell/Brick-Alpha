@@ -7,7 +7,7 @@ export function V3SettingsScreen({
   onDemoReset,
   updateSettings,
 }) {
-  const [rate, setRate] = useState(String(appSettings?.usdZarRate ?? 18.5));
+  const [rate, setRate] = useState(String(appSettings?.usdZarRate ?? 16.67));
   const [status, setStatus] = useState("");
 
   const saveRate = async (event) => {
@@ -70,10 +70,10 @@ export function V3SettingsScreen({
         <section className="v3DecisionCard">
           <span className="v3Eyebrow">Currency conversion</span>
           <h2>USD/ZAR exchange rate</h2>
-          <p>One rate is used for every converted valuation. Gavin’s demo baseline is R18.50 / USD.</p>
+          <p>One rate is used for every converted valuation. Gavin’s demo baseline is R16.670 / USD.</p>
           <form className="v3ExchangeForm" onSubmit={saveRate}>
             <label>
-              Rand per US dollar
+              Fallback rand per US dollar
               <input
                 type="number"
                 min="0.01"
