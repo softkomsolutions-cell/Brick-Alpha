@@ -46,7 +46,7 @@ test("exchange rate defaults to R16.67 and is shared by conversions", () => {
   const configured = resolveExchangeRate({ usdZarRate: 16.67 });
   assert.equal(fallback.rate, 16.67);
   assert.equal(configured.rate, 16.67);
-  assert.equal(convertUsdToZar(10, {}).zar, 166.7);
+  assert.ok(Math.abs(convertUsdToZar(10, {}).zar - 166.7) < 0.000001);
   assert.equal(convertUsdToZar(10, { usdZarRate: 19 }).zar, 190);
   assert.equal(convertUsdToZar("nope", { usdZarRate: 16.67 }).zar, null);
 });
@@ -81,7 +81,7 @@ test("home keeps owned value separate from realised cash", () => {
   assert.equal(home.realisedProfit, 8113 - 6999);
   assert.equal(home.realisedCash, 8113);
   assert.notEqual(home.ownedValue + home.realisedCash, home.ownedValue + 8540);
-  assert.equal(home.exchangeRate, 18.5);
+  assert.equal(home.exchangeRate, 16.67);
   assert.equal(home.source, "BrickEconomy");
   for (const value of [home.ownedValue, home.costBasis, home.unrealisedProfit, home.blendedRoi, home.exchangeRate]) {
     assert.equal(Number.isFinite(value), true);
