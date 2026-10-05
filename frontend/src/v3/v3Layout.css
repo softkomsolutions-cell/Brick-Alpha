@@ -2410,3 +2410,24 @@
     flex-direction:column;
   }
 }
+
+
+/* Scan hero stat-card fix: prevent legacy light-card override from creating blank blocks. */
+.v3AppShell [data-page="scan"] .seHeroCard .seHeroStats > div {
+  background: rgba(255, 255, 255, 0.10) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  box-shadow: none !important;
+  color: #fff !important;
+}
+
+.v3AppShell [data-page="scan"] .seHeroCard .seHeroStats strong {
+  color: #fff !important;
+  font-size: 22px;
+  line-height: 1.1;
+}
+
+.v3AppShell [data-page="scan"] .seHeroCard .seHeroStats span {
+  color: rgba(255, 255, 255, 0.82) !important;
+  display: block;
+  margin-top: 6px;
+}
