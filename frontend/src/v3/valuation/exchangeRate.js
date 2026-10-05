@@ -8,8 +8,9 @@ export function resolveExchangeRate(settings) {
     pair: "USD/ZAR",
     rate,
     label: `R${rate.toFixed(2)} / USD`,
-    source: "Settings",
+    source: settings?.exchangeRateSource || "Saved fallback",
     valuationDate: settings?.exchangeRateDate || null,
+    status: settings?.exchangeRateStatus || "fallback",
   };
 }
 
