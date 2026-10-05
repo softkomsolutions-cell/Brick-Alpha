@@ -16,6 +16,7 @@ function fallback(reason = "fallback") {
 }
 
 async function getUsdZarRate({ force = false, fetchFn = fetch } = {}) {
+  if (process.env.NODE_ENV === "test" || process.env.BRICK_ALPHA_FX_DISABLE === "1") return fallback("disabled");
   if (!force && cache && cache.expiresAt > Date.now()) {
     return { ...cache.value, cache: "fresh" };
   }
@@ -34,7 +35,7 @@ async function getUsdZarRate({ force = false, fetchFn = fetch } = {}) {
       ok: true,
       rate: Math.round(rate * 10000) / 10000,
       pair: "USD/ZAR",
-      source: "Frankfurter / South African Reserve Bank",
+      source: "Frankfurter reference rates",
       asOf: body?.date || new Date().toISOString().slice(0, 10),
     };
     cache = { value, expiresAt: Date.now() + CACHE_TTL_MS };
