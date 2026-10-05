@@ -17,7 +17,7 @@ function createAuthService({ repository, config, defaultSettings, now = Date.now
   }
   return {
     async register(input, demo = false) {
-      const name = demo ? String(input?.name || 'Partner Demo').trim().slice(0, 120) || 'Partner Demo' : String(input?.name || '').trim();
+      const name = demo ? String(input?.name || 'Gavin Demo').trim().slice(0, 120) || 'Gavin Demo' : String(input?.name || '').trim();
       const email = demo ? `demo-${crypto.randomUUID()}@collecttrade.local` : normalizeEmail(input?.email);
       const password = String(input?.password || '');
       if (!demo && name.length < 2) fail(400, 'name_too_short');

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { formatCollectiblePrice } from "../../appUtils";
 import { buildHomeView } from "../home/homeModel";
 import { buildCollectionView, formatSignedPercent } from "../collection/ownershipModel";
@@ -14,6 +14,8 @@ export function PortfolioScreen({ appSettings, openTrades = [], closedTrades = [
   const totalProfit = home.unrealisedProfit + home.realisedProfit;
   const maxTheme = Math.max(1, ...home.themes.map((item) => item.share));
   const maxHolding = Math.max(1, ...collection.sets.map((item) => item.marketValue || 0));
+  const [showAllHoldings, setShowAllHoldings] = useState(false);
+  const visibleHoldings = showAllHoldings ? collection.sets : collection.sets.slice(0, 15);
 
   return (
     <div className="v3Portfolio" data-page="portfolio">
@@ -70,7 +72,7 @@ export function PortfolioScreen({ appSettings, openTrades = [], closedTrades = [
       <section className="v3DecisionCard">
         <div className="v3PortfolioSectionHead"><div><span className="v3Eyebrow">Collection</span><h2>Portfolio contribution</h2></div><small>Market value and return by set</small></div>
         <div className="v3HoldingChart">
-          {collection.sets.map((set) => (
+          {visibleHoldings.map((set) => (
             <div key={set.id} className="v3HoldingChartRow">
               <div><strong>{set.name}</strong><small>#{set.setNumber} · {set.theme}</small></div>
               <Bar value={set.marketValue} max={maxHolding} />
@@ -79,6 +81,14 @@ export function PortfolioScreen({ appSettings, openTrades = [], closedTrades = [
             </div>
           ))}
         </div>
+        {collection.sets.length > 15 ? (
+          <div className="v3ListDisclosure">
+            <span>Showing {visibleHoldings.length} of {collection.sets.length} holdings</span>
+            <button type="button" className="secondaryButton" onClick={() => setShowAllHoldings((value) => !value)}>
+              {showAllHoldings ? "Show summary" : "View all holdings"}
+            </button>
+          </div>
+        ) : null}
       </section>
     </div>
   );

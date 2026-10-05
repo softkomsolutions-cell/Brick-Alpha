@@ -1712,7 +1712,7 @@ export default function App() {
         const data = await requestJson("/api/auth/demo", {
           method: "POST",
           body: {
-            name: "Partner Demo",
+            name: "Gavin Demo",
           },
         });
         await handleAuthenticatedRoute(data.token, data.user, data.settings, selection);
@@ -3393,8 +3393,8 @@ export default function App() {
       <V3Sidebar
         activePage={page}
         workspaceHint={SCREEN_PREVIEWS[page]}
-        userLabel={currentUser.name || currentUser.email}
-        userInitial={(currentUser.name || currentUser.email || "U").slice(0, 1).toUpperCase()}
+        userLabel={currentUser?.isDemo ? "Gavin Demo" : currentUser.name || currentUser.email}
+        userInitial={(currentUser?.isDemo ? "G" : currentUser.name || currentUser.email || "U").slice(0, 1).toUpperCase()}
         onNavigate={(nextPage) => navigateToPage(nextPage, false, activeDesk)}
         onBrandClick={handleNavigateHome}
       />

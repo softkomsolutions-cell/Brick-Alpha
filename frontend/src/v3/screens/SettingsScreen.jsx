@@ -12,7 +12,7 @@ export function SettingsScreen({
   navigateToPage,
   settingsStatus,
 }) {
-  const [rate, setRate] = useState(String(appSettings.usdZarRate ?? 18.5));
+  const [rate, setRate] = useState(String(appSettings.usdZarRate ?? 16.67));
   const [profile, setProfile] = useState(() => readBuyingProfile());
   const [profileStatus, setProfileStatus] = useState("");
   const saveRate = async (event) => {
@@ -38,7 +38,7 @@ export function SettingsScreen({
     event.preventDefault();
     const next = {
       ...profile,
-      usdZarRate: Number(rate) || Number(profile.usdZarRate) || 18.5,
+      usdZarRate: Number(rate) || Number(profile.usdZarRate) || 16.67,
       rewardsProgrammes: Array.isArray(profile.rewardsProgrammes)
         ? profile.rewardsProgrammes
         : [],
@@ -186,10 +186,10 @@ export function SettingsScreen({
         <section className="v3DecisionCard">
           <span className="v3Eyebrow">Valuation conversion</span>
           <h2>USD/ZAR exchange rate</h2>
-          <p>One rate is used for every converted valuation. Gavin baseline: R18.50 / USD.</p>
+          <p>One rate is used for every converted valuation. Gavin baseline: R16.670 / USD.</p>
           <form className="v3ExchangeForm" onSubmit={saveRate}>
             <label>
-              Rand per US dollar
+              Fallback rand per US dollar
               <input
                 name="usdZarRate"
                 type="number"

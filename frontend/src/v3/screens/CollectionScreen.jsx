@@ -35,7 +35,9 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
   const [filter, setFilter] = useState("all");
   const [theme, setTheme] = useState(view.themes[0] || "");
   const [expandedId, setExpandedId] = useState("");
+  const [showAllRows, setShowAllRows] = useState(false);
   const rows = filterCollectionSets(view.sets, filter, theme);
+  const visibleRows = showAllRows ? rows : rows.slice(0, 12);
   const allocation = useMemo(() => {
     const total = view.sets.reduce((sum, set) => sum + Number(set.marketValue || 0), 0);
     const grouped = new Map();
@@ -173,7 +175,7 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
             <small>Sorted by market value</small>
           </div>
           <div className="v3CollectionList">
-            {rows.map((set) => {
+            {visibleRows.map((set) => {
               const expanded = expandedId === set.id;
               return (
                 <article key={set.id} className="v3CollectionRow">
@@ -227,6 +229,14 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
               );
             })}
           </div>
+          {rows.length > 12 ? (
+            <div className="v3ListDisclosure">
+              <span>Showing {visibleRows.length} of {rows.length} sets</span>
+              <button type="button" className="secondaryButton" onClick={() => setShowAllRows((value) => !value)}>
+                {showAllRows ? "Show summary" : "View all sets"}
+              </button>
+            </div>
+          ) : null}
         </section>
       ) : (
         <section className="panel">
