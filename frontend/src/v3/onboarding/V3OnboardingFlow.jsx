@@ -20,7 +20,7 @@ export function V3OnboardingFlow({ onComplete, onNavigateToScan, onNavigateToDat
   const finish = async () => {
     writeBuyingProfile(profile);
     await onApplySettings?.({
-      usdZarRate: Number(profile.usdZarRate) || 18.5,
+      usdZarRate: Number(profile.usdZarRate) || 16.67,
       preferredRegion: profile.country === "South Africa" ? "south-africa" : "global",
     });
     markV3OnboardingComplete();
