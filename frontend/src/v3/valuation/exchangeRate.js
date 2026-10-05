@@ -1,5 +1,5 @@
 /** Single USD/ZAR rate for every converted Brick Alpha valuation. */
-export const DEFAULT_USD_ZAR_RATE = 18.5;
+export const DEFAULT_USD_ZAR_RATE = 16.67;
 
 export function resolveExchangeRate(settings) {
   const numeric = Number(settings?.usdZarRate);
