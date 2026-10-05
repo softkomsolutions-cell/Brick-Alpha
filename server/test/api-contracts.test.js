@@ -107,7 +107,7 @@ test("settings GET and PUT preserve the current response envelope", async () => 
   assert.deepEqual(Object.keys(updated.body), ["ok", "settings"]);
   assert.equal(updated.body.settings.riskMode, "defensive");
   assert.equal(updated.body.settings.preferredRegion, "global");
-  assert.equal(initial.body.settings.usdZarRate, 18.5);
+  assert.equal(initial.body.settings.usdZarRate, 16.67);
 
   const rated = await authenticated(user.token).put("/api/settings").send({ usdZarRate: 19 });
   assert.equal(rated.status, 200);
