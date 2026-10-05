@@ -41,14 +41,14 @@ function trade(partial) {
   };
 }
 
-test("exchange rate defaults to R18.50 and is shared by conversions", () => {
+test("exchange rate defaults to R16.67 and is shared by conversions", () => {
   const fallback = resolveExchangeRate({});
-  const configured = resolveExchangeRate({ usdZarRate: 18.5 });
-  assert.equal(fallback.rate, 18.5);
-  assert.equal(configured.rate, 18.5);
-  assert.equal(convertUsdToZar(10, {}).zar, 185);
+  const configured = resolveExchangeRate({ usdZarRate: 16.67 });
+  assert.equal(fallback.rate, 16.67);
+  assert.equal(configured.rate, 16.67);
+  assert.equal(convertUsdToZar(10, {}).zar, 166.7);
   assert.equal(convertUsdToZar(10, { usdZarRate: 19 }).zar, 190);
-  assert.equal(convertUsdToZar("nope", { usdZarRate: 18.5 }).zar, null);
+  assert.equal(convertUsdToZar("nope", { usdZarRate: 16.67 }).zar, null);
 });
 
 test("home keeps owned value separate from realised cash", () => {
@@ -75,7 +75,7 @@ test("home keeps owned value separate from realised cash", () => {
         orderNote: "local buyer groups",
       }),
     ],
-    settings: { usdZarRate: 18.5 },
+    settings: { usdZarRate: 16.67 },
   });
   assert.equal(home.ownedValue, 18684);
   assert.equal(home.realisedProfit, 8113 - 6999);
