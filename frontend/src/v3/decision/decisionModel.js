@@ -199,9 +199,11 @@ export function buildThesisChecklist(evaluation, verdict, retirement) {
   const checklist = [
     verdict.label,
     retirementState ? `Retirement: ${retirementState}` : null,
-    numberOrZero(evaluation?.discountPercentage) > 0
-      ? `${numberOrZero(evaluation.discountPercentage).toFixed(0)}% below retail`
-      : "Pricing is at or above retail",
+    numberOrZero(evaluation?.retailPrice) > 0
+      ? numberOrZero(evaluation?.discountPercentage) > 0
+        ? `${numberOrZero(evaluation.discountPercentage).toFixed(0)}% below retail`
+        : "Pricing is at or above retail"
+      : "Retail price not recorded",
     ...fromSignals,
   ].filter(Boolean);
   return checklist.slice(0, 5);

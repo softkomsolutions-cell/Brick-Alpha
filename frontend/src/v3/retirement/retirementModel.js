@@ -27,7 +27,7 @@ function parseDate(value) {
 export function buildCanonicalRetirement(item, asOf = CANONICAL_AS_OF) {
   const clock = parseDate(asOf) || new Date(CANONICAL_AS_OF);
   const actual = parseDate(item?.actualRetirementDate);
-  const expected = parseDate(item?.expectedRetirementDate || item?.sellByTargetDate);
+  const expected = parseDate(item?.expectedRetirementDate);
   const anchor = actual || expected;
   const daysRemaining = anchor == null ? null : Math.round((anchor.getTime() - clock.getTime()) / DAY_MS);
   const monthsRemaining = daysRemaining == null ? null : Math.round(daysRemaining / 30);
