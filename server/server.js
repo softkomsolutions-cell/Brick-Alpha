@@ -6040,12 +6040,29 @@ function tradeSetNumberForBrickEconomy(trade) {
   return match ? normalizeBrickEconomySetNumber(match[1]) : "";
 }
 
-function brickEconomyResearchItem(raw = {}, syncedAt = nowIso()) {
+function brickEconomyMoneyToZar(value, sourceCurrency = "USD", usdZarRate = 1) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return null;
+  const currency = String(sourceCurrency || "USD").trim().toUpperCase();
+  if (currency === "ZAR") return numeric;
+  if (currency === "USD") return numeric * Number(usdZarRate || 1);
+  return null;
+}
+
+function brickEconomyResearchItem(raw = {}, syncedAt = nowIso(), usdZarRate = 1) {
   const setNumber = normalizeBrickEconomySetNumber(raw.set_number || raw.setNumber);
-  const currentValue = Number(raw.current_value_new ?? raw.current_value ?? raw.current_value_used);
+  const sourceCurrency = String(raw.currency || "USD").trim().toUpperCase();
+  const currentValue = brickEconomyMoneyToZar(
+    raw.current_value_new ?? raw.current_value ?? raw.current_value_used,
+    sourceCurrency,
+    usdZarRate,
+  );
   const history = Array.isArray(raw.price_events_new)
     ? raw.price_events_new
-        .map((point) => ({ date: String(point?.date || ""), value: Number(point?.value) }))
+        .map((point) => ({
+          date: String(point?.date || ""),
+          value: brickEconomyMoneyToZar(point?.value, sourceCurrency, usdZarRate),
+        }))
         .filter((point) => point.date && Number.isFinite(point.value) && point.value > 0)
     : [];
   const annualGrowth = Number(raw.rolling_growth_12months ?? raw.rolling_growth_lastyear);
@@ -6069,11 +6086,16 @@ function brickEconomyResearchItem(raw = {}, syncedAt = nowIso()) {
     retirementStatus: raw.retired === true ? "Retired" : "Active",
     retired: raw.retired === true,
     valuationSource: "BrickEconomy",
-    valuationProvenance: "BrickEconomy API",
+    valuationCurrency: "ZAR",
+    valuationSourceCurrency: sourceCurrency,
+    usdZarRate: sourceCurrency === "USD" ? Number(usdZarRate || 1) : null,
+    valuationProvenance: sourceCurrency === "USD"
+      ? "BrickEconomy API (USD converted to ZAR)"
+      : "BrickEconomy API",
   };
 }
 
-function applyBrickEconomyCollectionToOpenTrades(userState, collectionData, syncedAt) {
+function applyBrickEconomyCollectionToOpenTrades(userState, collectionData, syncedAt, usdZarRate = 1) {
   const rows = Array.isArray(collectionData?.sets) ? collectionData.sets : [];
   const bySet = new Map();
   for (const row of rows) {
@@ -6097,7 +6119,8 @@ function applyBrickEconomyCollectionToOpenTrades(userState, collectionData, sync
     const row =
       candidates.find((item) => wantsNew ? String(item.condition || "").toLowerCase() === "new" : String(item.condition || "").toLowerCase() !== "new") ||
       candidates[0];
-    const currentValue = Number(row?.current_value);
+    const sourceCurrency = String(collectionData?.currency || "USD").trim().toUpperCase();
+    const currentValue = brickEconomyMoneyToZar(row?.current_value, sourceCurrency, usdZarRate);
     if (!Number.isFinite(currentValue) || currentValue <= 0) continue;
 
     const quantity = Math.max(1, Number(trade.quantity) || 1);
@@ -6106,6 +6129,8 @@ function applyBrickEconomyCollectionToOpenTrades(userState, collectionData, sync
     trade.brickEconomyValue = currentValue;
     trade.currentValue = currentValue * quantity;
     trade.valuationCurrency = "ZAR";
+    trade.valuationSourceCurrency = sourceCurrency;
+    trade.usdZarRate = sourceCurrency === "USD" ? Number(usdZarRate || 1) : null;
     trade.valuationSource = "BrickEconomy";
     trade.valuationDate = syncedAt.slice(0, 10);
     trade.retirementStatus = row.retired === true ? "Retired" : "Active";
@@ -6225,7 +6250,7 @@ app.put("/api/data-sources/brickeconomy", requireAuth, async (req, res) => {
     res.status(400).json({ ok: false, error: "brickeconomy_api_key_required" });
     return;
   }
-  const probe = await brickeconomyService.getSet("75367-1", apiKey, "ZAR");
+  const probe = await brickeconomyService.getSet("75367-1", apiKey, "USD");
   if (!probe.ok) {
     res.status(400).json({ ok: false, error: "brickeconomy_connection_failed", reason: probe.reason });
     return;
@@ -6262,7 +6287,7 @@ app.post("/api/data-sources/brickeconomy/sync", requireAuth, async (req, res) =>
     return;
   }
   const [collectionResult, salesResult] = await Promise.all([
-    brickeconomyService.getCollectionSets(credentials.apiKey, "ZAR"),
+    brickeconomyService.getCollectionSets(credentials.apiKey, "USD"),
     brickeconomyService.getSalesLedger(credentials.apiKey),
   ]);
   if (!collectionResult.ok) {
@@ -6270,7 +6295,8 @@ app.post("/api/data-sources/brickeconomy/sync", requireAuth, async (req, res) =>
     return;
   }
   const syncedAt = nowIso();
-  const applied = applyBrickEconomyCollectionToOpenTrades(req.userState, collectionResult.data, syncedAt);
+  const fx = await getUsdZarRate();
+  const applied = applyBrickEconomyCollectionToOpenTrades(req.userState, collectionResult.data, syncedAt, fx.rate);
   const sales = salesResult.ok
     ? replaceBrickEconomySalesLedger(req.userState, salesResult.data, syncedAt)
     : { importedSales: 0, skippedSales: 0, unsupportedCurrencies: [], salesLedgerReason: salesResult.reason };
@@ -6329,12 +6355,13 @@ app.get("/api/data-sources/brickeconomy/set/:setNumber", requireAuth, async (req
     return;
   }
   const setNumber = String(req.params?.setNumber || "").trim();
-  const result = await brickeconomyService.getSet(setNumber, credentials.apiKey, "ZAR");
+  const result = await brickeconomyService.getSet(setNumber, credentials.apiKey, "USD");
   if (!result.ok) {
     res.status(400).json({ ok: false, error: "brickeconomy_set_lookup_failed", reason: result.reason });
     return;
   }
-  res.json({ ok: true, item: brickEconomyResearchItem(result.data, nowIso()) });
+  const fx = await getUsdZarRate();
+  res.json({ ok: true, item: brickEconomyResearchItem(result.data, nowIso(), fx.rate) });
 });
 
 app.get("/api/data-sources/brickeconomy/usage", requireAuth, async (req, res) => {
