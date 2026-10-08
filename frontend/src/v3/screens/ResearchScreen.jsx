@@ -202,9 +202,6 @@ export function ResearchScreen({
     let active = true;
     const query = String(filters.query || "").trim();
     if (!liveDiscoveryReady || query.length < 3 || !authToken || !requestJson) {
-      setLiveSearchResults([]);
-      setLiveSearchBusy(false);
-      setLiveSearchError("");
       return () => { active = false; };
     }
     const timer = window.setTimeout(() => {
