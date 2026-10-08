@@ -6188,14 +6188,25 @@ function replaceBrickEconomySalesLedger(userState, ledgerData, syncedAt) {
   };
 }
 
+function brickEconomyCredentialsForState(userState = {}) {
+  const source = userState.dataSources || {};
+  const stored = decryptConnectorPayload(source.brickeconomyAuthBlob) || {};
+  const apiKey = String(stored.apiKey || process.env.BRICKECONOMY_API_KEY || "").trim();
+  return {
+    apiKey,
+    source: stored.apiKey ? "user" : apiKey ? "environment" : "none",
+  };
+}
+
 app.get("/api/data-sources", requireAuth, (req, res) => {
   const source = req.userState.dataSources || {};
-  const credentials = decryptConnectorPayload(source.brickeconomyAuthBlob) || {};
+  const credentials = brickEconomyCredentialsForState(req.userState);
   res.json({
     ok: true,
     brickeconomy: {
       configured: Boolean(credentials.apiKey),
       apiKeyMasked: credentials.apiKey ? maskValue(credentials.apiKey) : "",
+      credentialSource: credentials.source,
       lastSyncAt: source.lastBrickeconomySyncAt || null,
       role: "Canonical current LEGO valuation",
       researchFeedReady: Boolean(credentials.apiKey),
@@ -6234,12 +6245,18 @@ app.delete("/api/data-sources/brickeconomy", requireAuth, (req, res) => {
     lastBrickeconomySyncAt: null,
   };
   persistStore();
-  res.json({ ok: true, configured: false });
+  const fallback = brickEconomyCredentialsForState(req.userState);
+  res.json({
+    ok: true,
+    configured: Boolean(fallback.apiKey),
+    apiKeyMasked: fallback.apiKey ? maskValue(fallback.apiKey) : "",
+    credentialSource: fallback.source,
+  });
 });
 
 app.post("/api/data-sources/brickeconomy/sync", requireAuth, async (req, res) => {
   const source = req.userState.dataSources || {};
-  const credentials = decryptConnectorPayload(source.brickeconomyAuthBlob) || {};
+  const credentials = brickEconomyCredentialsForState(req.userState);
   if (!credentials.apiKey) {
     res.status(400).json({ ok: false, error: "brickeconomy_not_connected" });
     return;
@@ -6271,7 +6288,7 @@ app.post("/api/data-sources/brickeconomy/sync", requireAuth, async (req, res) =>
 
 app.get("/api/data-sources/brickeconomy/search", requireAuth, async (req, res) => {
   const source = req.userState.dataSources || {};
-  const credentials = decryptConnectorPayload(source.brickeconomyAuthBlob) || {};
+  const credentials = brickEconomyCredentialsForState(req.userState);
   if (!credentials.apiKey) {
     res.status(400).json({ ok: false, error: "brickeconomy_not_connected" });
     return;
@@ -6306,7 +6323,7 @@ app.get("/api/data-sources/brickeconomy/search", requireAuth, async (req, res) =
 
 app.get("/api/data-sources/brickeconomy/set/:setNumber", requireAuth, async (req, res) => {
   const source = req.userState.dataSources || {};
-  const credentials = decryptConnectorPayload(source.brickeconomyAuthBlob) || {};
+  const credentials = brickEconomyCredentialsForState(req.userState);
   if (!credentials.apiKey) {
     res.status(400).json({ ok: false, error: "brickeconomy_not_connected" });
     return;
@@ -6322,7 +6339,7 @@ app.get("/api/data-sources/brickeconomy/set/:setNumber", requireAuth, async (req
 
 app.get("/api/data-sources/brickeconomy/usage", requireAuth, async (req, res) => {
   const source = req.userState.dataSources || {};
-  const credentials = decryptConnectorPayload(source.brickeconomyAuthBlob) || {};
+  const credentials = brickEconomyCredentialsForState(req.userState);
   if (!credentials.apiKey) {
     res.status(400).json({ ok: false, error: "brickeconomy_not_connected" });
     return;
