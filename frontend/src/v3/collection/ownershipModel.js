@@ -165,13 +165,31 @@ export function allInAcquisition({
 
 function flywheelFor(units, cost) {
   const oneUnitValue = units.length ? Math.max(...units.map((unit) => numberOrZero(unit.marketValue))) : 0;
-  const recoveryGap = oneUnitValue - cost;
-  const recoveryPercent = cost > 0 ? (oneUnitValue / cost) * 100 : null;
+  const channels = EXIT_CHANNELS.map((channel) => {
+    const net = Math.max(0, oneUnitValue - Math.round(oneUnitValue * channel.feeRate));
+    const triggerGross = cost > 0 && channel.feeRate < 1
+      ? Math.ceil(cost / (1 - channel.feeRate))
+      : null;
+    return {
+      ...channel,
+      gross: oneUnitValue,
+      net,
+      triggerGross,
+      recoveryGap: net - cost,
+      ready: units.length > 1 && cost > 0 && net >= cost,
+    };
+  });
+  const bestChannel = [...channels].sort((left, right) => right.net - left.net)[0] || null;
+  const recoveryPercent = cost > 0 && bestChannel ? (bestChannel.net / cost) * 100 : null;
   return {
     oneUnitValue,
-    recoveryGap,
+    oneUnitNet: bestChannel?.net || 0,
+    recoveryGap: bestChannel ? bestChannel.recoveryGap : -cost,
     recoveryPercent: recoveryPercent != null && Number.isFinite(recoveryPercent) ? recoveryPercent : null,
-    flywheelReady: units.length > 1 && oneUnitValue >= cost,
+    sellTriggerPrice: bestChannel?.triggerGross ?? null,
+    flywheelChannel: bestChannel?.label || null,
+    flywheelChannels: channels,
+    flywheelReady: Boolean(bestChannel?.ready),
   };
 }
 
@@ -310,7 +328,10 @@ export function filterCollectionSets(sets, filter, theme = "") {
 
 export function exitRecommendation(set) {
   if (set.flywheelReady) {
-    return "Sell one unit and recycle the cash";
+    return `Sell 1 now — estimated net R${Math.round(set.oneUnitNet).toLocaleString("en-ZA")} covers the R${Math.round(set.cost).toLocaleString("en-ZA")} stack cost`;
+  }
+  if (set.isStack && set.sellTriggerPrice != null) {
+    return `Watch — 1-unit sell trigger is R${Math.round(set.sellTriggerPrice).toLocaleString("en-ZA")} before fees`;
   }
   if (set.sellWindowMonths != null && set.sellWindowMonths < 0) {
     return "Retired — review the exit now";
