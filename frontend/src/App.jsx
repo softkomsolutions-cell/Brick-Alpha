@@ -1358,6 +1358,33 @@ export default function App() {
   }, [authToken, currentUser, refreshContext]);
 
   useEffect(() => {
+    if (!currentUser || !authToken) return;
+    let cancelled = false;
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        const status = await requestJson("/api/data-sources", { token: authToken });
+        const source = status?.brickeconomy;
+        if (!source?.configured) return;
+        const last = source.lastSyncAt ? Date.parse(source.lastSyncAt) : 0;
+        const due = !Number.isFinite(last) || Date.now() - last >= 12 * 60 * 60 * 1000;
+        if (!due) return;
+        await requestJson("/api/data-sources/brickeconomy/sync", {
+          method: "POST",
+          token: authToken,
+          body: {},
+        });
+        if (!cancelled) await refreshContext();
+      } catch {
+        // Data Sources keeps the manual sync/status path available when an automatic refresh fails.
+      }
+    }, 1200);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [authToken, currentUser, refreshContext]);
+
+  useEffect(() => {
     const interval = window.setInterval(() => {
       refreshCore().catch(() => {});
       if (currentUser && authToken) {

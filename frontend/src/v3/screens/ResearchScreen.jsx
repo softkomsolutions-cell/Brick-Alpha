@@ -125,6 +125,9 @@ export function ResearchScreen({
 }) {
   const [section, setSection] = useState(() => readResearchSection());
   const [sourceStatus, setSourceStatus] = useState(null);
+  const [liveSearchResults, setLiveSearchResults] = useState([]);
+  const [liveSearchBusy, setLiveSearchBusy] = useState(false);
+  const [liveSearchError, setLiveSearchError] = useState("");
   const stagedQuery = readResearchQuery();
   const [filters, setFilters] = useState(() => ({
     ...EMPTY_FILTERS,
@@ -194,6 +197,35 @@ export function ResearchScreen({
     sourceStatus?.brickeconomy?.configured &&
     sourceStatus?.brickeconomy?.researchFeedReady,
   );
+
+  useEffect(() => {
+    let active = true;
+    const query = String(filters.query || "").trim();
+    if (!liveDiscoveryReady || query.length < 3 || !authToken || !requestJson) {
+      return () => { active = false; };
+    }
+    const timer = window.setTimeout(() => {
+      setLiveSearchBusy(true);
+      setLiveSearchError("");
+      requestJson(`/api/data-sources/brickeconomy/search?q=${encodeURIComponent(query)}`, { token: authToken })
+        .then((data) => {
+          if (active) setLiveSearchResults(Array.isArray(data.sets) ? data.sets : []);
+        })
+        .catch((error) => {
+          if (active) {
+            setLiveSearchResults([]);
+            setLiveSearchError(error.payload?.reason || error.message || "BrickEconomy search failed.");
+          }
+        })
+        .finally(() => {
+          if (active) setLiveSearchBusy(false);
+        });
+    }, 350);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [authToken, filters.query, liveDiscoveryReady, requestJson]);
   const sectionOptions = useMemo(
     () => (
       liveDiscoveryReady
@@ -233,6 +265,24 @@ export function ResearchScreen({
     });
     saveDecisionSnapshot(snapshot);
     navigateToPage?.("verdict");
+  };
+
+  const openLiveSearchResult = async (result) => {
+    if (!authToken || !requestJson) return;
+    setLiveSearchBusy(true);
+    setLiveSearchError("");
+    try {
+      const data = await requestJson(
+        `/api/data-sources/brickeconomy/set/${encodeURIComponent(result.apiSetNumber || result.setNumber)}`,
+        { token: authToken },
+      );
+      const card = buildResearchCard(data.item, { asOf, profile, openTrades, closedTrades });
+      openCard(card);
+    } catch (error) {
+      setLiveSearchError(error.payload?.reason || error.message || "Unable to load BrickEconomy set data.");
+    } finally {
+      setLiveSearchBusy(false);
+    }
   };
 
   const watchCard = (card) => {
@@ -335,6 +385,36 @@ export function ResearchScreen({
         <label>Min annual %<input type="number" value={filters.minAnnual} onChange={(event) => setFilter("minAnnual", event.target.value)} /></label>
         <label>Min 90-day %<input type="number" value={filters.minNinety} onChange={(event) => setFilter("minNinety", event.target.value)} /></label>
       </form>
+
+      {effectiveSection === "search" && liveDiscoveryReady && String(filters.query || "").trim().length >= 3 ? (
+        <section className="v3DecisionCard" aria-label="Live BrickEconomy search results">
+          <div className="v3PortfolioSectionHead">
+            <div><span className="v3Eyebrow">BrickEconomy</span><h2>Live search results</h2></div>
+            <small>{liveSearchBusy ? "Searching…" : `${liveSearchResults.length} matches`}</small>
+          </div>
+          {liveSearchError ? <p className="v3RetirementWarning">{liveSearchError}</p> : null}
+          <div className="v3ResearchList">
+            {liveSearchResults.map((result) => (
+              <article key={result.apiSetNumber || result.setNumber} className="v3ResearchCard">
+                <button
+                  type="button"
+                  className="v3ResearchOpen"
+                  disabled={liveSearchBusy}
+                  onClick={() => openLiveSearchResult(result)}
+                >
+                  <span className="v3DecisionImage v3DecisionImageFallback">#{result.setNumber}</span>
+                  <div>
+                    <span className="v3Eyebrow">{result.theme || "LEGO"}</span>
+                    <strong>{result.name}</strong>
+                    <small>#{result.setNumber}{result.year ? ` · ${result.year}` : ""}{result.subtheme ? ` · ${result.subtheme}` : ""}</small>
+                  </div>
+                </button>
+              </article>
+            ))}
+            {!liveSearchBusy && !liveSearchError && !liveSearchResults.length ? <p>No BrickEconomy matches.</p> : null}
+          </div>
+        </section>
+      ) : null}
 
       {section === "watch" ? (
         <section className="v3ResearchList" aria-label="Watch targets">

@@ -6028,6 +6028,166 @@ app.put("/api/settings", requireAuth, authHandler(async req => {
   };
 }));
 
+
+function normalizeBrickEconomySetNumber(value) {
+  return String(value || "").trim().replace(/-1$/, "");
+}
+
+function tradeSetNumberForBrickEconomy(trade) {
+  const explicit = trade?.sourceSetNumber || trade?.sku || "";
+  if (explicit) return normalizeBrickEconomySetNumber(explicit);
+  const match = String(trade?.ticker || trade?.collectibleId || "").match(/(\d{4,7})(?:-\d+)?/);
+  return match ? normalizeBrickEconomySetNumber(match[1]) : "";
+}
+
+function brickEconomyResearchItem(raw = {}, syncedAt = nowIso()) {
+  const setNumber = normalizeBrickEconomySetNumber(raw.set_number || raw.setNumber);
+  const currentValue = Number(raw.current_value_new ?? raw.current_value ?? raw.current_value_used);
+  const history = Array.isArray(raw.price_events_new)
+    ? raw.price_events_new
+        .map((point) => ({ date: String(point?.date || ""), value: Number(point?.value) }))
+        .filter((point) => point.date && Number.isFinite(point.value) && point.value > 0)
+    : [];
+  const annualGrowth = Number(raw.rolling_growth_12months ?? raw.rolling_growth_lastyear);
+  return {
+    id: `lego-${setNumber || "unknown"}`,
+    sku: setNumber,
+    setNumber,
+    brand: "LEGO",
+    name: String(raw.name || setNumber || "LEGO set"),
+    legoTheme: String(raw.theme || "Other"),
+    subtheme: String(raw.subtheme || ""),
+    year: raw.year ?? null,
+    piecesCount: raw.pieces_count ?? null,
+    minifigsCount: raw.minifigs_count ?? null,
+    brickEconomyValue: Number.isFinite(currentValue) && currentValue > 0 ? currentValue : null,
+    currentMarketValue: Number.isFinite(currentValue) && currentValue > 0 ? currentValue : null,
+    valuationDate: syncedAt.slice(0, 10),
+    valuationHistory: history,
+    annualGrowth: Number.isFinite(annualGrowth) ? annualGrowth : null,
+    actualRetirementDate: raw.retired_date || null,
+    retirementStatus: raw.retired === true ? "Retired" : "Active",
+    retired: raw.retired === true,
+    valuationSource: "BrickEconomy",
+    valuationProvenance: "BrickEconomy API",
+  };
+}
+
+function applyBrickEconomyCollectionToOpenTrades(userState, collectionData, syncedAt) {
+  const rows = Array.isArray(collectionData?.sets) ? collectionData.sets : [];
+  const bySet = new Map();
+  for (const row of rows) {
+    const key = normalizeBrickEconomySetNumber(row?.set_number);
+    if (!key) continue;
+    const list = bySet.get(key) || [];
+    list.push(row);
+    bySet.set(key, list);
+  }
+
+  let updated = 0;
+  for (const trade of userState.trades || []) {
+    if (trade?.assetClass !== "collectible" || trade.status === "closed") continue;
+    const setNumber = tradeSetNumberForBrickEconomy(trade);
+    const candidates = bySet.get(setNumber) || [];
+    if (!candidates.length) continue;
+
+    const wantsNew = !/opened|used|built|loose|incomplete/i.test(
+      `${trade.sourceCondition || ""} ${trade.note || ""} ${trade.orderNote || ""}`,
+    );
+    const row =
+      candidates.find((item) => wantsNew ? String(item.condition || "").toLowerCase() === "new" : String(item.condition || "").toLowerCase() !== "new") ||
+      candidates[0];
+    const currentValue = Number(row?.current_value);
+    if (!Number.isFinite(currentValue) || currentValue <= 0) continue;
+
+    const quantity = Math.max(1, Number(trade.quantity) || 1);
+    trade.currentPrice = currentValue;
+    trade.currentMarketValue = currentValue;
+    trade.brickEconomyValue = currentValue;
+    trade.currentValue = currentValue * quantity;
+    trade.valuationCurrency = "ZAR";
+    trade.valuationSource = "BrickEconomy";
+    trade.valuationDate = syncedAt.slice(0, 10);
+    trade.retirementStatus = row.retired === true ? "Retired" : "Active";
+    trade.actualRetirementDate = row.retired_date || null;
+    trade.expectedRetirementDate = row.retired === true ? row.retired_date || null : null;
+    trade.retirementDataSource = "BrickEconomy";
+    trade.updatedAt = syncedAt;
+    updated += 1;
+  }
+  return { updated, returned: rows.length };
+}
+
+function replaceBrickEconomySalesLedger(userState, ledgerData, syncedAt) {
+  const sales = Array.isArray(ledgerData?.set_sales) ? ledgerData.set_sales : [];
+  const supported = sales.filter((sale) => String(sale?.currency || "").toUpperCase() === "ZAR");
+  const unsupportedCurrencies = [...new Set(
+    sales
+      .map((sale) => String(sale?.currency || "").toUpperCase())
+      .filter((currency) => currency && currency !== "ZAR"),
+  )];
+
+  userState.trades = (userState.trades || []).filter((trade) =>
+    !["sales-ledger", "brickeconomy-sales-ledger"].includes(String(trade?.executionProvider || "")),
+  );
+
+  const imported = supported.map((sale, index) => {
+    const setNumber = normalizeBrickEconomySetNumber(sale.set_number);
+    const quantity = Math.max(1, Number(sale.sale_quantity) || 1);
+    const saleTotal = Number(sale.sale_price_total);
+    const saleUnit = Number(sale.sale_price_unit);
+    const fees = Number(sale.sale_price_fees || 0);
+    const gross = Number.isFinite(saleTotal) && saleTotal > 0
+      ? saleTotal
+      : (Number.isFinite(saleUnit) ? saleUnit * quantity : 0);
+    const buyPrice = Number(sale.buy_price || 0);
+    const costTotal = buyPrice * quantity;
+    const net = Math.max(0, gross - (Number.isFinite(fees) ? fees : 0));
+    return {
+      id: `brickeconomy-sale-${setNumber}-${sale.sale_date || "undated"}-${index + 1}`,
+      marketTicker: `COLLECTIBLE:brickeconomy-sale-${setNumber}-${index + 1}`,
+      ticker: `LEGO ${setNumber} — ${sale.name || "Recorded sale"}`,
+      assetClass: "collectible",
+      side: "BUY",
+      status: "closed",
+      entryPrice: quantity > 0 ? costTotal / quantity : buyPrice,
+      currentPrice: quantity > 0 ? gross / quantity : gross,
+      exitPrice: quantity > 0 ? gross / quantity : gross,
+      pnl: costTotal > 0 ? ((net - costTotal) / costTotal) * 100 : 0,
+      pnlAmount: net - costTotal,
+      entryValue: costTotal,
+      currentValue: gross,
+      quantity,
+      unitLabel: "items",
+      owner: userState.userId || "demo",
+      collectibleId: `lego-${setNumber}`,
+      sourceSetNumber: setNumber,
+      sourceCondition: String(sale.sale_condition || ""),
+      sourceTheme: String(sale.theme || ""),
+      category: "LEGO Portfolio",
+      market: "BrickEconomy",
+      venue: "BrickEconomy sales ledger",
+      executionMode: "recorded",
+      executionProvider: "brickeconomy-sales-ledger",
+      executionLabel: "BrickEconomy recorded sale",
+      createdAt: sale.buy_date ? `${sale.buy_date}T12:00:00.000Z` : syncedAt,
+      updatedAt: syncedAt,
+      closedAt: sale.sale_date ? `${sale.sale_date}T12:00:00.000Z` : syncedAt,
+      exitReason: `BrickEconomy sales ledger; fees R${Number.isFinite(fees) ? fees.toFixed(2) : "0.00"}`,
+      orderNote: String(sale.sale_notes || "Synced from BrickEconomy sales ledger."),
+      valuationCurrency: "ZAR",
+      valuationSource: "BrickEconomy Sales Ledger",
+    };
+  });
+
+  userState.trades.push(...imported);
+  return {
+    importedSales: imported.length,
+    skippedSales: sales.length - imported.length,
+    unsupportedCurrencies,
+  };
+}
+
 app.get("/api/data-sources", requireAuth, (req, res) => {
   const source = req.userState.dataSources || {};
   const credentials = decryptConnectorPayload(source.brickeconomyAuthBlob) || {};
@@ -6038,6 +6198,8 @@ app.get("/api/data-sources", requireAuth, (req, res) => {
       apiKeyMasked: credentials.apiKey ? maskValue(credentials.apiKey) : "",
       lastSyncAt: source.lastBrickeconomySyncAt || null,
       role: "Canonical current LEGO valuation",
+      researchFeedReady: Boolean(credentials.apiKey),
+      searchReady: Boolean(credentials.apiKey),
     },
     import: {
       accepted: ["csv"],
@@ -6082,14 +6244,95 @@ app.post("/api/data-sources/brickeconomy/sync", requireAuth, async (req, res) =>
     res.status(400).json({ ok: false, error: "brickeconomy_not_connected" });
     return;
   }
-  const result = await brickeconomyService.getCollectionSets(credentials.apiKey, "ZAR");
-  if (!result.ok) {
-    res.status(400).json({ ok: false, error: "brickeconomy_sync_failed", reason: result.reason });
+  const [collectionResult, salesResult] = await Promise.all([
+    brickeconomyService.getCollectionSets(credentials.apiKey, "ZAR"),
+    brickeconomyService.getSalesLedger(credentials.apiKey),
+  ]);
+  if (!collectionResult.ok) {
+    res.status(400).json({ ok: false, error: "brickeconomy_sync_failed", reason: collectionResult.reason });
     return;
   }
-  req.userState.dataSources.lastBrickeconomySyncAt = nowIso();
+  const syncedAt = nowIso();
+  const applied = applyBrickEconomyCollectionToOpenTrades(req.userState, collectionResult.data, syncedAt);
+  const sales = salesResult.ok
+    ? replaceBrickEconomySalesLedger(req.userState, salesResult.data, syncedAt)
+    : { importedSales: 0, skippedSales: 0, unsupportedCurrencies: [], salesLedgerReason: salesResult.reason };
+  req.userState.dataSources.lastBrickeconomySyncAt = syncedAt;
   persistStore();
-  res.json({ ok: true, syncedAt: req.userState.dataSources.lastBrickeconomySyncAt, collection: result.data });
+  res.json({
+    ok: true,
+    syncedAt,
+    collection: collectionResult.data,
+    updatedHoldings: applied.updated,
+    returnedHoldings: applied.returned,
+    ...sales,
+  });
+});
+
+app.get("/api/data-sources/brickeconomy/search", requireAuth, async (req, res) => {
+  const source = req.userState.dataSources || {};
+  const credentials = decryptConnectorPayload(source.brickeconomyAuthBlob) || {};
+  if (!credentials.apiKey) {
+    res.status(400).json({ ok: false, error: "brickeconomy_not_connected" });
+    return;
+  }
+  const query = String(req.query?.q || "").trim();
+  if (query.length < 3) {
+    res.status(400).json({ ok: false, error: "query_too_short" });
+    return;
+  }
+  const result = await brickeconomyService.searchSets(query, credentials.apiKey, 20);
+  if (!result.ok) {
+    res.status(400).json({ ok: false, error: "brickeconomy_search_failed", reason: result.reason });
+    return;
+  }
+  const data = result.data || {};
+  res.json({
+    ok: true,
+    count: Number(data.count || 0),
+    more: Boolean(data.more),
+    sets: Array.isArray(data.sets) ? data.sets.map((item) => ({
+      setNumber: normalizeBrickEconomySetNumber(item.set_number),
+      apiSetNumber: String(item.set_number || ""),
+      name: String(item.name || ""),
+      theme: String(item.theme || ""),
+      subtheme: String(item.subtheme || ""),
+      year: item.year ?? null,
+      piecesCount: item.pieces_count ?? null,
+      url: item.url || "",
+    })) : [],
+  });
+});
+
+app.get("/api/data-sources/brickeconomy/set/:setNumber", requireAuth, async (req, res) => {
+  const source = req.userState.dataSources || {};
+  const credentials = decryptConnectorPayload(source.brickeconomyAuthBlob) || {};
+  if (!credentials.apiKey) {
+    res.status(400).json({ ok: false, error: "brickeconomy_not_connected" });
+    return;
+  }
+  const setNumber = String(req.params?.setNumber || "").trim();
+  const result = await brickeconomyService.getSet(setNumber, credentials.apiKey, "ZAR");
+  if (!result.ok) {
+    res.status(400).json({ ok: false, error: "brickeconomy_set_lookup_failed", reason: result.reason });
+    return;
+  }
+  res.json({ ok: true, item: brickEconomyResearchItem(result.data, nowIso()) });
+});
+
+app.get("/api/data-sources/brickeconomy/usage", requireAuth, async (req, res) => {
+  const source = req.userState.dataSources || {};
+  const credentials = decryptConnectorPayload(source.brickeconomyAuthBlob) || {};
+  if (!credentials.apiKey) {
+    res.status(400).json({ ok: false, error: "brickeconomy_not_connected" });
+    return;
+  }
+  const result = await brickeconomyService.getUsage(credentials.apiKey);
+  if (!result.ok) {
+    res.status(400).json({ ok: false, error: "brickeconomy_usage_failed", reason: result.reason });
+    return;
+  }
+  res.json({ ok: true, usage: result.data });
 });
 
 app.post("/api/collection/import/preview", requireAuth, (req, res) => {

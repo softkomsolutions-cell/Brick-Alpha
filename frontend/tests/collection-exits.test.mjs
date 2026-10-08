@@ -176,11 +176,14 @@ test("flywheel ready compares one unit with the whole stack cost", () => {
   assert.equal(above.flywheelReady, true);
   assert.equal(above.cost, 8000);
   assert.equal(above.oneUnitValue, 8500);
-  assert.equal(above.recoveryGap, 500);
-  assert.equal(equal.flywheelReady, true);
-  assert.equal(equal.recoveryGap, 0);
+  assert.equal(above.oneUnitNet, 8075);
+  assert.equal(above.recoveryGap, 75);
+  assert.equal(above.sellTriggerPrice, 8422);
+  assert.equal(equal.flywheelReady, false);
+  assert.equal(equal.oneUnitNet, 7600);
+  assert.equal(equal.recoveryGap, -400);
   assert.equal(below.flywheelReady, false);
-  assert.equal(below.recoveryGap, -2000);
+  assert.equal(below.recoveryGap, -2300);
 
   const quantityStack = buildCollectionView(
     [trade({ id: "qty", quantity: 2, entryPrice: 4000, currentPrice: 8500 })],

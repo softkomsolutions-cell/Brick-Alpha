@@ -61,6 +61,25 @@ async function getCollectionSets(apiKey = null, currency = "ZAR") {
   );
 }
 
+async function searchSets(query, apiKey = null, limit = 20) {
+  const normalized = String(query || "").trim();
+  if (normalized.length < 3) return { ok: false, reason: "query_too_short" };
+  const safeLimit = Math.max(1, Math.min(100, Number(limit) || 20));
+  return requestJson(
+    `/search/sets?query=${encodeURIComponent(normalized)}&limit=${safeLimit}`,
+    apiKey,
+    `search:sets:${normalized.toLowerCase()}:${safeLimit}`,
+  );
+}
+
+async function getUsage(apiKey = null) {
+  return requestJson("/usage", apiKey, null);
+}
+
+async function getSalesLedger(apiKey = null) {
+  return requestJson("/salesledger", apiKey, "salesledger");
+}
+
 function status(apiKey = null) {
   return {
     configured: configured(apiKey),
@@ -72,5 +91,8 @@ function status(apiKey = null) {
 module.exports = {
   getCollectionSets,
   getSet,
+  getSalesLedger,
+  getUsage,
+  searchSets,
   status,
 };

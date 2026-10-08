@@ -113,14 +113,24 @@ export function buildHomeView({
   });
 
   const attention = [];
-  for (const set of view.sets.filter((item) => item.flywheelReady)) {
-    attention.push({
-      id: `flywheel-${set.id}`,
-      kind: "Flywheel ready",
-      title: set.name,
-      detail: "One unit covers the stack cost",
-      page: "exits",
-    });
+  for (const set of view.sets.filter((item) => item.isStack)) {
+    if (set.flywheelReady) {
+      attention.push({
+        id: `flywheel-${set.id}`,
+        kind: "Flywheel ready",
+        title: set.name,
+        detail: `Sell 1 now via ${set.flywheelChannel}: estimated net R${Math.round(set.oneUnitNet).toLocaleString("en-ZA")} covers stack cost R${Math.round(set.cost).toLocaleString("en-ZA")}`,
+        page: "exits",
+      });
+    } else if (set.sellTriggerPrice != null) {
+      attention.push({
+        id: `flywheel-watch-${set.id}`,
+        kind: "Flywheel watch",
+        title: set.name,
+        detail: `Current unit value R${Math.round(set.oneUnitValue).toLocaleString("en-ZA")} · sell trigger R${Math.round(set.sellTriggerPrice).toLocaleString("en-ZA")} before fees`,
+        page: "exits",
+      });
+    }
   }
   for (const theme of themeRows(view.sets).filter((row) => row.overCap)) {
     attention.push({
