@@ -31,6 +31,7 @@ const closed = [
     exitPrice: 8540,
     exitReason: "Local buyer groups",
     closedAt: "2026-09-23T12:00:00.000Z",
+    executionProvider: "sales-ledger",
   },
   {
     assetClass: "collectible",
@@ -42,29 +43,27 @@ const closed = [
     exitPrice: 18684,
     exitReason: "Local buyer groups",
     closedAt: "2026-09-23T12:00:00.000Z",
+    executionProvider: "sales-ledger",
   },
 ];
 
-test("the Gavin demo baseline keeps current-book ROI separate from realised Castle and Rivendell sales", () => {
+test("the Gavin demo baseline does not treat seeded example sales as authoritative realised cash", () => {
   const home = buildHomeView({
     openTrades: open,
     closedTrades: closed,
     settings: { usdZarRate: 18.5 },
   });
   const ledger = buildRealisedLedger(closed);
-  const castle = ledger.find((sale) => sale.setNumber === "10305");
-  const rivendell = ledger.find((sale) => sale.setNumber === "10316");
+  assert.equal(ledger.length, 0);
   assert.equal(home.ownedValue, 28295);
   assert.equal(home.costBasis, 22999);
   assert.equal(home.unrealisedProfit, 5296);
-  assert.equal(home.realisedProfit, 3964);
-  assert.equal(home.realisedCash, 25863);
+  assert.equal(home.realisedProfit, 0);
+  assert.equal(home.realisedCash, 0);
   assert.equal(home.positions, 1);
   assert.equal(Math.round(home.blendedRoi * 10) / 10, 23);
   assert.equal(home.source, "BrickEconomy");
-  assert.equal(castle.net, 8113);
-  assert.equal(castle.realisedProfit, 1114);
-  assert.equal(rivendell.realisedProfit, 2850);
+  assert.equal(home.realisedCash, 0);
 });
 
 test("demo reset clears the device snapshot and staged research section", () => {
