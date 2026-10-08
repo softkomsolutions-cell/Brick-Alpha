@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { enrichBrickAlphaCollectible } from "../../brickAlphaModel";
 import { formatCollectiblePrice } from "../../appUtils";
 import { buildDecisionSnapshot } from "../decision/decisionModel";
 import { saveDecisionSnapshot } from "../decision/decisionSession";
@@ -276,7 +277,13 @@ export function ResearchScreen({
         `/api/data-sources/brickeconomy/set/${encodeURIComponent(result.apiSetNumber || result.setNumber)}`,
         { token: authToken },
       );
-      const card = buildResearchCard(data.item, { asOf, profile, openTrades, closedTrades });
+      const enriched = enrichBrickAlphaCollectible({
+        ...data.item,
+        expectedRetirementDate: data.item?.actualRetirementDate ? data.item.actualRetirementDate : null,
+        numberOfMinifigures: data.item?.numberOfMinifigures ?? data.item?.minifigsCount ?? 0,
+        releaseDate: data.item?.releaseDate || (data.item?.year ? `${data.item.year}-01-01` : null),
+      });
+      const card = buildResearchCard(enriched, { asOf, profile, openTrades, closedTrades });
       openCard(card);
     } catch (error) {
       setLiveSearchError(error.payload?.reason || error.message || "Unable to load BrickEconomy set data.");

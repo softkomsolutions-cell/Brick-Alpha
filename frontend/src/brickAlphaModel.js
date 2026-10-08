@@ -105,6 +105,13 @@ export function retirementOutlookFor(item, today = new Date()) {
 
   const expectedMs = Date.parse(item.expectedRetirementDate);
   if (!Number.isFinite(expectedMs)) {
+    if (String(item?.retirementStatus || "").toLowerCase() === "active") {
+      return {
+        retirementStatus: "Active",
+        retirementProbability: null,
+        retirementConfidence: null,
+      };
+    }
     return {
       retirementStatus: "Unknown",
       retirementProbability: 50,
@@ -390,7 +397,10 @@ export function enrichBrickAlphaCollectible(item, today = new Date()) {
   const retirementTimeline = numberOrZero(
     item.retirementTimeline ?? notes.retirementTimeline ?? retirementTimelineScore({ ...notes, ...item }, today),
   );
-  const expectedRetirementDate = item.expectedRetirementDate || notes.expectedRetirementDate || "2027-12-31";
+  const hasExplicitExpectedRetirementDate = Object.prototype.hasOwnProperty.call(item, "expectedRetirementDate");
+  const expectedRetirementDate = hasExplicitExpectedRetirementDate
+    ? item.expectedRetirementDate
+    : notes.expectedRetirementDate || "2027-12-31";
   const actualRetirementDate = item.actualRetirementDate || notes.actualRetirementDate || null;
   const retirementOutlook = retirementOutlookFor(
     {
@@ -588,10 +598,15 @@ export function availabilityStatusFor(item) {
 }
 
 export function confidenceFor(item) {
+  const weighted = [
+    { value: item?.retirementConfidence, weight: 0.35 },
+    { value: item?.brickAlphaScore, weight: 0.45 },
+    { value: item?.liquidityScore, weight: 0.2 },
+  ].filter(({ value }) => value != null && value !== "" && Number.isFinite(Number(value)));
+  const totalWeight = weighted.reduce((sum, item) => sum + item.weight, 0);
+  if (!totalWeight) return 0;
   return Math.round(
-    numberOrZero(item.retirementConfidence) * 0.35 +
-      numberOrZero(item.brickAlphaScore) * 0.45 +
-      numberOrZero(item.liquidityScore) * 0.2,
+    weighted.reduce((sum, item) => sum + Number(item.value) * item.weight, 0) / totalWeight,
   );
 }
 
