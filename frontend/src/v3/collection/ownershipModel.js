@@ -365,7 +365,7 @@ export function buildExitCandidates(openTrades = [], collectibles = []) {
 
 export function buildRealisedLedger(closedTrades = []) {
   return (closedTrades || [])
-    .filter((trade) => trade?.assetClass === "collectible" && trade?.executionProvider !== "sales-ledger")
+    .filter((trade) => trade?.assetClass === "collectible" && !["sales-ledger", "demo-sales-ledger"].includes(String(trade?.executionProvider || "")))
     .map((trade) => {
       const quantity = Math.max(1, Math.round(numberOrZero(trade.quantity || 1)));
       const cost = numberOrZero(trade.entryPrice) * quantity;
