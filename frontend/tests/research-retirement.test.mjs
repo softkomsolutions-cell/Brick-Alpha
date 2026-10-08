@@ -174,7 +174,7 @@ test("flywheel ready stays a cost test when retirement is inside 6 months", () =
   assert.equal(ready, "Sell 1 now — estimated net R8 075 covers the R8 000 stack cost");
   const retirement = buildCanonicalRetirement({ expectedRetirementDate: "2026-10-20" }, AS_OF);
   assert.equal(retirement.insideSixMonths, true);
-  assert.equal(ready.includes("Flywheel") || ready.includes("recycle"), true);
+  assert.equal(ready.includes("Sell 1 now") && ready.includes("covers the R8"), true);
 });
 
 test("omitted analysis time stays on the canonical clock", () => {
