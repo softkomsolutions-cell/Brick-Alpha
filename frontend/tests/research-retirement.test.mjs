@@ -165,10 +165,13 @@ test("budget, theme cap, risk, hold period, and stack size adjust the book verdi
 test("flywheel ready stays a cost test when retirement is inside 6 months", () => {
   const ready = exitRecommendation({
     flywheelReady: true,
+    isStack: true,
+    oneUnitNet: 8075,
+    cost: 8000,
     belowCost: false,
     sellWindowMonths: 2,
   });
-  assert.equal(ready, "Sell one unit and recycle the cash");
+  assert.equal(ready, "Sell 1 now — estimated net R8 075 covers the R8 000 stack cost");
   const retirement = buildCanonicalRetirement({ expectedRetirementDate: "2026-10-20" }, AS_OF);
   assert.equal(retirement.insideSixMonths, true);
   assert.equal(ready.includes("Flywheel") || ready.includes("recycle"), true);
