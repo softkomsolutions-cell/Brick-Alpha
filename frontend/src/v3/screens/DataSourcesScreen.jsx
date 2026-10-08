@@ -60,6 +60,7 @@ export function DataSourcesScreen({ authToken, requestJson, onImported }) {
     setBusy("sync"); setStatus("");
     try {
       const data = await requestJson("/api/data-sources/brickeconomy/sync", { method: "POST", token: authToken, body: {} });
+      await load();
       setStatus(`BrickEconomy sync completed ${new Date(data.syncedAt).toLocaleString()}.`);
     } catch (error) { setStatus(error.payload?.reason || error.message); } finally { setBusy(""); }
   };
