@@ -328,7 +328,12 @@ export function filterCollectionSets(sets, filter, theme = "") {
 
 export function exitRecommendation(set) {
   if (set.flywheelReady) {
-    return `Sell 1 now — estimated net R${Math.round(set.oneUnitNet).toLocaleString("en-ZA")} covers the R${Math.round(set.cost).toLocaleString("en-ZA")} stack cost`;
+    const net = numberOrNull(set.oneUnitNet);
+    const cost = numberOrNull(set.cost);
+    if (net != null && cost != null) {
+      return `Sell 1 now — estimated net R${Math.round(net).toLocaleString("en-ZA")} covers the R${Math.round(cost).toLocaleString("en-ZA")} stack cost`;
+    }
+    return "Sell one unit and recycle the cash";
   }
   if (set.isStack && set.sellTriggerPrice != null) {
     return `Watch — 1-unit sell trigger is R${Math.round(set.sellTriggerPrice).toLocaleString("en-ZA")} before fees`;
