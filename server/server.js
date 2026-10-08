@@ -6118,6 +6118,76 @@ function applyBrickEconomyCollectionToOpenTrades(userState, collectionData, sync
   return { updated, returned: rows.length };
 }
 
+function replaceBrickEconomySalesLedger(userState, ledgerData, syncedAt) {
+  const sales = Array.isArray(ledgerData?.set_sales) ? ledgerData.set_sales : [];
+  const supported = sales.filter((sale) => String(sale?.currency || "").toUpperCase() === "ZAR");
+  const unsupportedCurrencies = [...new Set(
+    sales
+      .map((sale) => String(sale?.currency || "").toUpperCase())
+      .filter((currency) => currency && currency !== "ZAR"),
+  )];
+
+  userState.trades = (userState.trades || []).filter((trade) =>
+    !["sales-ledger", "brickeconomy-sales-ledger"].includes(String(trade?.executionProvider || "")),
+  );
+
+  const imported = supported.map((sale, index) => {
+    const setNumber = normalizeBrickEconomySetNumber(sale.set_number);
+    const quantity = Math.max(1, Number(sale.sale_quantity) || 1);
+    const saleTotal = Number(sale.sale_price_total);
+    const saleUnit = Number(sale.sale_price_unit);
+    const fees = Number(sale.sale_price_fees || 0);
+    const gross = Number.isFinite(saleTotal) && saleTotal > 0
+      ? saleTotal
+      : (Number.isFinite(saleUnit) ? saleUnit * quantity : 0);
+    const buyPrice = Number(sale.buy_price || 0);
+    const costTotal = buyPrice * quantity;
+    const net = Math.max(0, gross - (Number.isFinite(fees) ? fees : 0));
+    return {
+      id: `brickeconomy-sale-${setNumber}-${sale.sale_date || "undated"}-${index + 1}`,
+      marketTicker: `COLLECTIBLE:brickeconomy-sale-${setNumber}-${index + 1}`,
+      ticker: `LEGO ${setNumber} — ${sale.name || "Recorded sale"}`,
+      assetClass: "collectible",
+      side: "BUY",
+      status: "closed",
+      entryPrice: quantity > 0 ? costTotal / quantity : buyPrice,
+      currentPrice: quantity > 0 ? gross / quantity : gross,
+      exitPrice: quantity > 0 ? gross / quantity : gross,
+      pnl: costTotal > 0 ? ((net - costTotal) / costTotal) * 100 : 0,
+      pnlAmount: net - costTotal,
+      entryValue: costTotal,
+      currentValue: gross,
+      quantity,
+      unitLabel: "items",
+      owner: userState.userId || "demo",
+      collectibleId: `lego-${setNumber}`,
+      sourceSetNumber: setNumber,
+      sourceCondition: String(sale.sale_condition || ""),
+      sourceTheme: String(sale.theme || ""),
+      category: "LEGO Portfolio",
+      market: "BrickEconomy",
+      venue: "BrickEconomy sales ledger",
+      executionMode: "recorded",
+      executionProvider: "brickeconomy-sales-ledger",
+      executionLabel: "BrickEconomy recorded sale",
+      createdAt: sale.buy_date ? `${sale.buy_date}T12:00:00.000Z` : syncedAt,
+      updatedAt: syncedAt,
+      closedAt: sale.sale_date ? `${sale.sale_date}T12:00:00.000Z` : syncedAt,
+      exitReason: `BrickEconomy sales ledger; fees R${Number.isFinite(fees) ? fees.toFixed(2) : "0.00"}`,
+      orderNote: String(sale.sale_notes || "Synced from BrickEconomy sales ledger."),
+      valuationCurrency: "ZAR",
+      valuationSource: "BrickEconomy Sales Ledger",
+    };
+  });
+
+  userState.trades.push(...imported);
+  return {
+    importedSales: imported.length,
+    skippedSales: sales.length - imported.length,
+    unsupportedCurrencies,
+  };
+}
+
 app.get("/api/data-sources", requireAuth, (req, res) => {
   const source = req.userState.dataSources || {};
   const credentials = decryptConnectorPayload(source.brickeconomyAuthBlob) || {};
@@ -6174,21 +6244,28 @@ app.post("/api/data-sources/brickeconomy/sync", requireAuth, async (req, res) =>
     res.status(400).json({ ok: false, error: "brickeconomy_not_connected" });
     return;
   }
-  const result = await brickeconomyService.getCollectionSets(credentials.apiKey, "ZAR");
-  if (!result.ok) {
-    res.status(400).json({ ok: false, error: "brickeconomy_sync_failed", reason: result.reason });
+  const [collectionResult, salesResult] = await Promise.all([
+    brickeconomyService.getCollectionSets(credentials.apiKey, "ZAR"),
+    brickeconomyService.getSalesLedger(credentials.apiKey),
+  ]);
+  if (!collectionResult.ok) {
+    res.status(400).json({ ok: false, error: "brickeconomy_sync_failed", reason: collectionResult.reason });
     return;
   }
   const syncedAt = nowIso();
-  const applied = applyBrickEconomyCollectionToOpenTrades(req.userState, result.data, syncedAt);
+  const applied = applyBrickEconomyCollectionToOpenTrades(req.userState, collectionResult.data, syncedAt);
+  const sales = salesResult.ok
+    ? replaceBrickEconomySalesLedger(req.userState, salesResult.data, syncedAt)
+    : { importedSales: 0, skippedSales: 0, unsupportedCurrencies: [], salesLedgerReason: salesResult.reason };
   req.userState.dataSources.lastBrickeconomySyncAt = syncedAt;
   persistStore();
   res.json({
     ok: true,
     syncedAt,
-    collection: result.data,
+    collection: collectionResult.data,
     updatedHoldings: applied.updated,
     returnedHoldings: applied.returned,
+    ...sales,
   });
 });
 
