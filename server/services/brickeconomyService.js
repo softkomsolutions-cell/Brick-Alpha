@@ -76,6 +76,10 @@ async function getUsage(apiKey = null) {
   return requestJson("/usage", apiKey, null);
 }
 
+async function getSalesLedger(apiKey = null) {
+  return requestJson("/salesledger", apiKey, "salesledger");
+}
+
 function status(apiKey = null) {
   return {
     configured: configured(apiKey),
@@ -87,6 +91,7 @@ function status(apiKey = null) {
 module.exports = {
   getCollectionSets,
   getSet,
+  getSalesLedger,
   getUsage,
   searchSets,
   status,
