@@ -279,6 +279,7 @@ export function ResearchScreen({
       );
       const enriched = enrichBrickAlphaCollectible({
         ...data.item,
+        expectedRetirementDate: data.item?.actualRetirementDate ? data.item.actualRetirementDate : null,
         numberOfMinifigures: data.item?.numberOfMinifigures ?? data.item?.minifigsCount ?? 0,
         releaseDate: data.item?.releaseDate || (data.item?.year ? `${data.item.year}-01-01` : null),
       });
