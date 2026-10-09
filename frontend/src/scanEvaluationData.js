@@ -469,7 +469,9 @@ function copilotAnswerFor(question, ctx) {
   }
 
   if (normalized.includes("retir")) {
-    return ctx.expectedRetirementDate === "no recorded retirement date"\n      ? `The ${ctx.name} retirement status is ${ctx.retirementStatus} with no recorded retirement date. ${priceLine}`\n      : `The ${ctx.name} retirement status is ${ctx.retirementStatus}, expected ${ctx.expectedRetirementDate}. ${priceLine}`;
+    return ctx.expectedRetirementDate === "no recorded retirement date"
+      ? `The ${ctx.name} retirement status is ${ctx.retirementStatus} with no recorded retirement date. ${priceLine}`
+      : `The ${ctx.name} retirement status is ${ctx.retirementStatus}, expected ${ctx.expectedRetirementDate}. ${priceLine}`;
   }
 
   if (normalized.includes("score") || normalized.includes("grade") || normalized.includes("good")) {
