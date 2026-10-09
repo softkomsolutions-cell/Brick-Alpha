@@ -396,7 +396,7 @@ const DEMO_LEGO_SETS = [
     historicalPerformance: 84,
     portfolioFit: 80,
     riskScore: 42,
-    expectedRetirementDate: "2027-06-30",
+    retirementStatus: "Active",
     sellByTargetDate: "2030-06-30",
   },
   {
