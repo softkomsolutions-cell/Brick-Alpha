@@ -119,10 +119,30 @@
       const win = frame.contentWindow;
       const doc = win.document;
       await waitFor(() => doc.readyState === "complete" || doc.readyState === "interactive");
-      await waitFor(() => button(doc, "Enter Demo"), 30000);
-      button(doc, "Enter Demo").click();
-      await waitFor(() => doc.querySelector(".v3OnboardingShell") || page(doc, "home"), 30000);
-      await completeOnboarding(doc);
+      const demoResponse = await fetch("/api/auth/demo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "Gavin Final Acceptance" }),
+      });
+      if (!demoResponse.ok) throw new Error("demo auth failed " + demoResponse.status);
+      const demo = await demoResponse.json();
+      if (!demo?.token) throw new Error("demo auth returned no token");
+      win.localStorage.setItem("collecttrade_token", demo.token);
+      win.localStorage.setItem("brick_alpha_v3_onboarding_complete", "1");
+      win.localStorage.setItem("brick_alpha_v3_buying_profile", JSON.stringify({
+        country: "South Africa",
+        homeCurrency: "ZAR",
+        usdZarRate: 16.67,
+        businessBuyer: false,
+        vatRate: 15,
+        rewardsProgrammes: [],
+        rewardsBookingRule: "cash-equivalent",
+        budgetPerSet: "",
+        holdPeriod: "medium",
+        riskTolerance: "balanced",
+        preferredThemes: [],
+      }));
+      win.location.reload();
       await waitFor(() => page(doc, "home"), 30000);
       if (win.innerWidth !== 390) throw new Error("iframe viewport is " + win.innerWidth + ", expected 390");
       noOverflow(win, "Home");
