@@ -6911,71 +6911,7 @@ iframe{width:390px;height:844px;border:2px solid #555;background:#fff}
 <h1>Brick Alpha final acceptance</h1>
 <div id="status">Starting…</div>
 <iframe id="app" src="/"></iframe>
-<script>
-const statusEl=document.getElementById("status");
-const frame=document.getElementById("app");
-const log=[];
-function out(msg,ok=true){log.push((ok?"PASS ":"FAIL ")+msg);statusEl.textContent=log.join("\n");statusEl.className=ok?"pass":"fail";}
-const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-async function waitFor(fn,ms=20000){const end=Date.now()+ms;while(Date.now()<end){try{const v=fn();if(v)return v}catch{}await sleep(200)}throw new Error("timeout");}
-function visible(el){if(!el)return false;const s=getComputedStyle(el),r=el.getBoundingClientRect();return s.display!=="none"&&s.visibility!=="hidden"&&r.width>0&&r.height>0;}
-function button(doc,label){return [...doc.querySelectorAll("button")].find(b=>visible(b)&&String(b.getAttribute("aria-label")||b.textContent||"").replace(/\s+/g," ").trim()===label);}
-function page(doc,id){const el=doc.querySelector('[data-page="'+id+'"]');return el&&visible(el)?el:null;}
-function noOverflow(win,label){const sw=win.document.documentElement.scrollWidth,iw=win.innerWidth;if(sw>iw+2)throw new Error(label+" overflow "+sw+" > "+iw);}
-function namedButtons(doc,label){for(const b of [...doc.querySelectorAll("button")].filter(visible)){const n=String(b.getAttribute("aria-label")||b.getAttribute("title")||b.textContent||"").replace(/\s+/g," ").trim();if(!n)throw new Error(label+" unnamed visible button");}}
-function upcBits(code){
- const L=["0001101","0011001","0010011","0111101","0100011","0110001","0101111","0111011","0110111","0001011"];
- const R=["1110010","1100110","1101100","1000010","1011100","1001110","1010000","1000100","1001000","1110100"];
- return "101"+code.slice(0,6).split("").map(d=>L[+d]).join("")+"01010"+code.slice(6).split("").map(d=>R[+d]).join("")+"101";
-}
-function barcodeFile(win,code){
- const bits=upcBits(code),quiet=12,module=4,h=180;
- const canvas=win.document.createElement("canvas");canvas.width=(bits.length+quiet*2)*module;canvas.height=h;
- const x=canvas.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,canvas.width,h);x.fillStyle="#000";
- for(let i=0;i<bits.length;i++)if(bits[i]==="1")x.fillRect((quiet+i)*module,10,module,150);
- return new Promise(resolve=>canvas.toBlob(blob=>resolve(new win.File([blob],"barcode-673419340618.png",{type:"image/png"})),"image/png"));
-}
-async function gotoMobile(doc,win,label,id){
- let b=button(doc,label);
- if(!b){
-   const menu=button(doc,"Open menu"); if(menu){menu.click();await sleep(250);b=button(doc,label);}
- }
- if(!b)throw new Error("missing nav "+label);
- b.click();await waitFor(()=>page(doc,id));noOverflow(win,label);namedButtons(doc,label);
-}
-async function runAcceptance(){
- try{
-   const win=frame.contentWindow,doc=win.document;
-   await waitFor(()=>button(doc,"Enter Demo"));
-   button(doc,"Enter Demo").click();
-   await waitFor(()=>doc.querySelector(".v3OnboardingShell")||page(doc,"home"));
-   if(doc.querySelector(".v3OnboardingShell")){
-     for(const label of ["Continue","Continue","Go to Home"]){await waitFor(()=>button(doc,label));button(doc,label).click();await sleep(250);}
-   }
-   await waitFor(()=>page(doc,"home"));
-   if(win.innerWidth!==390)throw new Error("iframe viewport is "+win.innerWidth+", expected 390");
-   noOverflow(win,"Home"); namedButtons(doc,"Home"); out("390px Home");
-   for(const [label,id] of [["Research","research"],["Scan","scan"],["Collection","collection"],["Exits","exits"],["Portfolio","portfolio"],["Data Sources","data-sources"],["Settings","settings"]]){
-     await gotoMobile(doc,win,label,id); out("390px "+label);
-   }
-   await gotoMobile(doc,win,"Scan","scan");
-   const upload=button(doc,"Upload Barcode Image"); if(!upload)throw new Error("Upload Barcode Image control missing");
-   upload.click(); await sleep(150);
-   const input=doc.querySelector('#brick-alpha-barcode-image-input');if(!input)throw new Error("accessible barcode input missing");
-   const file=await barcodeFile(win,"673419340618");
-   const dt=new win.DataTransfer();dt.items.add(file);input.files=dt.files;input.dispatchEvent(new win.Event("change",{bubbles:true}));
-   await waitFor(()=>page(doc,"verdict"),30000);
-   const verdict=page(doc,"verdict").textContent||"";
-   if(!/75313/.test(verdict))throw new Error("barcode did not resolve to LEGO set 75313");
-   out("UPC 673419340618 image decoded and resolved to LEGO 75313");
-   out("FINAL_ACCEPTANCE_PASS");
- }catch(e){out(String(e&&e.message||e),false);}
-}
-frame.addEventListener("load",runAcceptance,{once:true});
-if(frame.contentDocument?.readyState==="complete"){
-  void runAcceptance();
-}
-</script></body></html>`);
+<script src="/qa-final-acceptance.js"></script></body></html>`);
 });
 
 if (fs.existsSync(FRONTEND_INDEX_FILE)) {
