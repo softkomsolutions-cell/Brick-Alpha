@@ -255,6 +255,14 @@ export function ResearchScreen({
           ? sections.topPerformers
           : sections.search;
 
+  const liveResultSetNumbers = new Set(
+    liveSearchResults.map((result) => String(result.setNumber || "").trim()).filter(Boolean),
+  );
+  const visibleCards =
+    effectiveSection === "search" && liveResultSetNumbers.size
+      ? visible.filter((card) => !liveResultSetNumbers.has(String(card.setNumber || "").trim()))
+      : visible;
+
   const openCard = (card) => {
     const snapshot = buildDecisionSnapshot({
       evaluation: card.item,
@@ -447,7 +455,7 @@ export function ResearchScreen({
         </section>
       ) : (
         <section className="v3ResearchList" aria-label={section}>
-          {visible.length ? visible.map((card) => (
+          {visibleCards.length ? visibleCards.map((card) => (
             <Card
               key={card.id}
               card={card}
