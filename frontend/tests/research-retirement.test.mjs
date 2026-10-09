@@ -44,6 +44,16 @@ test("retirement months stay fixed when unrelated fields change", () => {
   assert.equal(Number.isFinite(first.monthsRemaining), true);
 });
 
+
+
+test("sell-by target is never treated as retirement evidence", () => {
+  const retirement = buildCanonicalRetirement({ sellByTargetDate: "2028-12-31" }, AS_OF);
+  assert.equal(retirement.expectedRetirementDate, null);
+  assert.equal(retirement.monthsRemaining, null);
+  assert.equal(retirement.retirementState, "Active");
+  assert.equal(retirement.expectedRetirement, "No recorded retirement date");
+});
+
 test("60-day and 30-day reminders follow the recorded date", () => {
   const thirty = buildCanonicalRetirement({ expectedRetirementDate: "2026-10-20" }, AS_OF);
   const sixty = buildCanonicalRetirement({ expectedRetirementDate: "2026-11-10" }, AS_OF);

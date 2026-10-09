@@ -97,8 +97,9 @@ export function VerdictScreen({ navigateToPage, onWatch, onAddToCollection, appS
           {snapshot.retirement.retirementState === "Retired" || snapshot.retirement.monthsRemaining == null
             ? ""
             : ` · ${snapshot.retirement.monthsRemaining} months`}
-          {" · expected "}
-          {snapshot.retirement.expectedRetirement}
+          {snapshot.retirement.expectedRetirementDate
+            ? ` · expected ${snapshot.retirement.expectedRetirement}`
+            : " · no recorded retirement date"}
         </p>
         {snapshot.retirement.reminders?.thirtyDay ? <p>30-day reminder</p> : null}
         {snapshot.retirement.reminders?.sixtyDay ? <p>60-day reminder</p> : null}
