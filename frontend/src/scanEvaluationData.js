@@ -402,20 +402,18 @@ export function buildAiInvestmentSummary(evaluation, demoProfile) {
 }
 
 export function buildRetirementSnapshot(evaluation) {
-  const rawMonths = Number(
-    evaluation?.monthsUntilRetirement ?? evaluation?.retirementMonthsRemaining ?? 14,
-  );
-  const months = Number.isFinite(rawMonths) ? Math.round(rawMonths) : 14;
+  const rawMonths = evaluation?.monthsUntilRetirement ?? evaluation?.retirementMonthsRemaining;
+  const numericMonths = Number(rawMonths);
+  const months = rawMonths == null || !Number.isFinite(numericMonths) ? null : Math.round(numericMonths);
+  const probability = Number(evaluation?.retirementProbability);
+  const confidence = Number(evaluation?.retirementConfidence);
   return {
-    expectedRetirement: evaluation?.expectedRetirementDate || evaluation?.sellByTargetDate || "Q4 2026",
-    retirementProbability: Math.round(Number(evaluation?.retirementProbability) || 72),
-    retirementConfidence: Math.round(Number(evaluation?.retirementConfidence) || 78),
+    expectedRetirement: evaluation?.expectedRetirementDate || null,
+    retirementProbability: Number.isFinite(probability) ? Math.round(probability) : null,
+    retirementConfidence: Number.isFinite(confidence) ? Math.round(confidence) : null,
     monthsRemaining: months,
-    expectedRetirementPop: Math.round(
-      (Number(evaluation?.currentMarketValue) || 0) *
-        (1 + (Number(evaluation?.projectedRoi) || 28) / 100),
-    ),
-    status: evaluation?.retirementStatus || "Available",
+    expectedRetirementPop: null,
+    status: evaluation?.retirementStatus || "Active",
   };
 }
 
@@ -446,7 +444,7 @@ function copilotContext(evaluation, demoProfile) {
     annualText: growth.annualPercent == null ? "Insufficient history" : formatRecordedGrowth(growth.annualPercent),
     ninetyText: growth.ninetyDayPercent == null ? "Insufficient history" : formatRecordedGrowth(growth.ninetyDayPercent),
     retirementStatus: evaluation?.retirementStatus || "Available",
-    expectedRetirementDate: evaluation?.expectedRetirementDate || demoProfile?.investmentHorizon || "the recorded window",
+    expectedRetirementDate: evaluation?.expectedRetirementDate || "no recorded retirement date",
     riskScore: Number(evaluation?.riskScore),
     riskLabel: riskLabel(evaluation?.riskScore),
     discount: Number(evaluation?.discountPercentage),
@@ -471,7 +469,7 @@ function copilotAnswerFor(question, ctx) {
   }
 
   if (normalized.includes("retir")) {
-    return `The ${ctx.name} retirement status is ${ctx.retirementStatus}, expected ${ctx.expectedRetirementDate}. ${priceLine}`;
+    return ctx.expectedRetirementDate === "no recorded retirement date"\n      ? `The ${ctx.name} retirement status is ${ctx.retirementStatus} with no recorded retirement date. ${priceLine}`\n      : `The ${ctx.name} retirement status is ${ctx.retirementStatus}, expected ${ctx.expectedRetirementDate}. ${priceLine}`;
   }
 
   if (normalized.includes("score") || normalized.includes("grade") || normalized.includes("good")) {
