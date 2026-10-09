@@ -686,10 +686,12 @@ export function ScanEvaluateWorkspace({
           </div>
 
           <input
+            id="brick-alpha-barcode-image-input"
             ref={fileInputRef}
             type="file"
             accept="image/*"
             className="seHiddenInput"
+            aria-label="Choose barcode image"
             onChange={handleFileSelect}
           />
 
