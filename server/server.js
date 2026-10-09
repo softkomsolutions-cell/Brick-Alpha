@@ -6152,8 +6152,8 @@ function replaceBrickEconomySalesLedger(userState, ledgerData, syncedAt) {
       .filter((currency) => currency && currency !== "ZAR"),
   )];
 
-  userState.trades = (userState.trades || []).filter((trade) =>
-    !["sales-ledger", "brickeconomy-sales-ledger"].includes(String(trade?.executionProvider || "")),
+  userState.trades = (userState.trades || []).filter(
+    (trade) => String(trade?.executionProvider || "") !== "brickeconomy-sales-ledger",
   );
 
   const imported = supported.map((sale, index) => {
