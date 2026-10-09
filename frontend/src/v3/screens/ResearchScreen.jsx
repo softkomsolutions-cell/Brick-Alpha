@@ -210,7 +210,19 @@ export function ResearchScreen({
       setLiveSearchError("");
       requestJson(`/api/data-sources/brickeconomy/search?q=${encodeURIComponent(query)}`, { token: authToken })
         .then((data) => {
-          if (active) setLiveSearchResults(Array.isArray(data.sets) ? data.sets : []);
+          if (!active) return;
+          const uniqueBySetNumber = new Map();
+          for (const result of Array.isArray(data.sets) ? data.sets : []) {
+            const setNumber = String(result?.setNumber || result?.apiSetNumber || "")
+              .trim()
+              .replace(/-1$/, "");
+            if (!setNumber || uniqueBySetNumber.has(setNumber)) continue;
+            uniqueBySetNumber.set(setNumber, {
+              ...result,
+              setNumber,
+            });
+          }
+          setLiveSearchResults([...uniqueBySetNumber.values()]);
         })
         .catch((error) => {
           if (active) {
