@@ -400,7 +400,7 @@ export function enrichBrickAlphaCollectible(item, today = new Date()) {
   const hasExplicitExpectedRetirementDate = Object.prototype.hasOwnProperty.call(item, "expectedRetirementDate");
   const expectedRetirementDate = hasExplicitExpectedRetirementDate
     ? item.expectedRetirementDate
-    : notes.expectedRetirementDate || "2027-12-31";
+    : notes.expectedRetirementDate || null;
   const actualRetirementDate = item.actualRetirementDate || notes.actualRetirementDate || null;
   const retirementOutlook = retirementOutlookFor(
     {
