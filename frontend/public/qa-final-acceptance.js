@@ -21,19 +21,20 @@
   };
   const visible = (el) => {
     if (!el) return false;
-    const style = getComputedStyle(el);
+    const style = el.ownerDocument.defaultView.getComputedStyle(el);
     const rect = el.getBoundingClientRect();
     return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
   };
   const button = (doc, label) =>
     [...doc.querySelectorAll("button")].find((candidate) => {
       if (!visible(candidate)) return false;
-      return String(
+      const accessible = String(
         candidate.getAttribute("aria-label") ||
         candidate.getAttribute("title") ||
         candidate.textContent ||
         "",
-      ).replace(/\s+/g, " ").trim() === label;
+      ).replace(/\s+/g, " ").trim();
+      return accessible === label || accessible.includes(label);
     });
   const page = (doc, id) => {
     const el = doc.querySelector('[data-page="' + id + '"]');
@@ -81,7 +82,12 @@
     });
   };
   const gotoMobile = async (doc, win, label, id) => {
-    let target = button(doc, label);
+    let target = [...doc.querySelectorAll(".v3BottomNav button")].find((candidate) => {
+      if (!visible(candidate)) return false;
+      const text = String(candidate.getAttribute("aria-label") || candidate.textContent || "").replace(/\s+/g, " ").trim();
+      return text === label || text.includes(label);
+    });
+    if (!target) target = button(doc, label);
     if (!target) {
       const menu = button(doc, "Open menu");
       if (menu) {
@@ -104,7 +110,10 @@
       await sleep(300);
     }
   };
+  let acceptanceRunning = false;
   const runAcceptance = async () => {
+    if (acceptanceRunning) return;
+    acceptanceRunning = true;
     try {
       statusEl.textContent = "Running exact 390px + barcode acceptance…";
       const win = frame.contentWindow;
