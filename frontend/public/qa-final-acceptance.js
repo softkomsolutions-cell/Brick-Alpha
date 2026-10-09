@@ -117,7 +117,7 @@
     try {
       statusEl.textContent = "Running exact 390px + barcode acceptance…";
       const win = frame.contentWindow;
-      const doc = win.document;
+      let doc = win.document;
       await waitFor(() => doc.readyState === "complete" || doc.readyState === "interactive");
       const demoResponse = await fetch("/api/auth/demo", {
         method: "POST",
@@ -142,7 +142,10 @@
         riskTolerance: "balanced",
         preferredThemes: [],
       }));
+      const previousDocument = doc;
       win.location.reload();
+      await waitFor(() => frame.contentDocument && frame.contentDocument !== previousDocument, 30000);
+      doc = frame.contentDocument;
       await waitFor(() => page(doc, "home"), 30000);
       if (win.innerWidth !== 390) throw new Error("iframe viewport is " + win.innerWidth + ", expected 390");
       noOverflow(win, "Home");
