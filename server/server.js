@@ -6893,27 +6893,6 @@ app.post("/api/news/targets", requireAuth, (req, res) => {
   });
 });
 
-const FINAL_ACCEPTANCE_TOKEN = String(process.env.FINAL_ACCEPTANCE_TOKEN || "").trim();
-
-app.get("/qa/final-acceptance", (req, res, next) => {
-  if (!FINAL_ACCEPTANCE_TOKEN || String(req.query.token || "") !== FINAL_ACCEPTANCE_TOKEN) {
-    next();
-    return;
-  }
-  res.type("html").send(`<!doctype html>
-<html><head><meta charset="utf-8"><title>Brick Alpha final acceptance</title>
-<style>
-body{font:14px system-ui;margin:20px;background:#111;color:#eee}
-#status{white-space:pre-wrap;padding:12px;background:#1b1b1b;border-radius:8px;margin-bottom:12px}
-iframe{width:390px;height:844px;border:2px solid #555;background:#fff}
-.pass{color:#7ee787}.fail{color:#ff7b72}
-</style></head><body>
-<h1>Brick Alpha final acceptance</h1>
-<div id="status">Starting…</div>
-<iframe id="app" src="/"></iframe>
-<script src="/qa-final-acceptance.js"></script></body></html>`);
-});
-
 if (fs.existsSync(FRONTEND_INDEX_FILE)) {
   app.use(express.static(FRONTEND_DIST_DIR));
   app.get(/^\/(?!api(?:\/|$)).*/, (_req, res) => {
