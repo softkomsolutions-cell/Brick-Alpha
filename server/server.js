@@ -6943,7 +6943,7 @@ async function gotoMobile(doc,win,label,id){
  if(!b)throw new Error("missing nav "+label);
  b.click();await waitFor(()=>page(doc,id));noOverflow(win,label);namedButtons(doc,label);
 }
-frame.addEventListener("load",async()=>{
+async function runAcceptance(){
  try{
    const win=frame.contentWindow,doc=win.document;
    await waitFor(()=>button(doc,"Enter Demo"));
@@ -6970,7 +6970,11 @@ frame.addEventListener("load",async()=>{
    out("UPC 673419340618 image decoded and resolved to LEGO 75313");
    out("FINAL_ACCEPTANCE_PASS");
  }catch(e){out(String(e&&e.message||e),false);}
-});
+}
+frame.addEventListener("load",runAcceptance,{once:true});
+if(frame.contentDocument?.readyState==="complete"){
+  void runAcceptance();
+}
 </script></body></html>`);
 });
 
