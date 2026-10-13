@@ -284,7 +284,10 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
           <button
             key={item.id}
             type="button"
+            role="tab"
+            data-collection-filter={item.id}
             className={filter === item.id ? "primaryButton" : "ghostButton"}
+            aria-selected={filter === item.id}
             aria-pressed={filter === item.id}
             onClick={() => setFilter(item.id)}
           >
@@ -304,7 +307,7 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
       </div>
 
       {rows.length ? (
-        <section className="panel" aria-label="Sets">
+        <section className="panel" data-active-filter={filter} data-result-count={rows.length} aria-label="Sets">
           <div className="panelHeader">
             <strong>Sets</strong>
             <small>Sorted by market value</small>
@@ -374,7 +377,7 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
           ) : null}
         </section>
       ) : (
-        <section className="panel">
+        <section className="panel" data-active-filter={filter} data-result-count="0">
           <p>
             {filter === "all"
               ? "No sets in the collection yet."
