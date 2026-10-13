@@ -271,10 +271,14 @@ export function ResearchScreen({
 
     const candidates =
       effectiveSection === "new"
-        ? sections.newReleases
+        ? [...cards].sort((left, right) => {
+            const leftYear = Number(left.item?.year || 0);
+            const rightYear = Number(right.item?.year || 0);
+            return rightYear - leftYear;
+          })
         : effectiveSection === "retiring"
           ? sections.retiringSoon
-          : sections.topPerformers;
+          : (sections.topPerformers.length ? sections.topPerformers : cards);
     const setNumbers = candidates
       .map((card) => String(card.setNumber || "").trim())
       .filter(Boolean)
@@ -338,6 +342,7 @@ export function ResearchScreen({
     profile,
     requestJson,
     sections,
+    cards,
   ]);
 
   const themes = [...new Set(cards.map((card) => card.theme))].sort();
@@ -605,7 +610,7 @@ export function ResearchScreen({
               {effectiveSection === "new"
                 ? "No recently released active sets are available in the current synced data."
                 : effectiveSection === "retiring"
-                  ? "No sets with a recorded approaching retirement window are available in the current synced data."
+                  ? "BrickEconomy's API does not publish forward retirement dates for active sets. Brick Alpha will not invent a retiring-soon date without verified evidence."
                   : effectiveSection === "performers"
                     ? "No sets with recorded annual or 90-day growth are available yet."
                     : "No sets match this section."}
