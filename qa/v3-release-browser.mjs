@@ -118,6 +118,28 @@ try {
   await page.getByRole("button", { name: "Save investment profile", exact: true }).click();
   await page.getByText("Investment profile saved.", { exact: true }).waitFor();
   await nav(page, "Research", "research");
+  const researchTabs = page.getByRole("tablist", { name: "Research sections" });
+  for (const [label, sectionId] of [
+    ["Search", "search"],
+    ["New Releases", "new"],
+    ["Retiring Soon", "retiring"],
+    ["Top Performers", "performers"],
+    ["Watchlist", "watch"],
+  ]) {
+    const tab = researchTabs.getByRole("tab", { name: label, exact: true });
+    if (await tab.count()) {
+      await tab.click();
+      assert.equal(await tab.getAttribute("aria-selected"), "true", `${label} Research tab did not become selected`);
+      const active = page.locator(`[data-active-section="${sectionId}"]`);
+      await active.waitFor({ state: "visible" });
+      assert.ok(Number(await active.getAttribute("data-result-count")) >= 0, `${label} Research tab has no observable result state`);
+    }
+  }
+  await researchTabs.getByRole("tab", { name: "Search", exact: true }).click();
+  const searchInput = page.locator(".v3ResearchFilters input").first();
+  await searchInput.fill("Hulkbuster");
+  await researchTabs.getByRole("tab", { name: "Top Performers", exact: true }).click();
+  assert.equal(await searchInput.inputValue(), "", "Research category tab retained stale Search query");
   await nav(page, "Settings", "settings");
   assert.ok(Number(await page.locator('input[name="usdZarRate"]').inputValue()) > 0);
   await assertNamedVisibleButtons(page, "Settings");
@@ -160,6 +182,22 @@ try {
   await page.getByText(/1 collection position imported\./).waitFor();
   await nav(page, "Collection", "collection");
   assert.match(await page.locator("[data-page='collection']").innerText(), /#75367/);
+  const collectionTabs = page.getByRole("tablist", { name: "Collection filters" });
+  for (const [label, filterId] of [
+    ["All", "all"],
+    ["Stacks", "stacks"],
+    ["Flywheel Ready", "flywheel"],
+    ["Below Cost", "below"],
+    ["Theme", "theme"],
+  ]) {
+    const tab = collectionTabs.getByRole("tab", { name: label, exact: true });
+    await tab.click();
+    assert.equal(await tab.getAttribute("aria-selected"), "true", `${label} Collection tab did not become selected`);
+    const active = page.locator(`[data-active-filter="${filterId}"]`);
+    await active.waitFor({ state: "visible" });
+    assert.ok(Number(await active.getAttribute("data-result-count")) >= 0, `${label} Collection tab has no observable result state`);
+  }
+  await collectionTabs.getByRole("tab", { name: "All", exact: true }).click();
 
   await nav(page, "Scan", "scan");
   await page.getByRole("button", { name: "Enter Set Number", exact: true }).click();
@@ -169,6 +207,9 @@ try {
   await assertNamedVisibleButtons(page, "Verdict");
   const verdict = await page.locator("[data-page='verdict']").innerText();
   assert.match(verdict, /75367/);
+  const thesisToggle = page.getByRole("button", { name: "Thesis checklist", exact: true });
+  await thesisToggle.click();
+  await thesisToggle.click();
   assert.match(verdict, /BrickEconomy/i);
   assert.ok(/Buy ×2 flywheel|Buy ×1|Only below R|Skip/.test(verdict), "Canonical verdict label missing");
 
