@@ -129,6 +129,9 @@ export function ResearchScreen({
   const [liveSearchResults, setLiveSearchResults] = useState([]);
   const [liveSearchBusy, setLiveSearchBusy] = useState(false);
   const [liveSearchError, setLiveSearchError] = useState("");
+  const [liveSectionCards, setLiveSectionCards] = useState([]);
+  const [liveSectionBusy, setLiveSectionBusy] = useState(false);
+  const [liveSectionError, setLiveSectionError] = useState("");
   const stagedQuery = readResearchQuery();
   const [filters, setFilters] = useState(() => ({
     ...EMPTY_FILTERS,
@@ -251,6 +254,87 @@ export function ResearchScreen({
     ? section
     : "search";
   const sections = useMemo(() => splitResearchSections(filtered, asOf), [asOf, filtered]);
+
+  useEffect(() => {
+    let active = true;
+    if (!["new", "retiring", "performers"].includes(effectiveSection)) {
+      setLiveSectionCards([]);
+      setLiveSectionBusy(false);
+      setLiveSectionError("");
+      return () => { active = false; };
+    }
+    if (!liveDiscoveryReady || !authToken || !requestJson) {
+      return () => { active = false; };
+    }
+
+    const candidates =
+      effectiveSection === "new"
+        ? sections.newReleases
+        : effectiveSection === "retiring"
+          ? sections.retiringSoon
+          : sections.topPerformers;
+    const setNumbers = candidates
+      .map((card) => String(card.setNumber || "").trim())
+      .filter(Boolean)
+      .slice(0, 12);
+
+    if (!setNumbers.length) {
+      setLiveSectionCards([]);
+      setLiveSectionBusy(false);
+      setLiveSectionError("");
+      return () => { active = false; };
+    }
+
+    setLiveSectionBusy(true);
+    setLiveSectionError("");
+    requestJson("/api/data-sources/brickeconomy/sets", {
+      method: "POST",
+      token: authToken,
+      body: { setNumbers },
+    })
+      .then((data) => {
+        if (!active) return;
+        const refreshed = (Array.isArray(data.items) ? data.items : [])
+          .map((item) => buildResearchCard(
+            enrichBrickAlphaCollectible(item),
+            { asOf, profile, openTrades, closedTrades },
+          ));
+        const refreshedSections = splitResearchSections(refreshed, asOf);
+        setLiveSectionCards(
+          effectiveSection === "new"
+            ? refreshedSections.newReleases
+            : effectiveSection === "retiring"
+              ? refreshedSections.retiringSoon
+              : refreshedSections.topPerformers,
+        );
+        if (Array.isArray(data.errors) && data.errors.length && !refreshed.length) {
+          setLiveSectionError("BrickEconomy could not refresh the current candidate sets.");
+        }
+      })
+      .catch((error) => {
+        if (!active) return;
+        setLiveSectionCards([]);
+        setLiveSectionError(error.payload?.reason || error.message || "Live BrickEconomy refresh failed.");
+      })
+      .finally(() => {
+        if (active) setLiveSectionBusy(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [
+    asOf,
+    authToken,
+    closedTrades,
+    effectiveSection,
+    liveDiscoveryReady,
+    openTrades,
+    profile,
+    requestJson,
+    sections,
+  ]);
+
   const themes = [...new Set(cards.map((card) => card.theme))].sort();
   const liveValues = liveDiscoveryReady
     ? Object.fromEntries(cards.map((card) => [card.setNumber, card.currentMarketValue]))
@@ -260,11 +344,11 @@ export function ResearchScreen({
 
   const visible =
     effectiveSection === "new"
-      ? sections.newReleases
+      ? (liveSectionCards.length || liveSectionBusy || liveSectionError ? liveSectionCards : sections.newReleases)
       : effectiveSection === "retiring"
-        ? sections.retiringSoon
+        ? (liveSectionCards.length || liveSectionBusy || liveSectionError ? liveSectionCards : sections.retiringSoon)
         : effectiveSection === "performers"
-          ? sections.topPerformers
+          ? (liveSectionCards.length || liveSectionBusy || liveSectionError ? liveSectionCards : sections.topPerformers)
           : sections.search;
 
   const liveResultSetNumbers = new Set(
@@ -346,6 +430,8 @@ export function ResearchScreen({
       setFiltersOpen(false);
       setLiveSearchResults([]);
       setLiveSearchError("");
+      setLiveSectionCards([]);
+      setLiveSectionError("");
     }
   };
 
@@ -489,7 +575,11 @@ export function ResearchScreen({
                     : "Top Performers"}
               </strong>
               <span>
-                {visibleCards.length} {visibleCards.length === 1 ? "set" : "sets"} from the current synced LEGO data.
+                {liveSectionBusy
+                  ? "Refreshing candidate sets from BrickEconomy…"
+                  : liveSectionError
+                    ? liveSectionError
+                    : `${visibleCards.length} ${visibleCards.length === 1 ? "set" : "sets"} · live BrickEconomy refresh of Brick Alpha's candidate universe`}
               </span>
             </div>
           ) : null}
