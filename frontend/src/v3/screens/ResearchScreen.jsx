@@ -132,6 +132,7 @@ export function ResearchScreen({
   const [liveSectionCards, setLiveSectionCards] = useState([]);
   const [liveSectionBusy, setLiveSectionBusy] = useState(false);
   const [liveSectionError, setLiveSectionError] = useState("");
+  const [liveSectionLoaded, setLiveSectionLoaded] = useState(false);
   const stagedQuery = readResearchQuery();
   const [filters, setFilters] = useState(() => ({
     ...EMPTY_FILTERS,
@@ -164,7 +165,7 @@ export function ResearchScreen({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [targets, setTargets] = useState(() => readWatchTargets());
   const asOf = CANONICAL_AS_OF;
-  const profile = readBuyingProfile();
+  const profile = useMemo(() => readBuyingProfile(), []);
 
   const cards = useMemo(() => {
     const catalogue = (collectibles || [])
@@ -261,6 +262,7 @@ export function ResearchScreen({
       setLiveSectionCards([]);
       setLiveSectionBusy(false);
       setLiveSectionError("");
+      setLiveSectionLoaded(false);
       return () => { active = false; };
     }
     if (!liveDiscoveryReady || !authToken || !requestJson) {
@@ -282,6 +284,7 @@ export function ResearchScreen({
       setLiveSectionCards([]);
       setLiveSectionBusy(false);
       setLiveSectionError("");
+      setLiveSectionLoaded(true);
       return () => { active = false; };
     }
 
@@ -307,6 +310,7 @@ export function ResearchScreen({
               ? refreshedSections.retiringSoon
               : refreshedSections.topPerformers,
         );
+        setLiveSectionLoaded(true);
         if (Array.isArray(data.errors) && data.errors.length && !refreshed.length) {
           setLiveSectionError("BrickEconomy could not refresh the current candidate sets.");
         }
@@ -314,6 +318,7 @@ export function ResearchScreen({
       .catch((error) => {
         if (!active) return;
         setLiveSectionCards([]);
+        setLiveSectionLoaded(true);
         setLiveSectionError(error.payload?.reason || error.message || "Live BrickEconomy refresh failed.");
       })
       .finally(() => {
@@ -344,11 +349,11 @@ export function ResearchScreen({
 
   const visible =
     effectiveSection === "new"
-      ? (liveSectionCards.length || liveSectionBusy || liveSectionError ? liveSectionCards : sections.newReleases)
+      ? (liveSectionLoaded || liveSectionBusy ? liveSectionCards : sections.newReleases)
       : effectiveSection === "retiring"
-        ? (liveSectionCards.length || liveSectionBusy || liveSectionError ? liveSectionCards : sections.retiringSoon)
+        ? (liveSectionLoaded || liveSectionBusy ? liveSectionCards : sections.retiringSoon)
         : effectiveSection === "performers"
-          ? (liveSectionCards.length || liveSectionBusy || liveSectionError ? liveSectionCards : sections.topPerformers)
+          ? (liveSectionLoaded || liveSectionBusy ? liveSectionCards : sections.topPerformers)
           : sections.search;
 
   const liveResultSetNumbers = new Set(
@@ -432,6 +437,7 @@ export function ResearchScreen({
       setLiveSearchError("");
       setLiveSectionCards([]);
       setLiveSectionError("");
+      setLiveSectionLoaded(false);
     }
   };
 
