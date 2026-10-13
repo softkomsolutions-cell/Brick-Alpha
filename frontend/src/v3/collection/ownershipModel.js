@@ -254,6 +254,15 @@ export function buildCollectionView(openTrades = [], collectibles = []) {
     const sellWindowMonths = months.length ? Math.min(...months) : null;
     const profit = marketValue - cost;
     const roi = cost > 0 && Number.isFinite(profit / cost) ? (profit / cost) * 100 : null;
+    const recordedNinetyDay = group.trades
+      .map((trade) => numberOrNull(trade.growth90Day ?? trade.ninetyDayGrowth))
+      .find((value) => value != null);
+    const recordedAnnual = group.trades
+      .map((trade) => numberOrNull(trade.annualGrowth))
+      .find((value) => value != null);
+    const imageUrl = group.trades
+      .map((trade) => trade.imageUrl || trade.sourceImageUrl || trade.thumbnailUrl || null)
+      .find(Boolean) || null;
     const flywheel = flywheelFor(units, cost);
     return {
       ...group,
@@ -264,6 +273,9 @@ export function buildCollectionView(openTrades = [], collectibles = []) {
       marketValue,
       profit,
       roi,
+      ninetyDayGrowth: recordedNinetyDay,
+      annualGrowth: recordedAnnual,
+      imageUrl,
       annualised: hasCompletePurchaseHistory
         ? annualisedReturnPercent(cost, marketValue, holdingDays)
         : null,
