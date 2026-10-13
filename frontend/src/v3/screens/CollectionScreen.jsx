@@ -148,7 +148,7 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
         name: set.name,
         imageUrl: null,
         movementGrowth: Number(set.growth),
-        movementPeriod: "collection",
+        movementPeriod: "vs paid",
       }));
     }
     return [...movers].sort((a, b) => b.movementGrowth - a.movementGrowth).slice(0, 5);
@@ -161,7 +161,7 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
         name: set.name,
         imageUrl: null,
         movementGrowth: Number(set.growth),
-        movementPeriod: "collection",
+        movementPeriod: "vs paid",
         valueGain: Number(set.gain),
       }));
     }
@@ -221,7 +221,7 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
           </strong>
           <p>
             {topPercentMovers.length
-              ? `Biggest recorded mover: ${topPercentMovers[0].name} (${formatSignedPercent(topPercentMovers[0].movementGrowth)}).`
+              ? `Current collection leader: ${topPercentMovers[0].name} (${formatSignedPercent(topPercentMovers[0].movementGrowth)} vs paid).`
               : "Movement will appear as BrickEconomy valuation history accumulates."}
           </p>
         </div>
@@ -229,12 +229,12 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
 
       <section className="v3DecisionCard v3CollectionMovement">
         <div className="v3PortfolioSectionHead">
-          <div><span className="v3Eyebrow">Recorded movement</span><h2>This period's movers</h2></div>
-          <small>{liveCollectionSummary?.source === "BrickEconomy" ? "Live BrickEconomy collection history" : "Recorded BrickEconomy growth"}</small>
+          <div><span className="v3Eyebrow">BrickEconomy collection gains</span><h2>Current leaders</h2></div>
+          <small>{liveCollectionSummary?.source === "BrickEconomy" ? "Growth and value gain vs recorded paid price" : "Recorded growth vs cost"}</small>
         </div>
         <div className="v3MovementColumns">
           <div>
-            <h3>Top percentage movers</h3>
+            <h3>Top growth vs paid</h3>
             {topPercentMovers.length ? topPercentMovers.map((set) => (
               <article key={`pct-${set.id}`} className="v3MovementRow">
                 <div className="v3MovementIdentity">
@@ -246,7 +246,7 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
             )) : <p className="v3Muted">No recorded growth history yet.</p>}
           </div>
           <div>
-            <h3>Top value gains</h3>
+            <h3>Top value gains vs paid</h3>
             {topValueMovers.length ? topValueMovers.map((set) => (
               <article key={`value-${set.id}`} className="v3MovementRow">
                 <div className="v3MovementIdentity">
