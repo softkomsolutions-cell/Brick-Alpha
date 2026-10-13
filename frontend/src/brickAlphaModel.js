@@ -30,7 +30,7 @@ const FALLBACK_NOTES = {
     retailPrice: 8299,
     buyPrice: 6999,
     purchaseDate: "2026-02-06",
-    expectedRetirementDate: "2027-12-31",
+    expectedRetirementDate: null,
     actualRetirementDate: null,
     sellByTargetDate: "2029-06-30",
     storeSource: "LEGO retail promo",
