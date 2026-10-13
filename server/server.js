@@ -6911,19 +6911,20 @@ app.get("/qa/tab-audit", (req, res, next) => {
     next();
     return;
   }
+  const mobileAudit = String(req.query.mode || "") === "mobile";
   res.set("Cache-Control", "no-store, no-cache, must-revalidate");
   res.type("html").send(`<!doctype html>
-<html><head><meta charset="utf-8"><title>Brick Alpha tab audit</title>
+<html><head><meta charset="utf-8"><title>Brick Alpha ${mobileAudit ? "mobile " : ""}tab audit</title>
 <style>
 body{font:14px system-ui;margin:20px;background:#111;color:#eee}
 #status{white-space:pre-wrap;padding:12px;background:#1b1b1b;border-radius:8px;margin-bottom:12px}
-iframe{width:1440px;height:1000px;border:1px solid #555;background:#fff;transform-origin:top left}
+iframe{width:${mobileAudit ? "390px" : "1440px"};height:${mobileAudit ? "844px" : "1000px"};border:1px solid #555;background:#fff;transform-origin:top left}
 .pass{color:#7ee787}.fail{color:#ff7b72}
 </style></head><body>
-<h1>Brick Alpha all-tabs audit</h1>
+<h1>Brick Alpha ${mobileAudit ? "mobile " : "all-tabs "}audit</h1>
 <div id="status">Starting…</div>
 <iframe id="app" src="/"></iframe>
-<script src="/qa-all-tabs-v6.js"></script>
+<script src="${mobileAudit ? "/qa-mobile-tabs.js?v=2" : "/qa-all-tabs-v6.js?v=2"}"></script>
 </body></html>`);
 });
 
