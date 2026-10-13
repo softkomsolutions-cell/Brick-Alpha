@@ -603,6 +603,30 @@ export function ScanEvaluateWorkspace({
     jumpToPageSection("collectibles", "retirement-intelligence");
   }, [evaluation, handleCollectibleSelect, jumpToPageSection]);
 
+  const handleShareAnalysis = useCallback(async () => {
+    if (!evaluation) {
+      return;
+    }
+    const presented = presentResearchFields(evaluation);
+    const setNumber = extractSetNumber(evaluation);
+    const lines = [
+      `Brick Alpha analysis — ${evaluation.name || `LEGO ${setNumber}`}`,
+      setNumber ? `Set #${setNumber}` : "",
+      presented.currentMarketValue != null ? `Current market value: ${formatCanonicalValue(presented.currentMarketValue)}` : "",
+      presented.verdictLabel ? `Verdict: ${presented.verdictLabel}` : "",
+      presented.retirementStatus ? `Retirement: ${presented.retirementStatus}` : "",
+      retirementSnapshot?.expectedRetirement ? `Expected retirement: ${retirementSnapshot.expectedRetirement}` : "Expected retirement: Not recorded",
+      typeof window !== "undefined" ? `Brick Alpha: ${window.location.origin}` : "",
+    ].filter(Boolean);
+    const text = lines.join("\n");
+    try {
+      await navigator.clipboard.writeText(text);
+      setActionStatus("Analysis copied to clipboard.");
+    } catch {
+      setActionStatus("Clipboard access was blocked by the browser.");
+    }
+  }, [evaluation, retirementSnapshot]);
+
   const handleReset = useCallback(() => {
     setPhase("landing");
     setImagePreview(null);
@@ -944,7 +968,7 @@ export function ScanEvaluateWorkspace({
               <button type="button" className="ghostButton" onClick={handleAddToWatchlist}>
                 Add to Watchlist
               </button>
-              <button type="button" className="ghostButton" onClick={() => setActionStatus("Analysis link copied to clipboard (demo).")}>
+              <button type="button" className="ghostButton" onClick={handleShareAnalysis}>
                 Share Analysis
               </button>
               <button type="button" className="ghostButton" onClick={handleOpenInvestmentAnalysis}>
