@@ -53,7 +53,7 @@ function movementRows(sets) {
     .filter((set) => set.movementGrowth != null);
 }
 
-export function CollectionScreen({ openTrades = [], collectibles = [], navigateToPage }) {
+export function CollectionScreen({ openTrades = [], collectibles = [], navigateToPage, authToken, requestJson }) {
   const view = useMemo(
     () => buildCollectionView(openTrades, collectibles),
     [collectibles, openTrades],
@@ -63,6 +63,27 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
   const [expandedId, setExpandedId] = useState("");
   const [showAllRows, setShowAllRows] = useState(false);
   const [previousVisit, setPreviousVisit] = useState(null);
+  const [liveCollectionSummary, setLiveCollectionSummary] = useState(null);
+  const [liveCollectionError, setLiveCollectionError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    if (!authToken || !requestJson) return () => {};
+    requestJson("/api/data-sources/brickeconomy/collection-summary", { token: authToken })
+      .then((data) => {
+        if (!active) return;
+        setLiveCollectionSummary(data);
+        setLiveCollectionError("");
+      })
+      .catch((error) => {
+        if (!active) return;
+        setLiveCollectionSummary(null);
+        setLiveCollectionError(error?.message || "Live BrickEconomy collection history unavailable.");
+      });
+    return () => {
+      active = false;
+    };
+  }, [authToken, requestJson]);
 
   useEffect(() => {
     try {
@@ -114,17 +135,38 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
     [view.sets],
   );
   const unrealisedGain = view.summary.openValue - costBasis;
-  const ninetyDayChange = useMemo(() => weightedGrowth(view.sets, "ninetyDayGrowth"), [view.sets]);
+  const ninetyDayChange = liveCollectionSummary?.change90Day ?? weightedGrowth(view.sets, "ninetyDayGrowth");
+  const ytdChange = liveCollectionSummary?.changeYtd ?? null;
+  const thirtyDayChange = liveCollectionSummary?.change30Day ?? null;
   const annualChange = useMemo(() => weightedGrowth(view.sets, "annualGrowth"), [view.sets]);
   const movers = useMemo(() => movementRows(view.sets), [view.sets]);
-  const topPercentMovers = useMemo(
-    () => [...movers].sort((a, b) => b.movementGrowth - a.movementGrowth).slice(0, 5),
-    [movers],
-  );
-  const topValueMovers = useMemo(
-    () => [...movers].filter((set) => Number.isFinite(set.valueGain)).sort((a, b) => b.valueGain - a.valueGain).slice(0, 5),
-    [movers],
-  );
+  const topPercentMovers = useMemo(() => {
+    if (Array.isArray(liveCollectionSummary?.topGrowth) && liveCollectionSummary.topGrowth.length) {
+      return liveCollectionSummary.topGrowth.map((set, index) => ({
+        id: `live-growth-${set.setNumber || index}`,
+        setNumber: set.setNumber,
+        name: set.name,
+        imageUrl: null,
+        movementGrowth: Number(set.growth),
+        movementPeriod: "collection",
+      }));
+    }
+    return [...movers].sort((a, b) => b.movementGrowth - a.movementGrowth).slice(0, 5);
+  }, [liveCollectionSummary, movers]);
+  const topValueMovers = useMemo(() => {
+    if (Array.isArray(liveCollectionSummary?.topGain) && liveCollectionSummary.topGain.length) {
+      return liveCollectionSummary.topGain.map((set, index) => ({
+        id: `live-gain-${set.setNumber || index}`,
+        setNumber: set.setNumber,
+        name: set.name,
+        imageUrl: null,
+        movementGrowth: Number(set.growth),
+        movementPeriod: "collection",
+        valueGain: Number(set.gain),
+      }));
+    }
+    return [...movers].filter((set) => Number.isFinite(set.valueGain)).sort((a, b) => b.valueGain - a.valueGain).slice(0, 5);
+  }, [liveCollectionSummary, movers]);
   const visitChange = previousVisit && Number(previousVisit.value) > 0
     ? view.summary.openValue - Number(previousVisit.value)
     : null;
@@ -150,21 +192,22 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
           <small>{unrealisedGain >= 0 ? "+" : ""}{formatCollectiblePrice(unrealisedGain)} vs paid</small>
         </article>
         <article>
+          <span>30-day change</span>
+          <strong>{thirtyDayChange == null ? "—" : formatSignedPercent(thirtyDayChange)}</strong>
+          <small>{thirtyDayChange == null ? "Not enough provider history" : "BrickEconomy collection history"}</small>
+        </article>
+        <article>
           <span>90-day change</span>
           <strong>{ninetyDayChange == null ? "—" : formatSignedPercent(ninetyDayChange)}</strong>
-          <small>{ninetyDayChange == null ? "Not enough recorded history" : "Weighted by current value"}</small>
+          <small>{ninetyDayChange == null ? "Not enough provider history" : "BrickEconomy collection history"}</small>
         </article>
         <article>
-          <span>Annual change</span>
-          <strong>{annualChange == null ? "—" : formatSignedPercent(annualChange)}</strong>
-          <small>{annualChange == null ? "Not enough recorded history" : "Recorded annual growth"}</small>
-        </article>
-        <article>
-          <span>Cost basis</span>
-          <strong>{formatCollectiblePrice(costBasis)}</strong>
-          <small>{view.summary.stacks} stacks · {view.summary.sealed} sealed</small>
+          <span>YTD change</span>
+          <strong>{ytdChange == null ? "—" : formatSignedPercent(ytdChange)}</strong>
+          <small>{ytdChange == null ? "Not enough provider history" : "BrickEconomy collection history"}</small>
         </article>
       </section>
+      {liveCollectionError ? <p className="v3ResearchEmpty">{liveCollectionError}</p> : null}
 
       <section className="v3CollectionSinceVisit" aria-label="Since your last visit">
         <div>
@@ -178,7 +221,7 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
           </strong>
           <p>
             {topPercentMovers.length
-              ? `Biggest recorded mover: ${topPercentMovers[0].name} (${formatSignedPercent(topPercentMovers[0].movementGrowth)} ${topPercentMovers[0].movementPeriod}).`
+              ? `Biggest recorded mover: ${topPercentMovers[0].name} (${formatSignedPercent(topPercentMovers[0].movementGrowth)}).`
               : "Movement will appear as BrickEconomy valuation history accumulates."}
           </p>
         </div>
@@ -187,7 +230,7 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
       <section className="v3DecisionCard v3CollectionMovement">
         <div className="v3PortfolioSectionHead">
           <div><span className="v3Eyebrow">Recorded movement</span><h2>This period's movers</h2></div>
-          <small>Only recorded BrickEconomy growth is shown</small>
+          <small>{liveCollectionSummary?.source === "BrickEconomy" ? "Live BrickEconomy collection history" : "Recorded BrickEconomy growth"}</small>
         </div>
         <div className="v3MovementColumns">
           <div>
