@@ -122,38 +122,24 @@
 
       await waitFor(() => doc && (doc.readyState === "complete" || doc.readyState === "interactive"), 15000);
 
-      const auth = await fetch("/api/auth/demo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: "Gavin Tab Audit" }),
-      });
-      if (!auth.ok) fail("Demo authentication", "HTTP " + auth.status);
-      const demo = await auth.json();
-      if (!demo?.token) fail("Demo authentication", "no token returned");
-
-      win.localStorage.setItem("collecttrade_token", demo.token);
-      win.localStorage.setItem("brick_alpha_v3_onboarding_complete", "1");
-      win.localStorage.setItem("brick_alpha_v3_buying_profile", JSON.stringify({
-        country: "South Africa",
-        homeCurrency: "ZAR",
-        usdZarRate: 16.67,
-        businessBuyer: false,
-        vatRate: 15,
-        rewardsProgrammes: [],
-        rewardsBookingRule: "cash-equivalent",
-        budgetPerSet: "",
-        holdPeriod: "medium",
-        riskTolerance: "balanced",
-        preferredThemes: [],
-      }));
-      win.location.hash = "#/home";
-      win.location.reload();
-      await sleep(1200);
-      doc = frame.contentDocument;
-      await waitFor(() => {
-        doc = frame.contentDocument;
-        return doc && pageEl(doc, "home");
-      }, 30000);
+      log(true, "Audit frame loaded");
+      const enterDemo = await waitFor(() => button(doc, "Enter Demo"), 20000);
+      enterDemo.click();
+      log(true, "Enter Demo clicked");
+      await waitFor(() => doc.querySelector(".v3OnboardingShell") || pageEl(doc, "home"), 30000);
+      if (doc.querySelector(".v3OnboardingShell")) {
+        const skip = button(doc, "Skip for now") || buttonContains(doc, "Skip for now");
+        if (skip) {
+          skip.click();
+        } else {
+          for (const label of ["Continue", "Continue", "Go to Home"]) {
+            const next = await waitFor(() => button(doc, label), 10000);
+            next.click();
+            await sleep(150);
+          }
+        }
+      }
+      await waitFor(() => pageEl(doc, "home"), 30000);
       log(true, "Demo authentication and Home");
 
       for (const [label, id] of [
