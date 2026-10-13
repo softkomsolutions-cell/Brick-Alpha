@@ -39,5 +39,10 @@
   "devDependencies": {
     "prisma": "^7.10.0",
     "supertest": "^7.2.2"
+  },
+  "overrides": {
+    "body-parser": "2.2.3",
+    "proxy-addr": "2.0.8",
+    "qs": "6.15.4"
   }
 }
