@@ -4608,18 +4608,7 @@ function readShareStatus() {
 }
 
 app.get("/", (_req, res) => {
-  app.get("/qa/mobile-tab-audit", (req, res, next) => {
-  if (!TAB_AUDIT_TOKEN || String(req.query.token || "") !== TAB_AUDIT_TOKEN) {
-    next();
-    return;
-  }
-  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
-  res.type("html").send(`<!doctype html><html><head><meta charset="utf-8"><title>Brick Alpha mobile tab audit</title>
-<style>body{font:14px system-ui;margin:20px;background:#111;color:#eee}#status{white-space:pre-wrap;padding:12px;background:#1b1b1b;border-radius:8px;margin-bottom:12px}.pass{color:#7ee787}.fail{color:#ff7b72}iframe{width:390px;height:844px;border:1px solid #555;background:#fff}</style>
-</head><body><h1>Brick Alpha mobile tab audit</h1><div id="status">Starting…</div><iframe id="app" src="/"></iframe><script src="/qa-mobile-tabs.js"></script></body></html>`);
-});
-
-if (fs.existsSync(FRONTEND_INDEX_FILE)) {
+  if (fs.existsSync(FRONTEND_INDEX_FILE)) {
     res.sendFile(FRONTEND_INDEX_FILE);
     return;
   }
@@ -6320,6 +6309,83 @@ app.post("/api/data-sources/brickeconomy/sync", requireAuth, async (req, res) =>
     updatedHoldings: applied.updated,
     returnedHoldings: applied.returned,
     ...sales,
+  });
+});
+
+app.get("/api/data-sources/brickeconomy/collection-summary", requireAuth, async (req, res) => {
+  const credentials = brickEconomyCredentialsForState(req.userState);
+  if (!credentials.apiKey) {
+    res.status(400).json({ ok: false, error: "brickeconomy_not_connected" });
+    return;
+  }
+  const result = await brickeconomyService.getCollectionSets(credentials.apiKey, "ZAR");
+  if (!result.ok) {
+    res.status(400).json({ ok: false, error: "brickeconomy_collection_failed", reason: result.reason });
+    return;
+  }
+  const data = result.data || {};
+  const periods = Array.isArray(data.periods)
+    ? data.periods
+        .map((item) => ({
+          date: String(item?.date || ""),
+          value: Number(item?.value),
+          setsCount: Number(item?.sets_count || 0),
+        }))
+        .filter((item) => /^\d{4}-\d{2}-\d{2}$/.test(item.date) && Number.isFinite(item.value))
+        .sort((a, b) => String(b.date).localeCompare(String(a.date)))
+    : [];
+  const currentValue = Number(data.current_value);
+  const current = Number.isFinite(currentValue)
+    ? currentValue
+    : (periods[0]?.value ?? null);
+  const currentDate = periods[0]?.date ? new Date(periods[0].date + "T00:00:00Z") : new Date();
+
+  const percentFromPeriod = (targetDate) => {
+    if (!Number.isFinite(current) || !periods.length) return null;
+    const targetMs = targetDate.getTime();
+    const candidate = periods
+      .map((item) => ({ ...item, distance: Math.abs(new Date(item.date + "T00:00:00Z").getTime() - targetMs) }))
+      .sort((a, b) => a.distance - b.distance)[0];
+    if (!candidate || !Number.isFinite(candidate.value) || candidate.value <= 0) return null;
+    return ((current - candidate.value) / candidate.value) * 100;
+  };
+
+  const target30 = new Date(currentDate); target30.setUTCDate(target30.getUTCDate() - 30);
+  const target90 = new Date(currentDate); target90.setUTCDate(target90.getUTCDate() - 90);
+  const targetYtd = new Date(Date.UTC(currentDate.getUTCFullYear(), 0, 1));
+
+  const sets = Array.isArray(data.sets) ? data.sets.map((item) => ({
+    setNumber: normalizeBrickEconomySetNumber(item?.set_number),
+    name: String(item?.name || ""),
+    theme: String(item?.theme || ""),
+    currentValue: Number.isFinite(Number(item?.current_value)) ? Number(item.current_value) : null,
+    paidPrice: Number.isFinite(Number(item?.paid_price)) ? Number(item.paid_price) : null,
+    growth: Number.isFinite(Number(item?.growth)) ? Number(item.growth) : null,
+    condition: String(item?.condition || ""),
+  })) : [];
+
+  res.json({
+    ok: true,
+    source: "BrickEconomy",
+    currency: String(data.currency || "ZAR"),
+    currentValue: current,
+    setsCount: Number(data.sets_count || 0),
+    uniqueSets: Number(data.sets_unique_count || 0),
+    sealedSets: Number(data.sets_new_count || 0),
+    usedSets: Number(data.sets_used_count || 0),
+    change30Day: percentFromPeriod(target30),
+    change90Day: percentFromPeriod(target90),
+    changeYtd: percentFromPeriod(targetYtd),
+    periods,
+    topGrowth: sets
+      .filter((item) => item.growth != null)
+      .sort((a, b) => b.growth - a.growth)
+      .slice(0, 5),
+    topGain: sets
+      .filter((item) => item.currentValue != null && item.paidPrice != null)
+      .map((item) => ({ ...item, gain: item.currentValue - item.paidPrice }))
+      .sort((a, b) => b.gain - a.gain)
+      .slice(0, 5),
   });
 });
 
