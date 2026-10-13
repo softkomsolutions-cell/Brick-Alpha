@@ -366,4 +366,5 @@
 
   frame.addEventListener("load", () => void run(), { once: true });
   if (frame.contentDocument?.readyState === "complete") void run();
+  setTimeout(() => void run(), 1200);
 })();
