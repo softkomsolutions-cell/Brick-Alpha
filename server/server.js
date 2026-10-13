@@ -6900,6 +6900,7 @@ app.get("/qa/tab-audit", (req, res, next) => {
     next();
     return;
   }
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
   res.type("html").send(`<!doctype html>
 <html><head><meta charset="utf-8"><title>Brick Alpha tab audit</title>
 <style>
@@ -6911,7 +6912,7 @@ iframe{width:1440px;height:1000px;border:1px solid #555;background:#fff;transfor
 <h1>Brick Alpha all-tabs audit</h1>
 <div id="status">Starting…</div>
 <iframe id="app" src="/"></iframe>
-<script src="/qa-all-tabs.js"></script>
+<script src="/qa-all-tabs-v2.js"></script>
 </body></html>`);
 });
 
