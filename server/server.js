@@ -6912,7 +6912,7 @@ iframe{width:1440px;height:1000px;border:1px solid #555;background:#fff;transfor
 <h1>Brick Alpha all-tabs audit</h1>
 <div id="status">Starting…</div>
 <iframe id="app" src="/"></iframe>
-<script src="/qa-all-tabs-v4.js"></script>
+<script src="/qa-all-tabs-v5.js"></script>
 </body></html>`);
 });
 
