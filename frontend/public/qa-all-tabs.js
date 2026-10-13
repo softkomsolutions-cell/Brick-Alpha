@@ -146,12 +146,14 @@
         riskTolerance: "balanced",
         preferredThemes: [],
       }));
-      const oldDoc = doc;
       win.location.hash = "#/home";
       win.location.reload();
-      await waitFor(() => frame.contentDocument && frame.contentDocument !== oldDoc, 15000);
+      await sleep(1200);
       doc = frame.contentDocument;
-      await waitFor(() => pageEl(doc, "home"), 30000);
+      await waitFor(() => {
+        doc = frame.contentDocument;
+        return doc && pageEl(doc, "home");
+      }, 30000);
       log(true, "Demo authentication and Home");
 
       for (const [label, id] of [
