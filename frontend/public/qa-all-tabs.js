@@ -123,21 +123,27 @@
       await waitFor(() => doc && (doc.readyState === "complete" || doc.readyState === "interactive"), 15000);
 
       log(true, "Audit frame loaded");
-      const enterDemo = await waitFor(() => button(doc, "Enter Demo"), 20000);
-      enterDemo.click();
-      log(true, "Enter Demo clicked");
-      await waitFor(() => doc.querySelector(".v3OnboardingShell") || pageEl(doc, "home"), 30000);
-      if (doc.querySelector(".v3OnboardingShell")) {
-        const skip = button(doc, "Skip for now") || buttonContains(doc, "Skip for now");
-        if (skip) {
-          skip.click();
-        } else {
-          for (const label of ["Continue", "Continue", "Go to Home"]) {
-            const next = await waitFor(() => button(doc, label), 10000);
-            next.click();
-            await sleep(150);
+      if (!pageEl(doc, "home")) {
+        const enterDemo = await waitFor(() => button(doc, "Enter Demo") || pageEl(doc, "home"), 20000);
+        if (!pageEl(doc, "home")) {
+          enterDemo.click();
+          log(true, "Enter Demo clicked");
+          await waitFor(() => doc.querySelector(".v3OnboardingShell") || pageEl(doc, "home"), 30000);
+          if (doc.querySelector(".v3OnboardingShell")) {
+            const skip = button(doc, "Skip for now") || buttonContains(doc, "Skip for now");
+            if (skip) {
+              skip.click();
+            } else {
+              for (const label of ["Continue", "Continue", "Go to Home"]) {
+                const next = await waitFor(() => button(doc, label), 10000);
+                next.click();
+                await sleep(150);
+              }
+            }
           }
         }
+      } else {
+        log(true, "Existing Demo session detected");
       }
       await waitFor(() => pageEl(doc, "home"), 30000);
       log(true, "Demo authentication and Home");
