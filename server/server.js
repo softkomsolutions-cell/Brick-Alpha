@@ -6924,7 +6924,7 @@ iframe{width:${mobileAudit ? "390px" : "1440px"};height:${mobileAudit ? "844px" 
 <h1>Brick Alpha ${mobileAudit ? "mobile " : "all-tabs "}audit</h1>
 <div id="status">Starting…</div>
 <iframe id="app" src="/"></iframe>
-<script src="${mobileAudit ? "/qa-mobile-tabs-v3.js?v=4" : "/qa-all-tabs-v6.js?v=2"}"></script>
+<script src="${mobileAudit ? "/qa-mobile-tabs-v4.js?v=5" : "/qa-all-tabs-v6.js?v=2"}"></script>
 </body></html>`);
 });
 
