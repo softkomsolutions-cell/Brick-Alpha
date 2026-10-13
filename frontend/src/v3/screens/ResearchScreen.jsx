@@ -373,6 +373,9 @@ export function ResearchScreen({
           <button
             key={item.id}
             type="button"
+            role="tab"
+            data-research-section={item.id}
+            aria-selected={effectiveSection === item.id}
             className={effectiveSection === item.id ? "active" : ""}
             onClick={() => selectSection(item.id)}
           >
@@ -453,7 +456,7 @@ export function ResearchScreen({
       ) : null}
 
       {effectiveSection === "watch" ? (
-        <section className="v3ResearchList" aria-label="Watch targets">
+        <section className="v3ResearchList" data-active-section="watch" data-result-count={watches.length} aria-label="Watch targets">
           {watches.length ? watches.map((target) => (
             <article key={target.id} className="v3ResearchCard" data-triggered={target.triggered ? "true" : "false"}>
               <strong>{target.name}</strong>
@@ -490,7 +493,7 @@ export function ResearchScreen({
               </span>
             </div>
           ) : null}
-          <section className="v3ResearchList" aria-label={effectiveSection}>
+          <section className="v3ResearchList" data-active-section={effectiveSection} data-result-count={visibleCards.length} aria-label={effectiveSection}>
           {visibleCards.length ? visibleCards.map((card) => (
             <Card
               key={card.id}
