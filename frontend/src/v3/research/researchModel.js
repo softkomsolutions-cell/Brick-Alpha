@@ -34,6 +34,7 @@ export function buildResearchCard(item, context = {}) {
     name: item.name || "LEGO set",
     theme: item.legoTheme || legoThemeFor(item),
     imageUrl: item.imageUrl || item.image || "",
+    releaseDate: item.releaseDate || item.releasedDate || null,
     currentMarketValue: valuation.currentMarketValue,
     valuationDate: valuation.valuationDate,
     source: valuation.source,
@@ -104,20 +105,43 @@ export function filterResearchCards(cards, filters = {}) {
   });
 }
 
-export function splitResearchSections(cards) {
+export function splitResearchSections(cards, asOf = new Date().toISOString()) {
+  const asOfTime = Date.parse(asOf);
+  const recentCutoff = Number.isFinite(asOfTime)
+    ? asOfTime - 24 * 30.4375 * 24 * 60 * 60 * 1000
+    : Date.now() - 24 * 30.4375 * 24 * 60 * 60 * 1000;
   return {
     search: cards,
-    newReleases: cards.filter((card) => card.retirement.retirementState === "Active"),
-    retiringSoon: cards.filter(
-      (card) =>
-        card.retirement.retirementState === "Inside 6 months" ||
-        card.retirement.retirementState === "Approaching" ||
-        card.retirement.reminders.sixtyDay ||
-        card.retirement.reminders.thirtyDay,
-    ),
+    newReleases: cards
+      .filter((card) => {
+        const releaseTime = Date.parse(card.releaseDate || "");
+        return (
+          card.retirement.retirementState === "Active" &&
+          Number.isFinite(releaseTime) &&
+          releaseTime >= recentCutoff
+        );
+      })
+      .sort((left, right) => String(right.releaseDate || "").localeCompare(String(left.releaseDate || ""))),
+    retiringSoon: cards
+      .filter(
+        (card) =>
+          card.retirement.retirementState === "Inside 6 months" ||
+          card.retirement.retirementState === "Approaching" ||
+          card.retirement.reminders.sixtyDay ||
+          card.retirement.reminders.thirtyDay,
+      )
+      .sort((left, right) => {
+        const leftMonths = left.retirement.monthsRemaining ?? 999;
+        const rightMonths = right.retirement.monthsRemaining ?? 999;
+        return leftMonths - rightMonths;
+      }),
     topPerformers: [...cards]
-      .filter((card) => card.annualGrowth != null)
-      .sort((left, right) => right.annualGrowth - left.annualGrowth),
+      .filter((card) => card.annualGrowth != null || card.ninetyDayGrowth != null)
+      .sort((left, right) => {
+        const leftGrowth = left.ninetyDayGrowth ?? left.annualGrowth ?? -Infinity;
+        const rightGrowth = right.ninetyDayGrowth ?? right.annualGrowth ?? -Infinity;
+        return rightGrowth - leftGrowth;
+      }),
   };
 }
 
