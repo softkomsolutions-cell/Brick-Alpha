@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatCollectiblePrice } from "../../appUtils";
 import {
   buildCollectionView,
@@ -27,6 +27,32 @@ const ALLOCATION_PALETTE = [
   "#9333ea",
 ];
 
+const COLLECTION_VISIT_KEY = "brick_alpha_collection_visit_snapshot";
+
+function weightedGrowth(sets, field) {
+  const recorded = sets
+    .map((set) => ({ value: Number(set.marketValue || 0), growth: Number(set[field]) }))
+    .filter((item) => item.value > 0 && Number.isFinite(item.growth));
+  const total = recorded.reduce((sum, item) => sum + item.value, 0);
+  if (!total) return null;
+  return recorded.reduce((sum, item) => sum + item.growth * item.value, 0) / total;
+}
+
+function movementRows(sets) {
+  return sets
+    .map((set) => {
+      const growth = Number.isFinite(Number(set.ninetyDayGrowth))
+        ? Number(set.ninetyDayGrowth)
+        : Number.isFinite(Number(set.annualGrowth))
+          ? Number(set.annualGrowth)
+          : null;
+      const period = Number.isFinite(Number(set.ninetyDayGrowth)) ? "90-day" : "annual";
+      const valueGain = growth == null ? null : Number(set.marketValue || 0) * (growth / (100 + growth || 100));
+      return { ...set, movementGrowth: growth, movementPeriod: period, valueGain };
+    })
+    .filter((set) => set.movementGrowth != null);
+}
+
 export function CollectionScreen({ openTrades = [], collectibles = [], navigateToPage }) {
   const view = useMemo(
     () => buildCollectionView(openTrades, collectibles),
@@ -36,6 +62,21 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
   const [theme, setTheme] = useState(view.themes[0] || "");
   const [expandedId, setExpandedId] = useState("");
   const [showAllRows, setShowAllRows] = useState(false);
+  const [previousVisit, setPreviousVisit] = useState(null);
+
+  useEffect(() => {
+    try {
+      const prior = window.localStorage.getItem(COLLECTION_VISIT_KEY);
+      if (prior) setPreviousVisit(JSON.parse(prior));
+      const snapshot = {
+        value: view.summary.openValue,
+        at: new Date().toISOString(),
+      };
+      window.localStorage.setItem(COLLECTION_VISIT_KEY, JSON.stringify(snapshot));
+    } catch {
+      // Visit comparison is optional; collection data remains available.
+    }
+  }, [view.summary.openValue]);
   const rows = filterCollectionSets(view.sets, filter, theme);
   const visibleRows = showAllRows ? rows : rows.slice(0, 12);
   const allocation = useMemo(() => {
@@ -68,20 +109,114 @@ export function CollectionScreen({ openTrades = [], collectibles = [], navigateT
     return stops.length ? `conic-gradient(${stops.join(", ")})` : "#e9eef7";
   }, [allocation]);
 
+  const costBasis = useMemo(
+    () => view.sets.reduce((sum, set) => sum + Number(set.cost || 0), 0),
+    [view.sets],
+  );
+  const unrealisedGain = view.summary.openValue - costBasis;
+  const ninetyDayChange = useMemo(() => weightedGrowth(view.sets, "ninetyDayGrowth"), [view.sets]);
+  const annualChange = useMemo(() => weightedGrowth(view.sets, "annualGrowth"), [view.sets]);
+  const movers = useMemo(() => movementRows(view.sets), [view.sets]);
+  const topPercentMovers = useMemo(
+    () => [...movers].sort((a, b) => b.movementGrowth - a.movementGrowth).slice(0, 5),
+    [movers],
+  );
+  const topValueMovers = useMemo(
+    () => [...movers].filter((set) => Number.isFinite(set.valueGain)).sort((a, b) => b.valueGain - a.valueGain).slice(0, 5),
+    [movers],
+  );
+  const visitChange = previousVisit && Number(previousVisit.value) > 0
+    ? view.summary.openValue - Number(previousVisit.value)
+    : null;
+
   return (
     <div className="v3WorkflowScreen v3Collection" data-page="collection">
-      <header className="v3WorkflowHero">
-        <h1>Collection</h1>
-        <p>One row per set. Market value leads. Stacks open into the units that make up the cost.</p>
+      <header className="v3WorkflowHero v3CollectionHero">
+        <div>
+          <span className="v3Eyebrow">Brick Alpha portfolio</span>
+          <h1>My Collection</h1>
+          <p>Current value, recorded movement and the sets reshaping your LEGO portfolio.</p>
+        </div>
+        <div className="v3CollectionHeroMeta">
+          <strong>{view.summary.positions}</strong><span>positions</span>
+          <strong>{view.summary.uniqueSets}</strong><span>unique sets</span>
+        </div>
       </header>
 
-      <section className="v3StatGrid" aria-label="Collection summary">
-        <div><span>Positions</span><strong>{view.summary.positions}</strong></div>
-        <div><span>Unique sets</span><strong>{view.summary.uniqueSets}</strong></div>
-        <div><span>Stacks</span><strong>{view.summary.stacks}</strong></div>
-        <div><span>In profit</span><strong>{view.summary.inProfit}</strong></div>
-        <div><span>Sealed</span><strong>{view.summary.sealed}</strong></div>
-        <div><span>Non-sealed</span><strong>{view.summary.opened}</strong></div>
+      <section className="v3CollectionKpis" aria-label="Collection value summary">
+        <article>
+          <span>Portfolio value</span>
+          <strong>{formatCollectiblePrice(view.summary.openValue)}</strong>
+          <small>{unrealisedGain >= 0 ? "+" : ""}{formatCollectiblePrice(unrealisedGain)} vs paid</small>
+        </article>
+        <article>
+          <span>90-day change</span>
+          <strong>{ninetyDayChange == null ? "—" : formatSignedPercent(ninetyDayChange)}</strong>
+          <small>{ninetyDayChange == null ? "Not enough recorded history" : "Weighted by current value"}</small>
+        </article>
+        <article>
+          <span>Annual change</span>
+          <strong>{annualChange == null ? "—" : formatSignedPercent(annualChange)}</strong>
+          <small>{annualChange == null ? "Not enough recorded history" : "Recorded annual growth"}</small>
+        </article>
+        <article>
+          <span>Cost basis</span>
+          <strong>{formatCollectiblePrice(costBasis)}</strong>
+          <small>{view.summary.stacks} stacks · {view.summary.sealed} sealed</small>
+        </article>
+      </section>
+
+      <section className="v3CollectionSinceVisit" aria-label="Since your last visit">
+        <div>
+          <span className="v3Eyebrow">Since your last visit</span>
+          <strong>
+            {visitChange == null
+              ? "Your current collection snapshot is saved."
+              : visitChange === 0
+                ? "No portfolio-value change since your previous visit."
+                : `Portfolio value has ${visitChange > 0 ? "increased" : "decreased"} by ${formatCollectiblePrice(Math.abs(visitChange))}.`}
+          </strong>
+          <p>
+            {topPercentMovers.length
+              ? `Biggest recorded mover: ${topPercentMovers[0].name} (${formatSignedPercent(topPercentMovers[0].movementGrowth)} ${topPercentMovers[0].movementPeriod}).`
+              : "Movement will appear as BrickEconomy valuation history accumulates."}
+          </p>
+        </div>
+      </section>
+
+      <section className="v3DecisionCard v3CollectionMovement">
+        <div className="v3PortfolioSectionHead">
+          <div><span className="v3Eyebrow">Recorded movement</span><h2>This period's movers</h2></div>
+          <small>Only recorded BrickEconomy growth is shown</small>
+        </div>
+        <div className="v3MovementColumns">
+          <div>
+            <h3>Top percentage movers</h3>
+            {topPercentMovers.length ? topPercentMovers.map((set) => (
+              <article key={`pct-${set.id}`} className="v3MovementRow">
+                <div className="v3MovementIdentity">
+                  {set.imageUrl ? <img src={set.imageUrl} alt="" loading="lazy" /> : <span className="v3MovementFallback">#{set.setNumber}</span>}
+                  <div><strong>{set.setNumber} {set.name}</strong><small>{set.movementPeriod}</small></div>
+                </div>
+                <strong className={set.movementGrowth >= 0 ? "isPositive" : "isNegative"}>{formatSignedPercent(set.movementGrowth)}</strong>
+              </article>
+            )) : <p className="v3Muted">No recorded growth history yet.</p>}
+          </div>
+          <div>
+            <h3>Top value gains</h3>
+            {topValueMovers.length ? topValueMovers.map((set) => (
+              <article key={`value-${set.id}`} className="v3MovementRow">
+                <div className="v3MovementIdentity">
+                  {set.imageUrl ? <img src={set.imageUrl} alt="" loading="lazy" /> : <span className="v3MovementFallback">#{set.setNumber}</span>}
+                  <div><strong>{set.setNumber} {set.name}</strong><small>{formatSignedPercent(set.movementGrowth)} {set.movementPeriod}</small></div>
+                </div>
+                <strong className={set.valueGain >= 0 ? "isPositive" : "isNegative"}>
+                  {set.valueGain == null ? "—" : `${set.valueGain >= 0 ? "+" : "-"}${formatCollectiblePrice(Math.abs(set.valueGain))}`}
+                </strong>
+              </article>
+            )) : <p className="v3Muted">No recorded value gains yet.</p>}
+          </div>
+        </div>
       </section>
 
       <section className="v3DecisionCard v3CollectionAllocation">
