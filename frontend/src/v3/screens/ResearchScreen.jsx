@@ -250,7 +250,7 @@ export function ResearchScreen({
   const effectiveSection = sectionOptions.some((item) => item.id === section)
     ? section
     : "search";
-  const sections = useMemo(() => splitResearchSections(filtered), [filtered]);
+  const sections = useMemo(() => splitResearchSections(filtered, asOf), [asOf, filtered]);
   const themes = [...new Set(cards.map((card) => card.theme))].sort();
   const liveValues = liveDiscoveryReady
     ? Object.fromEntries(cards.map((card) => [card.setNumber, card.currentMarketValue]))
@@ -339,6 +339,15 @@ export function ResearchScreen({
   };
 
   const setFilter = (key, value) => setFilters((current) => ({ ...current, [key]: value }));
+  const selectSection = (nextSection) => {
+    setSection(nextSection);
+    if (["new", "retiring", "performers"].includes(nextSection)) {
+      setFilters({ ...EMPTY_FILTERS });
+      setFiltersOpen(false);
+      setLiveSearchResults([]);
+      setLiveSearchError("");
+    }
+  };
 
   return (
     <div className="v3Research" data-page="research">
@@ -365,7 +374,7 @@ export function ResearchScreen({
             key={item.id}
             type="button"
             className={effectiveSection === item.id ? "active" : ""}
-            onClick={() => setSection(item.id)}
+            onClick={() => selectSection(item.id)}
           >
             {item.label}
           </button>
@@ -443,7 +452,7 @@ export function ResearchScreen({
         </section>
       ) : null}
 
-      {section === "watch" ? (
+      {effectiveSection === "watch" ? (
         <section className="v3ResearchList" aria-label="Watch targets">
           {watches.length ? watches.map((target) => (
             <article key={target.id} className="v3ResearchCard" data-triggered={target.triggered ? "true" : "false"}>
@@ -466,7 +475,22 @@ export function ResearchScreen({
           )) : <p>No watch targets yet.</p>}
         </section>
       ) : (
-        <section className="v3ResearchList" aria-label={section}>
+        <>
+          {["new", "retiring", "performers"].includes(effectiveSection) ? (
+            <div className="v3ResearchSectionSummary" role="status">
+              <strong>
+                {effectiveSection === "new"
+                  ? "New Releases"
+                  : effectiveSection === "retiring"
+                    ? "Retiring Soon"
+                    : "Top Performers"}
+              </strong>
+              <span>
+                {visibleCards.length} {visibleCards.length === 1 ? "set" : "sets"} from the current synced LEGO data.
+              </span>
+            </div>
+          ) : null}
+          <section className="v3ResearchList" aria-label={effectiveSection}>
           {visibleCards.length ? visibleCards.map((card) => (
             <Card
               key={card.id}
@@ -477,8 +501,19 @@ export function ResearchScreen({
               onRemoveWatch={removeWatch}
               liveData={liveDiscoveryReady}
             />
-          )) : <p>No sets match this section.</p>}
-        </section>
+          )) : (
+            <p className="v3ResearchEmpty">
+              {effectiveSection === "new"
+                ? "No recently released active sets are available in the current synced data."
+                : effectiveSection === "retiring"
+                  ? "No sets with a recorded approaching retirement window are available in the current synced data."
+                  : effectiveSection === "performers"
+                    ? "No sets with recorded annual or 90-day growth are available yet."
+                    : "No sets match this section."}
+            </p>
+          )}
+          </section>
+        </>
       )}
     </div>
   );
