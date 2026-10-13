@@ -6447,6 +6447,45 @@ app.get("/api/data-sources/brickeconomy/search", requireAuth, async (req, res) =
   });
 });
 
+app.post("/api/data-sources/brickeconomy/sets", requireAuth, async (req, res) => {
+  const credentials = brickEconomyCredentialsForState(req.userState);
+  if (!credentials.apiKey) {
+    res.status(400).json({ ok: false, error: "brickeconomy_not_connected" });
+    return;
+  }
+  const requested = Array.isArray(req.body?.setNumbers) ? req.body.setNumbers : [];
+  const setNumbers = [...new Set(
+    requested
+      .map((value) => String(value || "").trim().replace(/-1$/, ""))
+      .filter((value) => /^\d{4,7}$/.test(value)),
+  )].slice(0, 12);
+  if (!setNumbers.length) {
+    res.json({ ok: true, items: [], errors: [] });
+    return;
+  }
+
+  const fx = await getUsdZarRate();
+  const outcomes = await Promise.all(setNumbers.map(async (setNumber) => {
+    let result = await brickeconomyService.getSet(`${setNumber}-1`, credentials.apiKey, "USD");
+    if (!result.ok) {
+      result = await brickeconomyService.getSet(setNumber, credentials.apiKey, "USD");
+    }
+    if (!result.ok) {
+      return { setNumber, error: result.reason || "set_lookup_failed" };
+    }
+    return { setNumber, item: brickEconomyResearchItem(result.data, nowIso(), fx.rate) };
+  }));
+
+  res.json({
+    ok: true,
+    items: outcomes.filter((entry) => entry.item).map((entry) => entry.item),
+    errors: outcomes.filter((entry) => entry.error).map((entry) => ({
+      setNumber: entry.setNumber,
+      reason: entry.error,
+    })),
+  });
+});
+
 app.get("/api/data-sources/brickeconomy/set/:setNumber", requireAuth, async (req, res) => {
   const source = req.userState.dataSources || {};
   const credentials = brickEconomyCredentialsForState(req.userState);
