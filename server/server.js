@@ -429,7 +429,7 @@ const DEMO_LEGO_SETS = [
     historicalPerformance: 82,
     portfolioFit: 72,
     riskScore: 50,
-    expectedRetirementDate: "2028-12-31",
+    expectedRetirementDate: null,
     sellByTargetDate: "2030-12-31",
   },
   {
@@ -496,7 +496,7 @@ const DEMO_LEGO_SETS = [
     historicalPerformance: 70,
     portfolioFit: 68,
     riskScore: 58,
-    expectedRetirementDate: "2026-12-31",
+    expectedRetirementDate: null,
     sellByTargetDate: "2029-12-31",
   },
   {
@@ -529,7 +529,7 @@ const DEMO_LEGO_SETS = [
     historicalPerformance: 55,
     portfolioFit: 60,
     riskScore: 60,
-    expectedRetirementDate: "2028-06-30",
+    expectedRetirementDate: null,
     sellByTargetDate: "2029-12-31",
   },
   {
@@ -562,7 +562,7 @@ const DEMO_LEGO_SETS = [
     historicalPerformance: 48,
     portfolioFit: 55,
     riskScore: 68,
-    expectedRetirementDate: "2027-12-31",
+    expectedRetirementDate: null,
     sellByTargetDate: "2028-12-31",
   },
 ];
