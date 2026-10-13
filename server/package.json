@@ -41,8 +41,8 @@
     "supertest": "^7.2.2"
   },
   "overrides": {
-    "body-parser": "2.2.3",
+    "body-parser": "2.3.0",
     "proxy-addr": "2.0.8",
-    "qs": "6.15.4"
+    "qs": "6.16.0"
   }
 }
