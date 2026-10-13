@@ -26,6 +26,13 @@
   };
   const nameOf = (el) => String(el?.getAttribute("aria-label") || el?.getAttribute("title") || el?.textContent || "").replace(/\s+/g, " ").trim();
   const buttons = (doc) => [...doc.querySelectorAll("button")].filter(visible);
+  const setNativeValue = (win, input, value) => {
+    const prototype = input.tagName === "TEXTAREA" ? win.HTMLTextAreaElement.prototype : win.HTMLInputElement.prototype;
+    const descriptor = Object.getOwnPropertyDescriptor(prototype, "value");
+    descriptor.set.call(input, value);
+    input.dispatchEvent(new win.Event("input", { bubbles: true }));
+    input.dispatchEvent(new win.Event("change", { bubbles: true }));
+  };
   const button = (doc, label, exact = true) => buttons(doc).find(b => exact ? nameOf(b) === label : nameOf(b).includes(label));
   const page = (doc, id) => {
     const el = doc.querySelector('[data-page="' + id + '"]');
@@ -91,9 +98,7 @@
       await navDesktop(doc,"Research","research");
       const searchInput = [...doc.querySelectorAll("input")].find(i => i.placeholder === "Name or set number");
       if (!searchInput) fail("Research search input missing");
-      searchInput.value = "Hulkbuster";
-      searchInput.dispatchEvent(new win.Event("input",{bubbles:true}));
-      searchInput.dispatchEvent(new win.Event("change",{bubbles:true}));
+      setNativeValue(win, searchInput, "Hulkbuster");
       await sleep(500);
       await clickTab(doc,"Research sections","Search","data-active-section","search");
       for (const [label,id] of [["New Releases","new"],["Retiring Soon","retiring"],["Top Performers","performers"],["Watchlist","watch"]]) {
@@ -165,9 +170,7 @@
       manual.click(); await sleep(120);
       const setInput = [...doc.querySelectorAll("input")].find(i => i.placeholder === "e.g. 75252");
       if (!setInput) fail("Scan set number input missing");
-      setInput.value = "75367";
-      setInput.dispatchEvent(new win.Event("input",{bubbles:true}));
-      setInput.dispatchEvent(new win.Event("change",{bubbles:true}));
+      setNativeValue(win, setInput, "75367");
       const analyse = button(doc,"Analyse");
       if (!analyse) fail("Analyse button missing");
       analyse.click();
