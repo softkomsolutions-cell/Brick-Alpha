@@ -766,7 +766,7 @@ export function ScanEvaluateWorkspace({
                   <div><span>Retail price</span><strong>{formatCollectiblePrice(evaluation.retailPrice)}</strong></div>
                   <div><span>Current market value</span><strong>{formatCanonicalValue(presentResearchFields(evaluation).currentMarketValue)}</strong></div>
                   <div><span>Retirement status</span><strong>{evaluation.retirementStatus}</strong></div>
-                  <div><span>Expected retirement</span><strong>{retirementSnapshot?.expectedRetirement}</strong></div>
+                  <div><span>Expected retirement</span><strong>{retirementSnapshot?.expectedRetirement || "Not recorded"}</strong></div>
                   <div><span>BrickEconomy status</span><strong>{demoProfile?.brickEconomyStatus || "Tracked"}</strong></div>
                   <div><span>Portfolio status</span><strong>{portfolioStatus}</strong></div>
                 </div>
@@ -922,11 +922,11 @@ export function ScanEvaluateWorkspace({
               <h2>Production lifecycle</h2>
             </div>
             <div className="seRetirementGrid">
-              <div className="seMetric"><span>Expected retirement</span><strong>{retirementSnapshot?.expectedRetirement}</strong></div>
-              <div className="seMetric"><span>Retirement probability</span><strong>{retirementSnapshot?.retirementProbability}%</strong></div>
-              <div className="seMetric"><span>Retirement confidence</span><strong>{retirementSnapshot?.retirementConfidence}%</strong></div>
-              <div className="seMetric"><span>Months remaining</span><strong>{retirementSnapshot?.monthsRemaining ?? monthsUntilRetirement(evaluation)}</strong></div>
-              <div className="seMetric"><span>Expected retirement pop</span><strong>{formatCollectiblePrice(retirementSnapshot?.expectedRetirementPop)}</strong></div>
+              <div className="seMetric"><span>Expected retirement</span><strong>{retirementSnapshot?.expectedRetirement || "Not recorded"}</strong></div>
+              <div className="seMetric"><span>Retirement probability</span><strong>{retirementSnapshot?.retirementProbability == null ? "Not recorded" : `${retirementSnapshot.retirementProbability}%`}</strong></div>
+              <div className="seMetric"><span>Retirement confidence</span><strong>{retirementSnapshot?.retirementConfidence == null ? "Not recorded" : `${retirementSnapshot.retirementConfidence}%`}</strong></div>
+              <div className="seMetric"><span>Months remaining</span><strong>{retirementSnapshot?.monthsRemaining == null ? "Not recorded" : retirementSnapshot.monthsRemaining}</strong></div>
+              <div className="seMetric"><span>Expected retirement pop</span><strong>{retirementSnapshot?.expectedRetirementPop == null ? "Not recorded" : formatCollectiblePrice(retirementSnapshot.expectedRetirementPop)}</strong></div>
             </div>
           </article>
 
@@ -943,9 +943,6 @@ export function ScanEvaluateWorkspace({
               </button>
               <button type="button" className="ghostButton" onClick={handleAddToWatchlist}>
                 Add to Watchlist
-              </button>
-              <button type="button" className="ghostButton" onClick={() => setActionStatus("PDF report queued for demo export.")}>
-                Generate PDF Report
               </button>
               <button type="button" className="ghostButton" onClick={() => setActionStatus("Analysis link copied to clipboard (demo).")}>
                 Share Analysis
