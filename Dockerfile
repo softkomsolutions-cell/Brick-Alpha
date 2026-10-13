@@ -26,7 +26,7 @@ WORKDIR /app
 COPY server/package*.json ./server/
 RUN npm --prefix server ci --omit=dev
 
-COPY --from=builder /app/server ./server
+COPY server ./server
 COPY --from=builder /app/frontend/dist ./frontend/dist
 COPY --from=builder /app/server/node_modules/.prisma ./server/node_modules/.prisma
 
