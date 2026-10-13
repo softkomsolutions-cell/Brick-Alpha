@@ -6089,6 +6089,17 @@ function brickEconomyResearchItem(raw = {}, syncedAt = nowIso(), usdZarRate = 1)
         .filter((point) => point.date && Number.isFinite(point.value) && point.value > 0)
     : [];
   const annualGrowth = Number(raw.rolling_growth_12months ?? raw.rolling_growth_lastyear);
+  const ninetyDayGrowth = Number(
+    raw.rolling_growth_3months ??
+    raw.rolling_growth_90days ??
+    raw.growth_90days ??
+    raw.growth_3months
+  );
+  const providerExpectedRetirementDate =
+    raw.expected_retirement_date ||
+    raw.retirement_date ||
+    raw.retirement_estimate_date ||
+    null;
   return {
     id: `lego-${setNumber || "unknown"}`,
     sku: setNumber,
@@ -6098,6 +6109,7 @@ function brickEconomyResearchItem(raw = {}, syncedAt = nowIso(), usdZarRate = 1)
     legoTheme: String(raw.theme || "Other"),
     subtheme: String(raw.subtheme || ""),
     year: raw.year ?? null,
+    releaseDate: raw.release_date || (raw.year ? `${raw.year}-01-01` : null),
     piecesCount: raw.pieces_count ?? null,
     minifigsCount: raw.minifigs_count ?? null,
     brickEconomyValue: Number.isFinite(currentValue) && currentValue > 0 ? currentValue : null,
@@ -6105,6 +6117,8 @@ function brickEconomyResearchItem(raw = {}, syncedAt = nowIso(), usdZarRate = 1)
     valuationDate: syncedAt.slice(0, 10),
     valuationHistory: history,
     annualGrowth: Number.isFinite(annualGrowth) ? annualGrowth : null,
+    ninetyDayGrowth: Number.isFinite(ninetyDayGrowth) ? ninetyDayGrowth : null,
+    expectedRetirementDate: raw.retired === true ? null : providerExpectedRetirementDate,
     actualRetirementDate: raw.retired_date || null,
     retirementStatus: raw.retired === true ? "Retired" : "Active",
     retired: raw.retired === true,
