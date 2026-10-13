@@ -3803,6 +3803,29 @@ function findImportableCollectibleBySkuOrId(value) {
   );
 }
 
+async function resolveImportableCollectible(value, userState) {
+  const setNumber = String(value || "").trim().replace(/-1$/, "");
+  const local = findImportableCollectibleBySkuOrId(setNumber);
+  if (local) return { item: local, source: "catalogue" };
+
+  const credentials = brickEconomyCredentialsForState(userState);
+  if (!credentials.apiKey) {
+    return { item: null, source: "unresolved", reason: "brickeconomy_not_connected" };
+  }
+
+  const result = await brickeconomyService.getSet(`${setNumber}-1`, credentials.apiKey, "USD");
+  if (!result.ok) {
+    const fallback = await brickeconomyService.getSet(setNumber, credentials.apiKey, "USD");
+    if (!fallback.ok) {
+      return { item: null, source: "brickeconomy", reason: fallback.reason || result.reason || "set_not_found" };
+    }
+    const fx = await getUsdZarRate();
+    return { item: brickEconomyResearchItem(fallback.data, nowIso(), fx.rate), source: "brickeconomy" };
+  }
+  const fx = await getUsdZarRate();
+  return { item: brickEconomyResearchItem(result.data, nowIso(), fx.rate), source: "brickeconomy" };
+}
+
 function collectionForRequest(req) {
   return req.userState ? req.userState.trades : guestTrades;
 }
@@ -6465,7 +6488,6 @@ app.post("/api/collection/import/preview", requireAuth, (req, res) => {
     const condition = String(raw?.condition || "Sealed").trim();
     const errors = [];
     if (!/^\d{4,6}$/.test(setNumber)) errors.push("Set number must be 4-6 digits.");
-    else if (!findImportableCollectibleBySkuOrId(setNumber)) errors.push("Set is not in the Brick Alpha LEGO catalogue.");
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > 1000) errors.push("Quantity must be a whole number from 1 to 1000.");
     if (!Number.isFinite(purchasePrice) || purchasePrice < 0) errors.push("Purchase price must be zero or greater.");
     return {
@@ -6540,17 +6562,31 @@ app.post("/api/collection/import/commit", requireAuth, async (req, res) => {
   }
 
   const errors = [];
-  const prepared = normalizedRows.map((raw, index) => {
+  const resolvedBySet = new Map();
+  const prepared = [];
+  for (let index = 0; index < normalizedRows.length; index += 1) {
+    const raw = normalizedRows[index];
     const { setNumber, quantity, purchasePrice } = raw;
     if (!/^\d{4,6}$/.test(setNumber) || !Number.isInteger(quantity) || quantity < 1 || quantity > 1000 || !Number.isFinite(purchasePrice) || purchasePrice < 0) {
       errors.push({ row: index + 1, setNumber, error: "invalid_row" });
-      return null;
+      continue;
     }
-    const item = findImportableCollectibleBySkuOrId(setNumber);
-    if (!item) {
-      errors.push({ row: index + 1, setNumber, error: "set_not_in_brick_alpha_catalogue" });
-      return null;
+
+    let resolved = resolvedBySet.get(setNumber);
+    if (!resolved) {
+      resolved = await resolveImportableCollectible(setNumber, req.userState);
+      resolvedBySet.set(setNumber, resolved);
     }
+    if (!resolved.item) {
+      errors.push({
+        row: index + 1,
+        setNumber,
+        error: "set_lookup_failed",
+        reason: resolved.reason || "set_not_found",
+      });
+      continue;
+    }
+
     const credits = ["vatReclaim", "rewards", "cashback", "vouchers"]
       .reduce((sum, key) => sum + (Number(raw[key]) || 0), 0);
     const allInTotal = Math.max(0, purchasePrice * quantity + (Number(raw.shipping) || 0) - credits);
@@ -6560,10 +6596,11 @@ app.post("/api/collection/import/commit", requireAuth, async (req, res) => {
       raw.retailer ? `Source: ${String(raw.retailer).slice(0, 120)}` : "",
       `Condition: ${/^opened$/i.test(String(raw.condition || "")) ? "Opened" : "Sealed"}`,
       `Import: ${importId}`,
+      resolved.source === "brickeconomy" ? "Set identity resolved via BrickEconomy" : "",
       "Imported collection data",
     ].filter(Boolean).join(". ");
-    return { item, quantity, unitCost, note };
-  }).filter(Boolean);
+    prepared.push({ item: resolved.item, quantity, unitCost, note });
+  }
 
   if (errors.length) {
     res.status(422).json({
