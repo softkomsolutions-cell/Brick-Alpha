@@ -6109,7 +6109,7 @@ function brickEconomyResearchItem(raw = {}, syncedAt = nowIso(), usdZarRate = 1)
     legoTheme: String(raw.theme || "Other"),
     subtheme: String(raw.subtheme || ""),
     year: raw.year ?? null,
-    releaseDate: raw.release_date || (raw.year ? `${raw.year}-01-01` : null),
+    releaseDate: raw.released_date || raw.release_date || (raw.year ? `${raw.year}-01-01` : null),
     piecesCount: raw.pieces_count ?? null,
     minifigsCount: raw.minifigs_count ?? null,
     brickEconomyValue: Number.isFinite(currentValue) && currentValue > 0 ? currentValue : null,
