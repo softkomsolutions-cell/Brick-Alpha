@@ -6904,30 +6904,6 @@ app.post("/api/news/targets", requireAuth, (req, res) => {
   });
 });
 
-const TAB_AUDIT_TOKEN = String(process.env.TAB_AUDIT_TOKEN || "").trim();
-
-app.get("/qa/tab-audit", (req, res, next) => {
-  if (!TAB_AUDIT_TOKEN || String(req.query.token || "") !== TAB_AUDIT_TOKEN) {
-    next();
-    return;
-  }
-  const mobileAudit = String(req.query.mode || "") === "mobile";
-  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
-  res.type("html").send(`<!doctype html>
-<html><head><meta charset="utf-8"><title>Brick Alpha ${mobileAudit ? "mobile " : ""}tab audit</title>
-<style>
-body{font:14px system-ui;margin:20px;background:#111;color:#eee}
-#status{white-space:pre-wrap;padding:12px;background:#1b1b1b;border-radius:8px;margin-bottom:12px}
-iframe{width:${mobileAudit ? "390px" : "1440px"};height:${mobileAudit ? "844px" : "1000px"};border:1px solid #555;background:#fff;transform-origin:top left}
-.pass{color:#7ee787}.fail{color:#ff7b72}
-</style></head><body>
-<h1>Brick Alpha ${mobileAudit ? "mobile " : "all-tabs "}audit</h1>
-<div id="status">Starting…</div>
-<iframe id="app" src="/"></iframe>
-<script src="${mobileAudit ? "/qa-mobile-tabs-v5.js?v=6" : "/qa-all-tabs-v6.js?v=2"}"></script>
-</body></html>`);
-});
-
 if (fs.existsSync(FRONTEND_INDEX_FILE)) {
   app.use(express.static(FRONTEND_DIST_DIR));
   app.get(/^\/(?!api(?:\/|$)).*/, (_req, res) => {
