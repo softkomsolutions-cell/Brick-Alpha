@@ -24,9 +24,9 @@
     "partner:compose": "docker compose up --build -d",
     "partner:compose:down": "docker compose down",
     "partner:compose:logs": "docker compose logs -f collecttrade",
-    "truehost:server:install": "npm --prefix server install",
-    "truehost:server:generate": "npm --prefix server run db:generate",
-    "truehost:frontend:build": "npm --prefix frontend run build"
+    "truehost-server-install": "npm --prefix server install",
+    "truehost-server-generate": "npm --prefix server run db:generate",
+    "truehost-frontend-build": "npm --prefix frontend run build"
   },
   "dependencies": {
     "localtunnel": "2.0.2"
