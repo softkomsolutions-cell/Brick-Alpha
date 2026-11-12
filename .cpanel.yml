@@ -1,10 +1,10 @@
 ---
 deployment:
   tasks:
-    - export APP_ROOT=/home/wwcgbqzj/brickalpha-deploy
+    - export APP_ROOT=/home/wwcgbqzj/brickalpha-app
     - cd $APP_ROOT && npm --prefix frontend ci
     - cd $APP_ROOT && npm --prefix server ci
     - cd $APP_ROOT && npm --prefix server run db:generate
     - cd $APP_ROOT && npm --prefix frontend run build
-    - cloudlinux-selector get --json --interpreter nodejs --user wwcgbqzj | grep -q '"app_root": "brickalpha-deploy"' || cloudlinux-selector create --json --interpreter nodejs --user wwcgbqzj --app-root brickalpha-deploy --domain softkomsolutions.com --app-uri brickalpha --version 22.23.4 --app-mode production --startup-file server/server.js
-    - cloudlinux-selector restart --json --interpreter nodejs --user wwcgbqzj --app-root brickalpha-deploy
+    - cloudlinux-selector get --json --interpreter nodejs --user wwcgbqzj | grep -q '"app_root": "brickalpha-app"' || cloudlinux-selector create --json --interpreter nodejs --user wwcgbqzj --app-root brickalpha-app --domain softkomsolutions.com --app-uri brickalpha --version 22.23.4 --app-mode production --startup-file server/server.js
+    - cloudlinux-selector restart --json --interpreter nodejs --user wwcgbqzj --app-root brickalpha-app
