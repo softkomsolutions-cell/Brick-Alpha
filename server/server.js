@@ -1,4 +1,37 @@
-require("./truehost-bootstrap");\nconst express = require("express");
+const trueHostFs = require("node:fs");
+const trueHostPath = require("node:path");
+const trueHostCrypto = require("node:crypto");
+
+if (String(__dirname).startsWith("/home/wwcgbqzj/")) {
+  const home = "/home/wwcgbqzj";
+  const dataDir = trueHostPath.join(home, "brickalpha-app", "server", "data");
+  const secretFile = trueHostPath.join(home, ".brickalpha-runtime-secrets.json");
+  let secrets;
+  try {
+    secrets = JSON.parse(trueHostFs.readFileSync(secretFile, "utf8"));
+  } catch {
+    secrets = {
+      auth: trueHostCrypto.randomBytes(48).toString("hex"),
+      connector: trueHostCrypto.randomBytes(48).toString("hex"),
+    };
+    trueHostFs.writeFileSync(secretFile, JSON.stringify(secrets), { mode: 0o600 });
+  }
+  process.env.NODE_ENV ||= "production";
+  process.env.AUTH_PERSISTENCE_MODE ||= "legacy";
+  process.env.FINANCIAL_PERSISTENCE_MODE ||= "legacy";
+  process.env.CONNECTOR_PERSISTENCE_MODE ||= "legacy";
+  process.env.VALUATION_PERSISTENCE_MODE ||= "legacy";
+  process.env.AUTH_SECRET ||= secrets.auth;
+  process.env.CONNECTOR_SECRET ||= secrets.connector;
+  process.env.DEMO_MODE ||= "true";
+  process.env.CORS_ALLOWED_ORIGINS ||= "https://brickalpha.softkomsolutions.com";
+  process.env.COLLECTTRADE_DATA_DIR ||= dataDir;
+  process.env.COLLECTTRADE_STORE_FILE ||= trueHostPath.join(dataDir, "app-store.json");
+  process.env.COLLECTTRADE_SHARE_STATUS_FILE ||= trueHostPath.join(dataDir, "share-status.json");
+}
+
+require("./truehost-bootstrap");
+\nconst express = require("express");
 const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
