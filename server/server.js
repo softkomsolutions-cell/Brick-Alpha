@@ -4736,50 +4736,6 @@ app.get("/", (_req, res) => {
 });
 
 
-app.get("/api/internal/migration-export", (req, res) => {
-  const expected = String(process.env.MIGRATION_EXPORT_TOKEN || "");
-  const provided = String(req.get("x-migration-token") || "");
-  if (!expected || !provided || !crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(expected))) {
-    return res.status(404).json({ error: "not_found" });
-  }
-  const readOptional = (file) => {
-    try {
-      return fs.existsSync(file) ? fs.readFileSync(file, "utf8") : null;
-    } catch {
-      return null;
-    }
-  };
-  const allowedEnv = [
-    "AUTH_PERSISTENCE_MODE",
-    "AUTH_SECRET",
-    "BRICKECONOMY_API_KEY",
-    "COLLECTTRADE_DATA_DIR",
-    "COLLECTTRADE_SHARE_STATUS_FILE",
-    "COLLECTTRADE_STORE_FILE",
-    "CONNECTOR_PERSISTENCE_MODE",
-    "CONNECTOR_SECRET",
-    "DEMO_MODE",
-    "FINANCIAL_PERSISTENCE_MODE",
-    "PORT",
-    "VALUATION_PERSISTENCE_MODE"
-  ];
-  const env = Object.fromEntries(
-    allowedEnv
-      .filter((key) => process.env[key] !== undefined)
-      .map((key) => [key, process.env[key]])
-  );
-  res.set("Cache-Control", "no-store");
-  return res.json({
-    exportedAt: new Date().toISOString(),
-    files: {
-      "app-store.json": readOptional(STORE_FILE),
-      "product-catalog.json": readOptional(PRODUCT_CATALOG_FILE),
-      "share-status.json": readOptional(SHARE_STATUS_FILE)
-    },
-    env
-  });
-});
-
 app.get("/api/health", async (_req, res) => {
   res.json(await buildHealth());
 });
