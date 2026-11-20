@@ -6569,13 +6569,18 @@ app.get("/api/data-sources/brickeconomy/usage", requireAuth, async (req, res) =>
 
 app.post("/api/collection/import/preview", requireAuth, (req, res) => {
   const rows = Array.isArray(req.body?.rows) ? req.body.rows.slice(0, 1000) : [];
+  const canLookUpExternalSets = Boolean(brickEconomyCredentialsForState(req.userState).apiKey);
   const normalized = rows.map((raw, index) => {
     const setNumber = String(raw?.setNumber || raw?.set || raw?.sku || "").trim().replace(/-1$/, "");
     const quantity = Number(raw?.quantity || raw?.qty || 1);
     const purchasePrice = Number(raw?.purchasePrice ?? raw?.price ?? raw?.cost ?? NaN);
     const condition = String(raw?.condition || "Sealed").trim();
     const errors = [];
-    if (!/^\d{4,6}$/.test(setNumber)) errors.push("Set number must be 4-6 digits.");
+    if (!/^\d{4,6}$/.test(setNumber)) {
+      errors.push("Set number must be 4-6 digits.");
+    } else if (!canLookUpExternalSets && !findImportableCollectibleBySkuOrId(setNumber)) {
+      errors.push("Set number is missing from the catalogue. Connect BrickEconomy to import additional sets.");
+    }
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > 1000) errors.push("Quantity must be a whole number from 1 to 1000.");
     if (!Number.isFinite(purchasePrice) || purchasePrice < 0) errors.push("Purchase price must be zero or greater.");
     return {
